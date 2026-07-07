@@ -7,11 +7,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.FragmentActivity
 import eu.kanade.presentation.more.settings.Preference
-import eu.kanade.tachiyomi.core.security.PrivacyPreferences
 import eu.kanade.tachiyomi.core.security.SecurityPreferences
 import eu.kanade.tachiyomi.util.system.AuthenticatorUtil.authenticate
 import eu.kanade.tachiyomi.util.system.AuthenticatorUtil.isAuthenticationSupported
-import eu.kanade.tachiyomi.util.system.telemetryIncluded
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.pluralStringResource
@@ -29,11 +27,8 @@ object SettingsSecurityScreen : SearchableSettings {
     @Composable
     override fun getPreferences(): List<Preference> {
         val securityPreferences = remember { Injekt.get<SecurityPreferences>() }
-        val privacyPreferences = remember { Injekt.get<PrivacyPreferences>() }
-        return buildList(2) {
+        return buildList {
             add(getSecurityGroup(securityPreferences))
-            if (!telemetryIncluded) return@buildList
-            add(getFirebaseGroup(privacyPreferences))
         }
     }
 
@@ -48,70 +43,72 @@ object SettingsSecurityScreen : SearchableSettings {
 
         return Preference.PreferenceGroup(
             title = stringResource(MR.strings.pref_security),
-            preferenceItems = listOf(
-                Preference.PreferenceItem.SwitchPreference(
-                    preference = useAuthPref,
-                    title = stringResource(MR.strings.lock_with_biometrics),
-                    enabled = authSupported,
-                    onValueChanged = {
-                        (context as FragmentActivity).authenticate(
-                            title = context.stringResource(MR.strings.lock_with_biometrics),
-                        )
-                    },
-                ),
-                Preference.PreferenceItem.ListPreference(
-                    preference = securityPreferences.lockAppAfter,
-                    entries = LockAfterValues
-                        .associateWith {
-                            when (it) {
-                                -1 -> stringResource(MR.strings.lock_never)
-                                0 -> stringResource(MR.strings.lock_always)
-                                else -> pluralStringResource(MR.plurals.lock_after_mins, count = it, it)
-                            }
-                        },
-                    title = stringResource(MR.strings.lock_when_idle),
-                    enabled = authSupported && useAuth,
-                    onValueChanged = {
-                        (context as FragmentActivity).authenticate(
-                            title = context.stringResource(MR.strings.lock_when_idle),
-                        )
-                    },
-                ),
-
-                Preference.PreferenceItem.SwitchPreference(
-                    preference = securityPreferences.hideNotificationContent,
-                    title = stringResource(MR.strings.hide_notification_content),
-                ),
-                Preference.PreferenceItem.ListPreference(
-                    preference = securityPreferences.secureScreen,
-                    entries = SecurityPreferences.SecureScreenMode.entries
-                        .associateWith { stringResource(it.titleRes) },
-                    title = stringResource(MR.strings.secure_screen),
-                ),
-                Preference.PreferenceItem.InfoPreference(stringResource(MR.strings.secure_screen_summary)),
-            ),
-        )
-    }
-
-    @Composable
-    private fun getFirebaseGroup(
-        privacyPreferences: PrivacyPreferences,
-    ): Preference.PreferenceGroup {
-        return Preference.PreferenceGroup(
-            title = stringResource(MR.strings.pref_firebase),
-            preferenceItems = listOf(
-                Preference.PreferenceItem.SwitchPreference(
-                    preference = privacyPreferences.crashlytics,
-                    title = stringResource(MR.strings.onboarding_permission_crashlytics),
-                    subtitle = stringResource(MR.strings.onboarding_permission_crashlytics_description),
-                ),
-                Preference.PreferenceItem.SwitchPreference(
-                    preference = privacyPreferences.analytics,
-                    title = stringResource(MR.strings.onboarding_permission_analytics),
-                    subtitle = stringResource(MR.strings.onboarding_permission_analytics_description),
-                ),
-                Preference.PreferenceItem.InfoPreference(stringResource(MR.strings.firebase_summary)),
-            ),
+            preferenceItems = buildList {
+                add(
+                    Preference.PreferenceItem.InfoPreference(
+                        "These settings protect this Android app only. Suwayomi server authentication, tracker logins, and server-side history are configured or stored on the server.",
+                    ),
+                )
+                if (!authSupported) {
+                    add(
+                        Preference.PreferenceItem.InfoPreference(
+                            "App lock is unavailable until a device screen lock, PIN, password, or biometric unlock is configured in Android settings.",
+                        ),
+                    )
+                } else {
+                    add(
+                        Preference.PreferenceItem.SwitchPreference(
+                            preference = useAuthPref,
+                            title = stringResource(MR.strings.lock_with_biometrics),
+                            onValueChanged = {
+                                (context as FragmentActivity).authenticate(
+                                    title = context.stringResource(MR.strings.lock_with_biometrics),
+                                )
+                            },
+                        ),
+                    )
+                    add(
+                        Preference.PreferenceItem.ListPreference(
+                            preference = securityPreferences.lockAppAfter,
+                            entries = LockAfterValues
+                                .associateWith {
+                                    when (it) {
+                                        -1 -> stringResource(MR.strings.lock_never)
+                                        0 -> stringResource(MR.strings.lock_always)
+                                        else -> pluralStringResource(MR.plurals.lock_after_mins, count = it, it)
+                                    }
+                                },
+                            title = stringResource(MR.strings.lock_when_idle),
+                            enabled = useAuth,
+                            onValueChanged = {
+                                (context as FragmentActivity).authenticate(
+                                    title = context.stringResource(MR.strings.lock_when_idle),
+                                )
+                            },
+                        ),
+                    )
+                }
+                add(
+                    Preference.PreferenceItem.SwitchPreference(
+                        preference = securityPreferences.hideNotificationContent,
+                        title = stringResource(MR.strings.hide_notification_content),
+                        subtitle = "Redacts manga, chapter, and extension names from Android notifications generated by this client.",
+                    ),
+                )
+                add(
+                    Preference.PreferenceItem.ListPreference(
+                        preference = securityPreferences.secureScreen,
+                        entries = SecurityPreferences.SecureScreenMode.entries
+                            .associateWith { stringResource(it.titleRes) },
+                        title = stringResource(MR.strings.secure_screen),
+                    ),
+                )
+                add(
+                    Preference.PreferenceItem.InfoPreference(
+                        "${stringResource(MR.strings.secure_screen_summary)}. This does not change Suwayomi server access or stored data.",
+                    ),
+                )
+            },
         )
     }
 }

@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import eu.kanade.core.preference.PreferenceMutableState
+import eu.kanade.presentation.components.ServerOfflineBanner
 import eu.kanade.tachiyomi.ui.library.LibraryItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -33,6 +34,7 @@ fun LibraryContent(
     contentPadding: PaddingValues,
     currentPage: Int,
     hasActiveFilters: Boolean,
+    staleSnapshotSyncedAt: Long?,
     showPageTabs: Boolean,
     onChangeCurrentPage: (Int) -> Unit,
     onClickManga: (Long) -> Unit,
@@ -57,6 +59,10 @@ fun LibraryContent(
 
         val scope = rememberCoroutineScope()
         var isRefreshing by remember(pagerState.currentPage) { mutableStateOf(false) }
+
+        if (staleSnapshotSyncedAt != null) {
+            ServerOfflineBanner(syncedAt = staleSnapshotSyncedAt)
+        }
 
         if (showPageTabs && categories.isNotEmpty() && (categories.size > 1 || !categories.first().isSystemCategory)) {
             LaunchedEffect(categories) {

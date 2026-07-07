@@ -36,6 +36,7 @@ fun OnboardingScreen(
         listOf(
             ThemeStep(),
             StorageStep(),
+            ServerStep(),
             PermissionStep(),
             GuidesStep(onRestoreBackup = onRestoreBackup),
         )

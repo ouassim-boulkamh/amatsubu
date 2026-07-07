@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DragHandle
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,6 +27,7 @@ import tachiyomi.presentation.core.i18n.stringResource
 fun ReorderableCollectionItemScope.CategoryListItem(
     category: Category,
     onRename: () -> Unit,
+    onEditFlags: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -56,6 +58,12 @@ fun ReorderableCollectionItemScope.CategoryListItem(
                 Icon(
                     imageVector = Icons.Outlined.Edit,
                     contentDescription = stringResource(MR.strings.action_rename_category),
+                )
+            }
+            IconButton(onClick = onEditFlags) {
+                Icon(
+                    imageVector = Icons.Outlined.Settings,
+                    contentDescription = "Category behavior",
                 )
             }
             IconButton(onClick = onDelete) {

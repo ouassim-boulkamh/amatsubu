@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -74,18 +75,26 @@ fun ChapterNavigator(
 ) {
     val haptic = LocalHapticFeedback.current
 
-    val state = rememberSliderState(
-        value = currentPage.toFloat(),
-        steps = totalPages - 2,
-        valueRange = 1f..totalPages.toFloat(),
-    )
-    state.value = currentPage.toFloat()
-    state.onValueChange = { onPageIndexChange(it.roundToInt() - 1) }
+    val pageCount = totalPages.coerceAtLeast(0)
+    val sliderPage = currentPage.coerceIn(1, pageCount.coerceAtLeast(1))
+    val state = if (pageCount > 1) {
+        key(pageCount) {
+            rememberSliderState(
+                value = sliderPage.toFloat(),
+                steps = pageCount - 2,
+                valueRange = 1f..pageCount.toFloat(),
+            )
+        }
+    } else {
+        null
+    }
+    state?.value = sliderPage.toFloat()
+    state?.onValueChange = { onPageIndexChange(it.roundToInt() - 1) }
 
     val interactionSource = remember { MutableInteractionSource() }
     val sliderDragged by interactionSource.collectIsDraggedAsState()
-    LaunchedEffect(currentPage) {
-        if (sliderDragged) {
+    LaunchedEffect(sliderPage, state) {
+        if (sliderDragged && state != null) {
             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         }
     }
@@ -111,7 +120,7 @@ fun ChapterNavigator(
             onPreviousChapter = onPreviousChapter,
             enabledPrevious = enabledPrevious,
             currentPage = currentPage,
-            totalPages = totalPages,
+            totalPages = pageCount,
             interactionSource = interactionSource,
             mainAxisPadding = mainAxisPadding,
             backgroundColor = backgroundColor,
@@ -125,7 +134,7 @@ fun ChapterNavigator(
             onPreviousChapter = onPreviousChapter,
             enabledPrevious = enabledPrevious,
             currentPage = currentPage,
-            totalPages = totalPages,
+            totalPages = pageCount,
             interactionSource = interactionSource,
             mainAxisPadding = mainAxisPadding,
             backgroundColor = backgroundColor,
@@ -137,7 +146,7 @@ fun ChapterNavigator(
 @Composable
 fun ChapterNavigator(
     isRtl: Boolean,
-    state: SliderState,
+    state: SliderState?,
     onNextChapter: () -> Unit,
     enabledNext: Boolean,
     onPreviousChapter: () -> Unit,
@@ -172,7 +181,7 @@ fun ChapterNavigator(
                 )
             }
 
-            if (totalPages > 1) {
+            if (state != null && totalPages > 1) {
                 CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
                     Row(
                         modifier = Modifier
@@ -221,7 +230,7 @@ fun ChapterNavigator(
 
 @Composable
 fun VerticalChapterNavigator(
-    state: SliderState,
+    state: SliderState?,
     onNextChapter: () -> Unit,
     enabledNext: Boolean,
     onPreviousChapter: () -> Unit,
@@ -251,7 +260,7 @@ fun VerticalChapterNavigator(
             )
         }
 
-        if (totalPages > 1) {
+        if (state != null && totalPages > 1) {
             Column(
                 modifier = Modifier
                     .weight(1f)

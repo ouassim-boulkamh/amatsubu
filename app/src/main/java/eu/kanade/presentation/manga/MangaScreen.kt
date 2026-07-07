@@ -46,6 +46,8 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.util.fastAll
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastMap
+import androidx.compose.ui.unit.dp
+import eu.kanade.presentation.components.ServerOfflineBanner
 import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.manga.components.ChapterHeader
@@ -74,7 +76,6 @@ import tachiyomi.presentation.core.components.material.PullRefresh
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.shouldExpandFAB
-import tachiyomi.source.local.isLocal
 import java.time.Instant
 
 @Composable
@@ -91,7 +92,7 @@ fun MangaScreen(
     onAddToLibraryClicked: () -> Unit,
     onWebViewClicked: (() -> Unit)?,
     onWebViewLongClicked: (() -> Unit)?,
-    onTrackingClicked: () -> Unit,
+    onTrackingClicked: (() -> Unit)?,
 
     // For tags menu
     onTagSearch: (String) -> Unit,
@@ -102,7 +103,7 @@ fun MangaScreen(
     onSearch: (query: String, global: Boolean) -> Unit,
 
     // For cover dialog
-    onCoverClicked: () -> Unit,
+    onCoverClicked: (() -> Unit)?,
 
     // For top action menu
     onShareClicked: (() -> Unit)?,
@@ -110,13 +111,13 @@ fun MangaScreen(
     onEditCategoryClicked: (() -> Unit)?,
     onEditFetchIntervalClicked: (() -> Unit)?,
     onMigrateClicked: (() -> Unit)?,
-    onEditNotesClicked: () -> Unit,
+    onEditNotesClicked: (() -> Unit)?,
 
     // For bottom action menu
     onMultiBookmarkClicked: (List<Chapter>, bookmarked: Boolean) -> Unit,
     onMultiMarkAsReadClicked: (List<Chapter>, markAsRead: Boolean) -> Unit,
     onMarkPreviousAsReadClicked: (Chapter) -> Unit,
-    onMultiDeleteClicked: (List<Chapter>) -> Unit,
+    onMultiDeleteClicked: ((List<Chapter>) -> Unit)?,
 
     // For chapter swipe
     onChapterSwipe: (ChapterList.Item, LibraryPreferences.ChapterSwipeAction) -> Unit,
@@ -221,7 +222,7 @@ private fun MangaScreenSmallImpl(
     onAddToLibraryClicked: () -> Unit,
     onWebViewClicked: (() -> Unit)?,
     onWebViewLongClicked: (() -> Unit)?,
-    onTrackingClicked: () -> Unit,
+    onTrackingClicked: (() -> Unit)?,
 
     // For tags menu
     onTagSearch: (String) -> Unit,
@@ -233,7 +234,7 @@ private fun MangaScreenSmallImpl(
     onSearch: (query: String, global: Boolean) -> Unit,
 
     // For cover dialog
-    onCoverClicked: () -> Unit,
+    onCoverClicked: (() -> Unit)?,
 
     // For top action menu
     onShareClicked: (() -> Unit)?,
@@ -241,13 +242,13 @@ private fun MangaScreenSmallImpl(
     onEditCategoryClicked: (() -> Unit)?,
     onEditIntervalClicked: (() -> Unit)?,
     onMigrateClicked: (() -> Unit)?,
-    onEditNotesClicked: () -> Unit,
+    onEditNotesClicked: (() -> Unit)?,
 
     // For bottom action menu
     onMultiBookmarkClicked: (List<Chapter>, bookmarked: Boolean) -> Unit,
     onMultiMarkAsReadClicked: (List<Chapter>, markAsRead: Boolean) -> Unit,
     onMarkPreviousAsReadClicked: (Chapter) -> Unit,
-    onMultiDeleteClicked: (List<Chapter>) -> Unit,
+    onMultiDeleteClicked: ((List<Chapter>) -> Unit)?,
 
     // For chapter swipe
     onChapterSwipe: (ChapterList.Item, LibraryPreferences.ChapterSwipeAction) -> Unit,
@@ -319,6 +320,25 @@ private fun MangaScreenSmallImpl(
                 onMultiMarkAsReadClicked = onMultiMarkAsReadClicked,
                 onMarkPreviousAsReadClicked = onMarkPreviousAsReadClicked,
                 onDownloadChapter = onDownloadChapter,
+                isServerBacked = state.isServerBacked,
+                onSaveDeviceCopiesClicked = if (
+                    onDownloadChapter != null &&
+                    selectedChapters.fastAny { it.deviceCopyState != eu.kanade.tachiyomi.ui.manga.DeviceCopyState.FRESH }
+                ) {
+                    { onDownloadChapter(selectedChapters, ChapterDownloadAction.SAVE_DEVICE) }
+                } else {
+                    null
+                },
+                onRemoveDeviceCopiesClicked = if (
+                    onDownloadChapter != null &&
+                    selectedChapters.fastAny {
+                        it.deviceCopyState != eu.kanade.tachiyomi.ui.manga.DeviceCopyState.NONE
+                    }
+                ) {
+                    { onDownloadChapter(selectedChapters, ChapterDownloadAction.REMOVE_DEVICE) }
+                } else {
+                    null
+                },
                 onMultiDeleteClicked = onMultiDeleteClicked,
                 fillFraction = 1f,
             )
@@ -370,16 +390,43 @@ private fun MangaScreenSmallImpl(
                         bottom = contentPadding.calculateBottomPadding(),
                     ),
                 ) {
+                    state.staleSnapshot?.let { staleSnapshot ->
+                        item(
+                            key = MangaScreenItem.OFFLINE_BANNER,
+                            contentType = MangaScreenItem.OFFLINE_BANNER,
+                        ) {
+                            ServerOfflineBanner(syncedAt = staleSnapshot.syncedAt)
+                        }
+                    }
+                    if (state.pendingReadStateCount > 0) {
+                        item(
+                            key = "pending-read-state-count",
+                            contentType = MangaScreenItem.OFFLINE_BANNER,
+                        ) {
+                            Text(
+                                text = "${state.pendingReadStateCount} read-state changes will sync when Suwayomi is reachable.",
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            )
+                        }
+                    }
+
                     item(
                         key = MangaScreenItem.INFO_BOX,
                         contentType = MangaScreenItem.INFO_BOX,
                     ) {
+                        val isSourceUnavailable = state.staleSnapshot != null && state.source is StubSource
                         MangaInfoBox(
                             isTabletUi = false,
                             appBarPadding = topPadding,
                             manga = state.manga,
-                            sourceName = remember { state.source.getNameForMangaInfo() },
-                            isStubSource = remember { state.source is StubSource },
+                            sourceName = if (isSourceUnavailable) {
+                                stringResource(MR.strings.source_unavailable)
+                            } else {
+                                remember(state.source) { state.source.getNameForMangaInfo() }
+                            },
+                            isStubSource = remember(state.source, isSourceUnavailable) {
+                                state.source is StubSource && !isSourceUnavailable
+                            },
                             onCoverClick = onCoverClicked,
                             doSearch = onSearch,
                         )
@@ -437,6 +484,8 @@ private fun MangaScreenSmallImpl(
                         manga = state.manga,
                         chapters = listItem,
                         isAnyChapterSelected = chapters.fastAny { it.selected },
+                        serverActionsEnabled = state.staleSnapshot == null,
+                        deviceSaveEnabled = state.staleSnapshot == null,
                         chapterSwipeStartAction = chapterSwipeStartAction,
                         chapterSwipeEndAction = chapterSwipeEndAction,
                         onChapterClicked = onChapterClicked,
@@ -463,7 +512,7 @@ fun MangaScreenLargeImpl(
     onAddToLibraryClicked: () -> Unit,
     onWebViewClicked: (() -> Unit)?,
     onWebViewLongClicked: (() -> Unit)?,
-    onTrackingClicked: () -> Unit,
+    onTrackingClicked: (() -> Unit)?,
 
     // For tags menu
     onTagSearch: (String) -> Unit,
@@ -475,7 +524,7 @@ fun MangaScreenLargeImpl(
     onSearch: (query: String, global: Boolean) -> Unit,
 
     // For cover dialog
-    onCoverClicked: () -> Unit,
+    onCoverClicked: (() -> Unit)?,
 
     // For top action menu
     onShareClicked: (() -> Unit)?,
@@ -483,13 +532,13 @@ fun MangaScreenLargeImpl(
     onEditCategoryClicked: (() -> Unit)?,
     onEditIntervalClicked: (() -> Unit)?,
     onMigrateClicked: (() -> Unit)?,
-    onEditNotesClicked: () -> Unit,
+    onEditNotesClicked: (() -> Unit)?,
 
     // For bottom action menu
     onMultiBookmarkClicked: (List<Chapter>, bookmarked: Boolean) -> Unit,
     onMultiMarkAsReadClicked: (List<Chapter>, markAsRead: Boolean) -> Unit,
     onMarkPreviousAsReadClicked: (Chapter) -> Unit,
-    onMultiDeleteClicked: (List<Chapter>) -> Unit,
+    onMultiDeleteClicked: ((List<Chapter>) -> Unit)?,
 
     // For swipe actions
     onChapterSwipe: (ChapterList.Item, LibraryPreferences.ChapterSwipeAction) -> Unit,
@@ -558,6 +607,27 @@ fun MangaScreenLargeImpl(
                     onMultiMarkAsReadClicked = onMultiMarkAsReadClicked,
                     onMarkPreviousAsReadClicked = onMarkPreviousAsReadClicked,
                     onDownloadChapter = onDownloadChapter,
+                    isServerBacked = state.isServerBacked,
+                    onSaveDeviceCopiesClicked = if (
+                        onDownloadChapter != null &&
+                        selectedChapters.fastAny {
+                            it.deviceCopyState != eu.kanade.tachiyomi.ui.manga.DeviceCopyState.FRESH
+                        }
+                    ) {
+                        { onDownloadChapter(selectedChapters, ChapterDownloadAction.SAVE_DEVICE) }
+                    } else {
+                        null
+                    },
+                    onRemoveDeviceCopiesClicked = if (
+                        onDownloadChapter != null &&
+                        selectedChapters.fastAny {
+                            it.deviceCopyState != eu.kanade.tachiyomi.ui.manga.DeviceCopyState.NONE
+                        }
+                    ) {
+                        { onDownloadChapter(selectedChapters, ChapterDownloadAction.REMOVE_DEVICE) }
+                    } else {
+                        null
+                    },
                     onMultiDeleteClicked = onMultiDeleteClicked,
                     fillFraction = 0.5f,
                 )
@@ -610,12 +680,28 @@ fun MangaScreenLargeImpl(
                             .verticalScroll(rememberScrollState())
                             .padding(bottom = contentPadding.calculateBottomPadding()),
                     ) {
+                        state.staleSnapshot?.let { staleSnapshot ->
+                            ServerOfflineBanner(syncedAt = staleSnapshot.syncedAt)
+                        }
+                        if (state.pendingReadStateCount > 0) {
+                            Text(
+                                text = "${state.pendingReadStateCount} read-state changes will sync when Suwayomi is reachable.",
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            )
+                        }
+                        val isSourceUnavailable = state.staleSnapshot != null && state.source is StubSource
                         MangaInfoBox(
                             isTabletUi = true,
                             appBarPadding = contentPadding.calculateTopPadding(),
                             manga = state.manga,
-                            sourceName = remember { state.source.getNameForMangaInfo() },
-                            isStubSource = remember { state.source is StubSource },
+                            sourceName = if (isSourceUnavailable) {
+                                stringResource(MR.strings.source_unavailable)
+                            } else {
+                                remember(state.source) { state.source.getNameForMangaInfo() }
+                            },
+                            isStubSource = remember(state.source, isSourceUnavailable) {
+                                state.source is StubSource && !isSourceUnavailable
+                            },
                             onCoverClick = onCoverClicked,
                             doSearch = onSearch,
                         )
@@ -674,6 +760,8 @@ fun MangaScreenLargeImpl(
                                 manga = state.manga,
                                 chapters = listItem,
                                 isAnyChapterSelected = chapters.fastAny { it.selected },
+                                serverActionsEnabled = state.staleSnapshot == null,
+                                deviceSaveEnabled = state.staleSnapshot == null,
                                 chapterSwipeStartAction = chapterSwipeStartAction,
                                 chapterSwipeEndAction = chapterSwipeEndAction,
                                 onChapterClicked = onChapterClicked,
@@ -696,7 +784,10 @@ private fun SharedMangaBottomActionMenu(
     onMultiMarkAsReadClicked: (List<Chapter>, markAsRead: Boolean) -> Unit,
     onMarkPreviousAsReadClicked: (Chapter) -> Unit,
     onDownloadChapter: ((List<ChapterList.Item>, ChapterDownloadAction) -> Unit)?,
-    onMultiDeleteClicked: (List<Chapter>) -> Unit,
+    isServerBacked: Boolean,
+    onSaveDeviceCopiesClicked: (() -> Unit)?,
+    onRemoveDeviceCopiesClicked: (() -> Unit)?,
+    onMultiDeleteClicked: ((List<Chapter>) -> Unit)?,
     fillFraction: Float,
     modifier: Modifier = Modifier,
 ) {
@@ -723,11 +814,29 @@ private fun SharedMangaBottomActionMenu(
         }.takeIf {
             onDownloadChapter != null && selected.fastAny { it.downloadState != Download.State.DOWNLOADED }
         },
-        onDeleteClicked = {
-            onMultiDeleteClicked(selected.fastMap { it.chapter })
-        }.takeIf {
-            selected.fastAny { it.downloadState == Download.State.DOWNLOADED }
+        onDownloadClickedLabel = stringResource(
+            if (isServerBacked) {
+                MR.strings.action_download_to_server
+            } else {
+                MR.strings.action_download_locally
+            },
+        ),
+        onSaveDeviceCopiesClicked = onSaveDeviceCopiesClicked,
+        onRemoveDeviceCopiesClicked = onRemoveDeviceCopiesClicked,
+        onDeleteClicked = onMultiDeleteClicked?.let { onDelete ->
+            {
+                onDelete(selected.fastMap { it.chapter })
+            }.takeIf {
+                selected.fastAny { it.downloadState == Download.State.DOWNLOADED }
+            }
         },
+        onDeleteClickedLabel = stringResource(
+            if (isServerBacked) {
+                MR.strings.action_remove_server_download
+            } else {
+                MR.strings.action_delete_local_download
+            },
+        ),
     )
 }
 
@@ -735,6 +844,8 @@ private fun LazyListScope.sharedChapterItems(
     manga: Manga,
     chapters: List<ChapterList>,
     isAnyChapterSelected: Boolean,
+    serverActionsEnabled: Boolean,
+    deviceSaveEnabled: Boolean,
     chapterSwipeStartAction: LibraryPreferences.ChapterSwipeAction,
     chapterSwipeEndAction: LibraryPreferences.ChapterSwipeAction,
     onChapterClicked: (Chapter) -> Unit,
@@ -781,9 +892,13 @@ private fun LazyListScope.sharedChapterItems(
                     read = item.chapter.read,
                     bookmark = item.chapter.bookmark,
                     selected = item.selected,
-                    downloadIndicatorEnabled = !isAnyChapterSelected && !manga.isLocal(),
+                    downloadIndicatorEnabled = !isAnyChapterSelected,
                     downloadStateProvider = { item.downloadState },
                     downloadProgressProvider = { item.downloadProgress },
+                    deviceCopyState = item.deviceCopyState,
+                    deviceCopyProgress = item.deviceCopyProgress,
+                    serverActionsEnabled = serverActionsEnabled,
+                    deviceSaveEnabled = deviceSaveEnabled,
                     chapterSwipeStartAction = chapterSwipeStartAction,
                     chapterSwipeEndAction = chapterSwipeEndAction,
                     onLongClick = {

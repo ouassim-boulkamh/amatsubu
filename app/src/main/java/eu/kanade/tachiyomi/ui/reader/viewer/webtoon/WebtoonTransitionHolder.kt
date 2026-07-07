@@ -64,7 +64,12 @@ class WebtoonTransitionHolder(
      * Binds the given [transition] with this view holder, subscribing to its state.
      */
     fun bind(transition: ChapterTransition) {
-        transitionView.bind(transition, viewer.downloadManager, viewer.activity.viewModel.manga)
+        transitionView.bind(
+            transition = transition,
+            manga = viewer.activity.viewModel.manga,
+            currChapterDownloaded = viewer.activity.viewModel.isServerChapterDownloadedForReader(transition.from),
+            goingToChapterDownloaded = viewer.activity.viewModel.isServerChapterDownloadedForReader(transition.to),
+        )
 
         transition.to?.let { observeStatus(it, transition) }
     }

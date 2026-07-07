@@ -1,6 +1,5 @@
 package eu.kanade.tachiyomi.ui.updates
 
-import android.app.Application
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
@@ -10,60 +9,63 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.core.preference.asState
 import eu.kanade.core.util.addOrRemove
 import eu.kanade.core.util.insertSeparators
-import eu.kanade.domain.chapter.interactor.SetReadStatus
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.updates.UpdatesUiModel
-import eu.kanade.tachiyomi.data.download.DownloadCache
-import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.download.model.Download
-import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterWithMangaDto
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiDownloadStatusDto
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiLibraryUpdateStatusDto
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaDto
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
+import eu.kanade.tachiyomi.data.suwayomi.isSuwayomiServerUnavailable
+import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
+import eu.kanade.tachiyomi.data.suwayomi.syncTrackerProgressAfterReadStateChange
 import eu.kanade.tachiyomi.util.lang.toLocalDate
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
 import logcat.LogPriority
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.chapter.interactor.GetChapter
-import tachiyomi.domain.chapter.interactor.UpdateChapter
-import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.applyFilter
-import tachiyomi.domain.source.service.SourceManager
-import tachiyomi.domain.updates.interactor.GetUpdates
+import tachiyomi.domain.manga.model.MangaCover
 import tachiyomi.domain.updates.model.UpdatesWithRelations
 import tachiyomi.domain.updates.service.UpdatesPreferences
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import java.time.ZonedDateTime
+import kotlin.coroutines.cancellation.CancellationException
 
 class UpdatesScreenModel(
-    private val sourceManager: SourceManager = Injekt.get(),
-    private val downloadManager: DownloadManager = Injekt.get(),
-    private val downloadCache: DownloadCache = Injekt.get(),
-    private val updateChapter: UpdateChapter = Injekt.get(),
-    private val setReadStatus: SetReadStatus = Injekt.get(),
-    private val getUpdates: GetUpdates = Injekt.get(),
-    private val getManga: GetManga = Injekt.get(),
-    private val getChapter: GetChapter = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
     private val updatesPreferences: UpdatesPreferences = Injekt.get(),
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
 ) : StateScreenModel<UpdatesScreenModel.State>(State()) {
+
+    private val suwayomiProvider = SuwayomiClientProvider()
+    private val json = Injekt.get<Json>()
+    private val suwayomiClient = suwayomiProvider.graphQlClient
+    private val serverUpdatesRefreshes = MutableStateFlow(0)
+    private val serverDownloadRefreshes = MutableStateFlow(0)
+    private var recentChapterIds: Set<Long> = emptySet()
+    private var activeDownloadChapterIds: Set<Long> = emptySet()
 
     private val _events: Channel<Event> = Channel(Int.MAX_VALUE)
     val events: Flow<Event> = _events.receiveAsFlow()
@@ -76,31 +78,13 @@ class UpdatesScreenModel(
 
     init {
         screenModelScope.launchIO {
-            // Set date limit for recent chapters
-            val limit = ZonedDateTime.now().minusMonths(3).toInstant()
-
             combine(
-                // needed for SQL filters (unread, started, bookmarked, etc)
-                getUpdatesItemPreferenceFlow()
-                    .distinctUntilChanged()
-                    .flatMapLatest {
-                        getUpdates.subscribe(
-                            limit,
-                            unread = it.filterUnread.toBooleanOrNull(),
-                            started = it.filterStarted.toBooleanOrNull(),
-                            bookmarked = it.filterBookmarked.toBooleanOrNull(),
-                            hideExcludedScanlators = it.filterExcludedScanlators,
-                        ).distinctUntilChanged()
-                    },
-                downloadCache.changes,
-                downloadManager.queueState,
-                // needed for Kotlin filters (downloaded)
-                getUpdatesItemPreferenceFlow().distinctUntilChanged { old, new ->
-                    old.filterDownloaded == new.filterDownloaded
-                },
-            ) { updates, _, _, itemPreferences ->
+                serverUpdatesRefreshes.flatMapLatest { getServerUpdatesFlow() },
+                serverDownloadRefreshes.flatMapLatest { getServerDownloadStatusFlow() },
+                getUpdatesItemPreferenceFlow().distinctUntilChanged(),
+            ) { updates, downloadStatus, itemPreferences ->
                 updates
-                    .toUpdateItems()
+                    .toUpdateItems(downloadStatus)
                     .applyFilters(itemPreferences)
             }
                 .collectLatest { updateItems ->
@@ -111,12 +95,6 @@ class UpdatesScreenModel(
                         )
                     }
                 }
-        }
-
-        screenModelScope.launchIO {
-            merge(downloadManager.statusFlow(), downloadManager.progressFlow())
-                .catch { logcat(LogPriority.ERROR, it) }
-                .collect(this@UpdatesScreenModel::updateDownloadState)
         }
 
         getUpdatesItemPreferenceFlow()
@@ -136,112 +114,233 @@ class UpdatesScreenModel(
                 }
             }
             .launchIn(screenModelScope)
+
+        ServerStateSync.refreshes
+            .onEach {
+                serverUpdatesRefreshes.update { it + 1 }
+                serverDownloadRefreshes.update { it + 1 }
+            }
+            .launchIn(screenModelScope)
+
+        suwayomiProvider.liveStatusClient.libraryUpdateStatusFlow()
+            .onEach { status ->
+                mutableState.update { state ->
+                    state.copy(libraryUpdateStatus = status.toLibraryUpdateState())
+                }
+            }
+            .launchIn(screenModelScope)
     }
 
     private fun List<UpdatesItem>.applyFilters(
         preferences: ItemPreferences,
     ): List<UpdatesItem> {
         val filterDownloaded = preferences.filterDownloaded
+        val filterUnread = preferences.filterUnread
+        val filterStarted = preferences.filterStarted
+        val filterBookmarked = preferences.filterBookmarked
+        val filterExcludedScanlators = preferences.filterExcludedScanlators
 
         val filterFnDownloaded: (UpdatesItem) -> Boolean = {
             applyFilter(filterDownloaded) {
                 it.downloadStateProvider() == Download.State.DOWNLOADED
             }
         }
+        val filterFnUnread: (UpdatesItem) -> Boolean = {
+            applyFilter(filterUnread) {
+                !it.update.read
+            }
+        }
+        val filterFnStarted: (UpdatesItem) -> Boolean = {
+            applyFilter(filterStarted) {
+                it.update.lastPageRead > 0
+            }
+        }
+        val filterFnBookmarked: (UpdatesItem) -> Boolean = {
+            applyFilter(filterBookmarked) {
+                it.update.bookmark
+            }
+        }
+        val filterFnExcludedScanlators: (UpdatesItem) -> Boolean = {
+            !filterExcludedScanlators || it.update.scanlator !in it.excludedScanlators
+        }
 
         return fastFilter {
-            filterFnDownloaded(it)
+            filterFnDownloaded(it) &&
+                filterFnUnread(it) &&
+                filterFnStarted(it) &&
+                filterFnBookmarked(it) &&
+                filterFnExcludedScanlators(it)
         }
     }
 
-    private fun List<UpdatesWithRelations>.toUpdateItems(): List<UpdatesItem> {
+    private fun getServerUpdatesFlow(): Flow<List<SuwayomiChapterWithMangaDto>> = flow {
+        val result = runCatching { suwayomiClient.getRecentChapters() }
+            .onFailure { error ->
+                logcat(LogPriority.ERROR, error) { "Failed to load server updates" }
+                mutableState.update { it.copy(serverUnavailable = error.isSuwayomiServerUnavailable()) }
+                _events.send(if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError)
+            }
+            .onSuccess {
+                mutableState.update { it.copy(serverUnavailable = false) }
+            }
+        val updates = result.getOrDefault(emptyList())
+        recentChapterIds = updates.mapTo(mutableSetOf()) { it.id.toLong() }
+        emit(updates)
+    }
+
+    private fun getServerDownloadStatusFlow(): Flow<SuwayomiDownloadStatusDto?> = flow {
+        emit(null)
+        emitAll(
+            suwayomiProvider.liveStatusClient.downloadStatusFlow()
+                .onEach(::refreshUpdatesWhenVisibleDownloadLeavesQueue),
+        )
+    }
+
+    private fun refreshUpdatesWhenVisibleDownloadLeavesQueue(status: SuwayomiDownloadStatusDto) {
+        val nextActiveIds = status.queue.mapTo(mutableSetOf()) { it.chapter.id.toLong() }
+        val removedVisibleIds = activeDownloadChapterIds
+            .intersect(recentChapterIds)
+            .subtract(nextActiveIds)
+        activeDownloadChapterIds = nextActiveIds
+        if (removedVisibleIds.isNotEmpty()) {
+            serverUpdatesRefreshes.update { it + 1 }
+        }
+    }
+
+    fun refreshServerState() {
+        serverUpdatesRefreshes.update { it + 1 }
+        serverDownloadRefreshes.update { it + 1 }
+    }
+
+    private fun List<SuwayomiChapterWithMangaDto>.toUpdateItems(
+        downloadStatus: SuwayomiDownloadStatusDto?,
+    ): List<UpdatesItem> {
+        val queuedDownloads = downloadStatus
+            ?.queue
+            ?.associateBy { it.chapter.id.toLong() }
+            .orEmpty()
         return this
-            .map { update ->
-                val activeDownload = downloadManager.getQueuedDownloadOrNull(update.chapterId)
-                val downloaded = downloadManager.isChapterDownloaded(
-                    update.chapterName,
-                    update.scanlator,
-                    update.chapterUrl,
-                    update.mangaTitle,
-                    update.sourceId,
-                )
+            .map { chapter ->
+                val manga = chapter.manga
+                val mangaId = manga.id.toLong()
+                val chapterId = chapter.id.toLong()
+                val sourceId = manga.sourceId.toLongOrNull() ?: 0L
+                val activeDownload = queuedDownloads[chapterId]
                 val downloadState = when {
-                    activeDownload != null -> activeDownload.status
-                    downloaded -> Download.State.DOWNLOADED
+                    activeDownload != null -> activeDownload.state.toDownloadState()
+                    chapter.isDownloaded -> Download.State.DOWNLOADED
                     else -> Download.State.NOT_DOWNLOADED
                 }
                 UpdatesItem(
-                    update = update,
+                    update = UpdatesWithRelations(
+                        mangaId = mangaId,
+                        mangaTitle = manga.title,
+                        chapterId = chapterId,
+                        chapterName = chapter.name,
+                        scanlator = chapter.scanlator,
+                        chapterUrl = chapter.url,
+                        read = chapter.isRead,
+                        bookmark = chapter.isBookmarked,
+                        lastPageRead = chapter.lastPageRead.toLong(),
+                        sourceId = sourceId,
+                        dateFetch = chapter.fetchedAt.toLongOrNull() ?: chapter.uploadDate,
+                        coverData = MangaCover(
+                            mangaId = mangaId,
+                            sourceId = sourceId,
+                            isMangaFavorite = manga.inLibrary,
+                            url = manga.thumbnailUrl?.let { resolveServerUrl(suwayomiProvider.baseUrl(), it) },
+                            lastModified = 0L,
+                        ),
+                    ),
                     downloadStateProvider = { downloadState },
-                    downloadProgressProvider = { activeDownload?.progress ?: 0 },
-                    selected = update.chapterId in selectedChapterIds,
+                    downloadProgressProvider = { activeDownload?.progress.toDownloadProgress() },
+                    excludedScanlators = manga.excludedScanlators(),
+                    selected = chapterId in selectedChapterIds,
                 )
             }
+    }
+
+    private fun SuwayomiMangaDto.excludedScanlators(): Set<String> {
+        val value = meta.firstOrNull { it.key == SERVER_EXCLUDED_SCANLATORS_META_KEY }?.value ?: return emptySet()
+        return runCatching {
+            json.decodeFromString(ListSerializer(String.serializer()), value).toSet()
+        }.getOrDefault(emptySet())
     }
 
     fun updateLibrary(): Boolean {
-        val started = LibraryUpdateJob.startNow(Injekt.get<Application>())
-        screenModelScope.launch {
-            _events.send(Event.LibraryUpdateTriggered(started))
+        if (state.value.libraryUpdateStatus.isRunning) {
+            stopLibraryUpdate()
+            return false
         }
-        return started
+        screenModelScope.launchIO {
+            runCatching {
+                suwayomiClient.updateLibraryMangas()
+            }.onSuccess { started ->
+                libraryPreferences.lastUpdatedTimestamp.set(System.currentTimeMillis())
+                serverUpdatesRefreshes.update { it + 1 }
+                ServerStateSync.requestRefresh()
+                _events.send(Event.LibraryUpdateTriggered(started))
+            }.onFailure { error ->
+                logcat(LogPriority.ERROR, error) { "Failed to trigger server library update" }
+                _events.send(if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError)
+            }
+        }
+        return true
     }
 
-    /**
-     * Update status of chapters.
-     *
-     * @param download download object containing progress.
-     */
-    private fun updateDownloadState(download: Download) {
-        mutableState.update { state ->
-            val newItems = state.items.toMutableList().also { list ->
-                val modifiedIndex = list.indexOfFirst { it.update.chapterId == download.chapter.id }
-                if (modifiedIndex < 0) return@also
-
-                val item = list[modifiedIndex]
-                list[modifiedIndex] = item.copy(
-                    downloadStateProvider = { download.status },
-                    downloadProgressProvider = { download.progress },
-                )
+    private fun stopLibraryUpdate() {
+        screenModelScope.launchIO {
+            runCatching {
+                suwayomiClient.stopLibraryUpdate()
+            }.onSuccess {
+                serverUpdatesRefreshes.update { it + 1 }
+                ServerStateSync.requestRefresh()
+                _events.send(Event.LibraryUpdateStopped)
+            }.onFailure { error ->
+                if (error is CancellationException) throw error
+                logcat(LogPriority.ERROR, error) { "Failed to stop server library update from Updates" }
+                _events.send(if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError)
             }
-            state.copy(items = newItems)
         }
     }
 
     fun downloadChapters(items: List<UpdatesItem>, action: ChapterDownloadAction) {
         if (items.isEmpty()) return
-        screenModelScope.launch {
+        screenModelScope.launchNonCancellable {
             when (action) {
                 ChapterDownloadAction.START -> {
-                    downloadChapters(items)
-                    if (items.any { it.downloadStateProvider() == Download.State.ERROR }) {
-                        downloadManager.startDownloads()
-                    }
+                    enqueueDownloads(items)
                 }
                 ChapterDownloadAction.START_NOW -> {
-                    val chapterId = items.singleOrNull()?.update?.chapterId ?: return@launch
-                    startDownloadingNow(chapterId)
+                    enqueueDownloads(listOfNotNull(items.singleOrNull()), startDownloader = true)
                 }
                 ChapterDownloadAction.CANCEL -> {
-                    val chapterId = items.singleOrNull()?.update?.chapterId ?: return@launch
-                    cancelDownload(chapterId)
+                    val chapterIds = items.map { it.update.chapterId.toInt() }
+                    runServerDownloadAction {
+                        suwayomiClient.dequeueChapterDownloads(chapterIds)
+                    }
                 }
                 ChapterDownloadAction.DELETE -> {
                     deleteChapters(items)
                 }
+                ChapterDownloadAction.SAVE_DEVICE,
+                ChapterDownloadAction.REMOVE_DEVICE,
+                ChapterDownloadAction.REFRESH_DEVICE,
+                -> Unit
             }
             toggleAllSelection(false)
         }
     }
 
-    private fun startDownloadingNow(chapterId: Long) {
-        downloadManager.startDownloadNow(chapterId)
-    }
-
-    private fun cancelDownload(chapterId: Long) {
-        val activeDownload = downloadManager.getQueuedDownloadOrNull(chapterId) ?: return
-        downloadManager.cancelQueuedDownloads(listOf(activeDownload))
-        updateDownloadState(activeDownload.apply { status = Download.State.NOT_DOWNLOADED })
+    private suspend fun enqueueDownloads(items: List<UpdatesItem>, startDownloader: Boolean = false) {
+        val chapterIds = items.map { it.update.chapterId.toInt() }
+        if (chapterIds.isEmpty()) return
+        runServerDownloadAction {
+            suwayomiClient.enqueueChapterDownloads(chapterIds)
+            if (startDownloader) {
+                suwayomiClient.startDownloader()
+            }
+        }
     }
 
     /**
@@ -251,12 +350,29 @@ class UpdatesScreenModel(
      */
     fun markUpdatesRead(updates: List<UpdatesItem>, read: Boolean) {
         screenModelScope.launchIO {
-            setReadStatus.await(
-                read = read,
-                chapters = updates
-                    .mapNotNull { getChapter.await(it.update.chapterId) }
-                    .toTypedArray(),
-            )
+            runCatching {
+                val chapterIds = updates
+                    .filterNot { it.update.read == read }
+                    .map { it.update.chapterId.toInt() }
+                suwayomiClient.updateChaptersRead(chapterIds, read)
+                val changedMangaIds = updates
+                    .filterNot { it.update.read == read }
+                    .map { it.update.mangaId.toInt() }
+                syncTrackerProgressAfterReadStateChange(
+                    read = read,
+                    changedMangaIds = changedMangaIds,
+                    trackProgress = suwayomiClient::trackProgress,
+                    onFailure = { error ->
+                        logcat(LogPriority.ERROR, error) { "Failed to update server tracker progress from Updates" }
+                    },
+                )
+            }.onSuccess {
+                serverUpdatesRefreshes.update { it + 1 }
+                ServerStateSync.requestRefresh()
+            }.onFailure { error ->
+                logcat(LogPriority.ERROR, error) { "Failed to update server chapter read state from Updates" }
+                _events.send(if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError)
+            }
         }
         toggleAllSelection(false)
     }
@@ -267,30 +383,20 @@ class UpdatesScreenModel(
      */
     fun bookmarkUpdates(updates: List<UpdatesItem>, bookmark: Boolean) {
         screenModelScope.launchIO {
-            updates
-                .filterNot { it.update.bookmark == bookmark }
-                .map { ChapterUpdate(id = it.update.chapterId, bookmark = bookmark) }
-                .let { updateChapter.awaitAll(it) }
-        }
-        toggleAllSelection(false)
-    }
-
-    /**
-     * Downloads the given list of chapters with the manager.
-     * @param updatesItem the list of chapters to download.
-     */
-    private fun downloadChapters(updatesItem: List<UpdatesItem>) {
-        screenModelScope.launchNonCancellable {
-            val groupedUpdates = updatesItem.groupBy { it.update.mangaId }.values
-            for (updates in groupedUpdates) {
-                val mangaId = updates.first().update.mangaId
-                val manga = getManga.await(mangaId) ?: continue
-                // Don't download if source isn't available
-                sourceManager.get(manga.source) ?: continue
-                val chapters = updates.mapNotNull { getChapter.await(it.update.chapterId) }
-                downloadManager.downloadChapters(manga, chapters)
+            runCatching {
+                val chapterIds = updates
+                    .filterNot { it.update.bookmark == bookmark }
+                    .map { it.update.chapterId.toInt() }
+                suwayomiClient.updateChaptersBookmark(chapterIds, bookmark)
+            }.onSuccess {
+                serverUpdatesRefreshes.update { it + 1 }
+                ServerStateSync.requestRefresh()
+            }.onFailure { error ->
+                logcat(LogPriority.ERROR, error) { "Failed to update server chapter bookmark state from Updates" }
+                _events.send(if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError)
             }
         }
+        toggleAllSelection(false)
     }
 
     /**
@@ -300,17 +406,46 @@ class UpdatesScreenModel(
      */
     fun deleteChapters(updatesItem: List<UpdatesItem>) {
         screenModelScope.launchNonCancellable {
-            updatesItem
-                .groupBy { it.update.mangaId }
-                .entries
-                .forEach { (mangaId, updates) ->
-                    val manga = getManga.await(mangaId) ?: return@forEach
-                    val source = sourceManager.get(manga.source) ?: return@forEach
-                    val chapters = updates.mapNotNull { getChapter.await(it.update.chapterId) }
-                    downloadManager.deleteChapters(chapters, manga, source)
-                }
+            runServerDownloadAction {
+                suwayomiClient.deleteDownloadedChapters(updatesItem.map { it.update.chapterId.toInt() })
+            }
         }
         toggleAllSelection(false)
+    }
+
+    private suspend fun runServerDownloadAction(action: suspend () -> Unit) {
+        runCatching {
+            action()
+        }.onSuccess {
+            serverUpdatesRefreshes.update { it + 1 }
+            serverDownloadRefreshes.update { it + 1 }
+            ServerStateSync.requestRefresh()
+        }.onFailure { error ->
+            if (error is CancellationException) throw error
+            logcat(LogPriority.ERROR, error) { "Failed to update server download state from Updates" }
+            _events.send(if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError)
+        }
+    }
+
+    private fun String.toDownloadState(): Download.State {
+        return when {
+            equals("DOWNLOADED", ignoreCase = true) ||
+                equals("FINISHED", ignoreCase = true) ||
+                equals("DONE", ignoreCase = true) -> Download.State.DOWNLOADED
+            equals("ERROR", ignoreCase = true) ||
+                equals("FAILED", ignoreCase = true) -> Download.State.ERROR
+            contains("DOWNLOAD", ignoreCase = true) ||
+                equals("STARTED", ignoreCase = true) -> Download.State.DOWNLOADING
+            else -> Download.State.QUEUE
+        }
+    }
+
+    private fun Double?.toDownloadProgress(): Int {
+        val value = this ?: return 0
+        return when {
+            value <= 1.0 -> (value * 100).toInt()
+            else -> value.toInt()
+        }.coerceIn(0, 100)
     }
 
     fun showConfirmDeleteChapters(updatesItem: List<UpdatesItem>) {
@@ -447,7 +582,9 @@ class UpdatesScreenModel(
     @Immutable
     data class State(
         val isLoading: Boolean = true,
+        val serverUnavailable: Boolean = false,
         val hasActiveFilters: Boolean = false,
+        val libraryUpdateStatus: LibraryUpdateState = LibraryUpdateState(),
         val items: List<UpdatesItem> = listOf(),
         val dialog: Dialog? = null,
     ) {
@@ -476,16 +613,25 @@ class UpdatesScreenModel(
 
     sealed interface Event {
         data object InternalError : Event
+        data object ServerUnavailable : Event
+        data object LibraryUpdateStopped : Event
         data class LibraryUpdateTriggered(val started: Boolean) : Event
     }
 }
 
-private fun TriState.toBooleanOrNull(): Boolean? {
-    return when (this) {
-        TriState.DISABLED -> null
-        TriState.ENABLED_IS -> true
-        TriState.ENABLED_NOT -> false
-    }
+@Immutable
+data class LibraryUpdateState(
+    val isRunning: Boolean = false,
+    val totalJobs: Int = 0,
+    val finishedJobs: Int = 0,
+)
+
+private fun SuwayomiLibraryUpdateStatusDto.toLibraryUpdateState(): LibraryUpdateState {
+    return LibraryUpdateState(
+        isRunning = jobsInfo.isRunning,
+        totalJobs = jobsInfo.totalJobs,
+        finishedJobs = jobsInfo.finishedJobs,
+    )
 }
 
 @Immutable
@@ -493,5 +639,8 @@ data class UpdatesItem(
     val update: UpdatesWithRelations,
     val downloadStateProvider: () -> Download.State,
     val downloadProgressProvider: () -> Int,
+    val excludedScanlators: Set<String> = emptySet(),
     val selected: Boolean = false,
 )
+
+private const val SERVER_EXCLUDED_SCANLATORS_META_KEY = "amatsubu.excludedScanlators"

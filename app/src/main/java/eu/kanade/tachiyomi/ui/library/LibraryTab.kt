@@ -7,9 +7,11 @@ import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -20,7 +22,9 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.util.fastAll
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
@@ -36,18 +40,19 @@ import eu.kanade.presentation.manga.components.LibraryBottomActionMenu
 import eu.kanade.presentation.more.onboarding.GETTING_STARTED_URL
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
-import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
-import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
+import eu.kanade.tachiyomi.ui.browse.ServerGlobalSearchScreen
+import eu.kanade.tachiyomi.ui.browse.migration.search.ServerMigrateSearchScreen
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
+import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import mihon.feature.migration.config.MigrationConfigScreen
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.domain.category.model.Category
@@ -59,7 +64,7 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.EmptyScreenAction
 import tachiyomi.presentation.core.screens.LoadingScreen
-import tachiyomi.source.local.isLocal
+import kotlin.time.Duration.Companion.seconds
 
 data object LibraryTab : Tab {
 
@@ -85,24 +90,32 @@ data object LibraryTab : Tab {
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
         val haptic = LocalHapticFeedback.current
+        val lifecycleOwner = LocalLifecycleOwner.current
 
         val screenModel = rememberScreenModel { LibraryScreenModel() }
         val settingsScreenModel = rememberScreenModel { LibrarySettingsScreenModel() }
         val state by screenModel.state.collectAsState()
+        val isOfflineSnapshot = state.libraryData.staleSnapshot != null
 
         val snackbarHostState = remember { SnackbarHostState() }
 
         val onClickRefresh: (Category?) -> Boolean = { category ->
-            val started = LibraryUpdateJob.startNow(context, category)
+            if (isOfflineSnapshot) {
+                scope.launch {
+                    snackbarHostState.showSnackbar(context.stringResource(MR.strings.server_offline_actions_disabled))
+                }
+                false
+            } else {
             scope.launch {
+                val started = screenModel.updateServerLibrary(category)
                 val msgRes = when {
                     !started -> MR.strings.update_already_running
-                    category != null -> MR.strings.updating_category
                     else -> MR.strings.updating_library
                 }
                 snackbarHostState.showSnackbar(context.stringResource(msgRes))
             }
-            started
+            true
+            }
         }
 
         Scaffold(
@@ -122,11 +135,22 @@ data object LibraryTab : Tab {
                     onClickFilter = screenModel::showSettingsDialog,
                     onClickRefresh = { onClickRefresh(state.activeCategory) },
                     onClickGlobalUpdate = { onClickRefresh(null) },
+                    onClickStopUpdate = if (isOfflineSnapshot) {
+                        { onClickRefresh(null); Unit }
+                    } else {
+                        screenModel::stopServerLibraryUpdate
+                    },
+                    libraryUpdateRunning = state.libraryUpdateStatus.isRunning,
                     onClickOpenRandomManga = {
                         scope.launch {
                             val randomItem = screenModel.getRandomLibraryItemForCurrentCategory()
                             if (randomItem != null) {
-                                navigator.push(MangaScreen(randomItem.libraryManga.manga.id))
+                                navigator.push(
+                                    MangaScreen(
+                                        randomItem.libraryManga.manga.id,
+                                        fetchChaptersOnOpen = false,
+                                    ),
+                                )
                             } else {
                                 snackbarHostState.showSnackbar(
                                     context.stringResource(MR.strings.information_no_entries_found),
@@ -142,17 +166,22 @@ data object LibraryTab : Tab {
             },
             bottomBar = {
                 LibraryBottomActionMenu(
-                    visible = state.selectionMode,
+                    visible = state.selectionMode && !isOfflineSnapshot,
                     onChangeCategoryClicked = screenModel::openChangeCategoryDialog,
                     onMarkAsReadClicked = { screenModel.markReadSelection(true) },
                     onMarkAsUnreadClicked = { screenModel.markReadSelection(false) },
-                    onDownloadClicked = screenModel::performDownloadAction
-                        .takeIf { state.selectedManga.fastAll { !it.isLocal() } },
+                    onDownloadClicked = screenModel::performDownloadAction,
                     onDeleteClicked = screenModel::openDeleteMangaDialog,
-                    onMigrateClicked = {
-                        val selection = state.selection
-                        screenModel.clearSelection()
-                        navigator.push(MigrationConfigScreen(selection))
+                    onMigrateClicked = state.selectedManga.map { it.id }.takeIf { it.isNotEmpty() && !isOfflineSnapshot }?.let { mangaIds ->
+                        {
+                            screenModel.clearSelection()
+                            navigator.push(
+                                ServerMigrateSearchScreen(
+                                    currentMangaId = mangaIds.first(),
+                                    currentMangaIds = mangaIds,
+                                ),
+                            )
+                        }
                     },
                 )
             },
@@ -161,6 +190,19 @@ data object LibraryTab : Tab {
             when {
                 state.isLoading -> {
                     LoadingScreen(Modifier.padding(contentPadding))
+                }
+                state.serverUnavailable && state.libraryData.staleSnapshot == null -> {
+                    EmptyScreen(
+                        stringRes = MR.strings.server_unreachable,
+                        modifier = Modifier.padding(contentPadding),
+                        actions = listOf(
+                            EmptyScreenAction(
+                                stringRes = MR.strings.pref_category_server,
+                                icon = Icons.Outlined.Settings,
+                                onClick = { navigator.push(SettingsScreen(SettingsScreen.Destination.Server)) },
+                            ),
+                        ),
+                    )
                 }
                 state.searchQuery.isNullOrEmpty() && !state.hasActiveFilters && state.isLibraryEmpty -> {
                     val handler = LocalUriHandler.current
@@ -184,15 +226,22 @@ data object LibraryTab : Tab {
                         contentPadding = contentPadding,
                         currentPage = state.coercedActiveCategoryIndex,
                         hasActiveFilters = state.hasActiveFilters,
+                        staleSnapshotSyncedAt = state.libraryData.staleSnapshot?.syncedAt,
                         showPageTabs = state.showCategoryTabs || !state.searchQuery.isNullOrEmpty(),
                         onChangeCurrentPage = screenModel::updateActiveCategoryIndex,
-                        onClickManga = { navigator.push(MangaScreen(it)) },
+                        onClickManga = { navigator.push(MangaScreen(it, fetchChaptersOnOpen = false)) },
                         onContinueReadingClicked = { it: LibraryManga ->
                             scope.launchIO {
-                                val chapter = screenModel.getNextUnreadChapter(it.manga)
+                                if (isOfflineSnapshot) {
+                                    snackbarHostState.showSnackbar(
+                                        context.stringResource(MR.strings.server_offline_reader_unavailable),
+                                    )
+                                    return@launchIO
+                                }
+                                val chapter = screenModel.getServerNextUnreadChapter(it.manga)
                                 if (chapter != null) {
                                     context.startActivity(
-                                        ReaderActivity.newIntent(context, chapter.mangaId, chapter.id),
+                                        ReaderActivity.newIntent(context, chapter.mangaId, chapter.id, true),
                                     )
                                 } else {
                                     snackbarHostState.showSnackbar(context.stringResource(MR.strings.no_next_chapter))
@@ -207,7 +256,7 @@ data object LibraryTab : Tab {
                         },
                         onRefresh = { onClickRefresh(state.activeCategory) },
                         onGlobalSearchClicked = {
-                            navigator.push(GlobalSearchScreen(screenModel.state.value.searchQuery ?: ""))
+                            navigator.push(ServerGlobalSearchScreen(screenModel.state.value.searchQuery ?: ""))
                         },
                         getItemCountForCategory = { state.getItemCountForCategory(it) },
                         getDisplayMode = { screenModel.getDisplayMode() },
@@ -243,7 +292,7 @@ data object LibraryTab : Tab {
             }
             is LibraryScreenModel.Dialog.DeleteManga -> {
                 DeleteLibraryMangaDialog(
-                    containsLocalManga = dialog.manga.any(Manga::isLocal),
+                    containsLocalManga = state.selectedMangaContainsLocal,
                     onDismissRequest = onDismissRequest,
                     onConfirm = { deleteManga, deleteChapter ->
                         screenModel.removeMangas(dialog.manga, deleteManga, deleteChapter)
@@ -274,6 +323,25 @@ data object LibraryTab : Tab {
         LaunchedEffect(Unit) {
             launch { queryEvent.receiveAsFlow().collect(screenModel::search) }
             launch { requestSettingsSheetEvent.receiveAsFlow().collectLatest { screenModel.showSettingsDialog() } }
+        }
+
+        LaunchedEffect(screenModel) {
+            while (true) {
+                delay(30.seconds)
+                screenModel.refreshServerLibrary()
+            }
+        }
+
+        DisposableEffect(lifecycleOwner, screenModel) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    screenModel.refreshServerLibrary()
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(observer)
+            }
         }
     }
 

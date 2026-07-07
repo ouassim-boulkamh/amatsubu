@@ -3,6 +3,7 @@ package eu.kanade.presentation.browse
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
@@ -21,8 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.browse.components.BaseSourceItem
-import eu.kanade.tachiyomi.ui.browse.source.SourcesScreenModel
-import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreenModel.Listing
 import eu.kanade.tachiyomi.util.system.LocaleHelper
 import tachiyomi.domain.source.model.Pin
 import tachiyomi.domain.source.model.Source
@@ -36,15 +35,15 @@ import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.presentation.core.theme.header
 import tachiyomi.presentation.core.util.plus
-import tachiyomi.source.local.isLocal
 
 @Composable
 fun SourcesScreen(
-    state: SourcesScreenModel.State,
+    state: SourcesState,
     contentPadding: PaddingValues,
-    onClickItem: (Source, Listing) -> Unit,
+    onClickItem: (Source, SourceListing) -> Unit,
     onClickPin: (Source) -> Unit,
     onLongClickItem: (Source) -> Unit,
+    sourceIcon: (@Composable RowScope.(Source) -> Unit)? = null,
 ) {
     when {
         state.isLoading -> LoadingScreen(Modifier.padding(contentPadding))
@@ -84,6 +83,7 @@ fun SourcesScreen(
                             onClickItem = onClickItem,
                             onLongClickItem = onLongClickItem,
                             onClickPin = onClickPin,
+                            sourceIcon = sourceIcon,
                         )
                     }
                 }
@@ -109,33 +109,46 @@ private fun SourceHeader(
 @Composable
 private fun SourceItem(
     source: Source,
-    onClickItem: (Source, Listing) -> Unit,
+    onClickItem: (Source, SourceListing) -> Unit,
     onLongClickItem: (Source) -> Unit,
     onClickPin: (Source) -> Unit,
     modifier: Modifier = Modifier,
+    sourceIcon: (@Composable RowScope.(Source) -> Unit)? = null,
 ) {
-    BaseSourceItem(
-        modifier = modifier,
-        source = source,
-        onClickItem = { onClickItem(source, Listing.Popular) },
-        onLongClickItem = { onLongClickItem(source) },
-        action = {
-            if (source.supportsLatest) {
-                TextButton(onClick = { onClickItem(source, Listing.Latest) }) {
-                    Text(
-                        text = stringResource(MR.strings.latest),
-                        style = LocalTextStyle.current.copy(
-                            color = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                }
+    val action: @Composable RowScope.(Source) -> Unit = {
+        if (source.supportsLatest) {
+            TextButton(onClick = { onClickItem(source, SourceListing.Latest) }) {
+                Text(
+                    text = stringResource(MR.strings.latest),
+                    style = LocalTextStyle.current.copy(
+                        color = MaterialTheme.colorScheme.primary,
+                    ),
+                )
             }
-            SourcePinButton(
-                isPinned = Pin.Pinned in source.pin,
-                onClick = { onClickPin(source) },
-            )
-        },
-    )
+        }
+        SourcePinButton(
+            isPinned = Pin.Pinned in source.pin,
+            onClick = { onClickPin(source) },
+        )
+    }
+    if (sourceIcon == null) {
+        BaseSourceItem(
+            modifier = modifier,
+            source = source,
+            onClickItem = { onClickItem(source, SourceListing.Popular) },
+            onLongClickItem = { onLongClickItem(source) },
+            action = action,
+        )
+    } else {
+        BaseSourceItem(
+            modifier = modifier,
+            source = source,
+            onClickItem = { onClickItem(source, SourceListing.Popular) },
+            onLongClickItem = { onLongClickItem(source) },
+            icon = sourceIcon,
+            action = action,
+        )
+    }
 }
 
 @Composable
@@ -182,15 +195,13 @@ fun SourceOptionsDialog(
                         .fillMaxWidth()
                         .padding(vertical = 16.dp),
                 )
-                if (!source.isLocal()) {
-                    Text(
-                        text = stringResource(MR.strings.action_disable),
-                        modifier = Modifier
-                            .clickable(onClick = onClickDisable)
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                    )
-                }
+                Text(
+                    text = stringResource(MR.strings.action_disable),
+                    modifier = Modifier
+                        .clickable(onClick = onClickDisable)
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                )
             }
         },
         onDismissRequest = onDismiss,
@@ -201,4 +212,22 @@ fun SourceOptionsDialog(
 sealed interface SourceUiModel {
     data class Item(val source: Source) : SourceUiModel
     data class Header(val language: String) : SourceUiModel
+}
+
+data class SourcesState(
+    val isLoading: Boolean = true,
+    val items: List<SourceUiModel> = emptyList(),
+) {
+    val isEmpty: Boolean
+        get() = items.isEmpty()
+}
+
+enum class SourceListing {
+    Popular,
+    Latest,
+}
+
+object SourceGroup {
+    const val PINNED_KEY = "pinned"
+    const val LAST_USED_KEY = "last_used"
 }

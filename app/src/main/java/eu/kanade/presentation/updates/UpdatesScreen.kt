@@ -9,6 +9,7 @@ import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.FlipToBack
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.SelectAll
+import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
@@ -71,6 +72,7 @@ fun UpdateScreen(
             UpdatesAppBar(
                 onCalendarClicked = { onCalendarClicked() },
                 onUpdateLibrary = { onUpdateLibrary() },
+                libraryUpdateRunning = state.libraryUpdateStatus.isRunning,
                 onFilterClicked = { onFilterClicked() },
                 hasFilters = hasActiveFilters,
                 actionModeCounter = state.selected.size,
@@ -93,6 +95,10 @@ fun UpdateScreen(
     ) { contentPadding ->
         when {
             state.isLoading -> LoadingScreen(Modifier.padding(contentPadding))
+            state.serverUnavailable -> EmptyScreen(
+                stringRes = MR.strings.server_unreachable,
+                modifier = Modifier.padding(contentPadding),
+            )
             state.items.isEmpty() -> EmptyScreen(
                 stringRes = MR.strings.information_no_recent,
                 modifier = Modifier.padding(contentPadding),
@@ -140,6 +146,7 @@ fun UpdateScreen(
 private fun UpdatesAppBar(
     onCalendarClicked: () -> Unit,
     onUpdateLibrary: () -> Unit,
+    libraryUpdateRunning: Boolean,
     onFilterClicked: () -> Unit,
     hasFilters: Boolean,
     // For action mode
@@ -169,7 +176,7 @@ private fun UpdatesAppBar(
                     ),
                     AppBar.Action(
                         title = stringResource(MR.strings.action_update_library),
-                        icon = Icons.Outlined.Refresh,
+                        icon = if (libraryUpdateRunning) Icons.Outlined.Stop else Icons.Outlined.Refresh,
                         onClick = onUpdateLibrary,
                     ),
                 ),

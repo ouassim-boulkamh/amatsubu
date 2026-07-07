@@ -9,14 +9,14 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ChromeReaderMode
-import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Explore
-import androidx.compose.material.icons.outlined.GetApp
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.LocalContentColor
@@ -190,18 +190,6 @@ object SettingsMainScreen : Screen() {
             screen = SettingsReaderScreen,
         ),
         Item(
-            titleRes = MR.strings.pref_category_downloads,
-            subtitleRes = MR.strings.pref_downloads_summary,
-            icon = Icons.Outlined.GetApp,
-            screen = SettingsDownloadScreen,
-        ),
-        Item(
-            titleRes = MR.strings.pref_category_tracking,
-            subtitleRes = MR.strings.pref_tracking_summary,
-            icon = Icons.Outlined.Sync,
-            screen = SettingsTrackingScreen,
-        ),
-        Item(
             titleRes = MR.strings.browse,
             subtitleRes = MR.strings.pref_browse_summary,
             icon = Icons.Outlined.Explore,
@@ -214,6 +202,18 @@ object SettingsMainScreen : Screen() {
             screen = SettingsDataScreen,
         ),
         Item(
+            titleRes = MR.strings.pref_category_server,
+            subtitleRes = MR.strings.pref_server_summary,
+            icon = Icons.Outlined.Cloud,
+            screen = SettingsServerScreen,
+        ),
+        Item(
+            titleRes = MR.strings.pref_category_tracking,
+            subtitleRes = MR.strings.pref_tracking_summary,
+            icon = Icons.Outlined.Sync,
+            screen = SettingsTrackingScreen,
+        ),
+        Item(
             titleRes = MR.strings.pref_category_security,
             subtitleRes = MR.strings.pref_security_summary,
             icon = Icons.Outlined.Security,
@@ -222,7 +222,7 @@ object SettingsMainScreen : Screen() {
         Item(
             titleRes = MR.strings.pref_category_advanced,
             subtitleRes = MR.strings.pref_advanced_summary,
-            icon = Icons.Outlined.Code,
+            icon = Icons.Outlined.Settings,
             screen = SettingsAdvancedScreen,
         ),
         Item(

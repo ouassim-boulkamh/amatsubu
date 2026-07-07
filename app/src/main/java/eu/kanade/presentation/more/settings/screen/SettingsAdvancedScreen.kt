@@ -8,29 +8,22 @@ import android.webkit.WebStorage
 import android.webkit.WebView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.core.net.toUri
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.domain.base.BasePreferences
-import eu.kanade.domain.extension.interactor.TrustExtension
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.screen.advanced.ClearDatabaseScreen
 import eu.kanade.presentation.more.settings.screen.debug.DebugInfoScreen
-import eu.kanade.tachiyomi.data.download.DownloadCache
-import eu.kanade.tachiyomi.data.library.MetadataUpdateJob
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiGraphQlClient
 import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.network.NetworkPreferences
 import eu.kanade.tachiyomi.network.PREF_DOH_360
@@ -48,19 +41,18 @@ import eu.kanade.tachiyomi.network.PREF_DOH_SHECAN
 import eu.kanade.tachiyomi.ui.more.OnboardingScreen
 import eu.kanade.tachiyomi.util.CrashLogUtil
 import eu.kanade.tachiyomi.util.system.GLUtil
-import eu.kanade.tachiyomi.util.system.isReleaseBuildType
-import eu.kanade.tachiyomi.util.system.isShizukuInstalled
 import eu.kanade.tachiyomi.util.system.powerManager
 import eu.kanade.tachiyomi.util.system.setDefaultSettings
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.launch
 import logcat.LogPriority
 import okhttp3.Headers
+import tachiyomi.core.common.i18n.stringResource as contextStringResource
 import tachiyomi.core.common.util.lang.launchNonCancellable
+import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.ImageUtil
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.ResetViewerFlags
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
@@ -83,7 +75,7 @@ object SettingsAdvancedScreen : SearchableSettings {
 
         val basePreferences = remember { Injekt.get<BasePreferences>() }
         val networkPreferences = remember { Injekt.get<NetworkPreferences>() }
-        val libraryPreferences = remember { Injekt.get<LibraryPreferences>() }
+        val suwayomiClient = remember { SuwayomiClientProvider().graphQlClient }
 
         return listOf(
             Preference.PreferenceItem.TextPreference(
@@ -124,9 +116,10 @@ object SettingsAdvancedScreen : SearchableSettings {
             getBackgroundActivityGroup(),
             getDataGroup(),
             getNetworkGroup(networkPreferences = networkPreferences),
-            getLibraryGroup(libraryPreferences = libraryPreferences),
+            getLibraryGroup(
+                suwayomiClient = suwayomiClient,
+            ),
             getReaderGroup(basePreferences = basePreferences),
-            getExtensionsGroup(basePreferences = basePreferences),
         )
     }
 
@@ -171,23 +164,14 @@ object SettingsAdvancedScreen : SearchableSettings {
 
     @Composable
     private fun getDataGroup(): Preference.PreferenceGroup {
-        val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
 
         return Preference.PreferenceGroup(
             title = stringResource(MR.strings.label_data),
             preferenceItems = listOf(
                 Preference.PreferenceItem.TextPreference(
-                    title = stringResource(MR.strings.pref_invalidate_download_cache),
-                    subtitle = stringResource(MR.strings.pref_invalidate_download_cache_summary),
-                    onClick = {
-                        Injekt.get<DownloadCache>().invalidateCache()
-                        context.toast(MR.strings.download_cache_invalidated)
-                    },
-                ),
-                Preference.PreferenceItem.TextPreference(
-                    title = stringResource(MR.strings.pref_clear_database),
-                    subtitle = stringResource(MR.strings.pref_clear_database_summary),
+                    title = "Clear client database",
+                    subtitle = "Delete non-library manga records from Android's local database. Suwayomi server data is not changed.",
                     onClick = { navigator.push(ClearDatabaseScreen()) },
                 ),
             ),
@@ -286,7 +270,7 @@ object SettingsAdvancedScreen : SearchableSettings {
 
     @Composable
     private fun getLibraryGroup(
-        libraryPreferences: LibraryPreferences,
+        suwayomiClient: SuwayomiGraphQlClient,
     ): Preference.PreferenceGroup {
         val scope = rememberCoroutineScope()
         val context = LocalContext.current
@@ -295,38 +279,64 @@ object SettingsAdvancedScreen : SearchableSettings {
             title = stringResource(MR.strings.label_library),
             preferenceItems = listOf(
                 Preference.PreferenceItem.TextPreference(
-                    title = stringResource(MR.strings.pref_refresh_library_covers),
-                    onClick = { MetadataUpdateJob.startNow(context) },
-                ),
-                Preference.PreferenceItem.TextPreference(
                     title = stringResource(MR.strings.pref_reset_viewer_flags),
                     subtitle = stringResource(MR.strings.pref_reset_viewer_flags_summary),
                     onClick = {
                         scope.launchNonCancellable {
-                            val success = Injekt.get<ResetViewerFlags>().await()
+                            val localSuccess = runCatching {
+                                Injekt.get<ResetViewerFlags>().await()
+                            }.onFailure { error ->
+                                logcat(LogPriority.ERROR, error) { "Failed to reset local viewer flags" }
+                            }.getOrDefault(false)
+                            val serverSuccess = runCatching {
+                                resetServerViewerFlags(suwayomiClient)
+                            }.onFailure { error ->
+                                logcat(LogPriority.ERROR, error) { "Failed to reset Suwayomi viewer flags" }
+                            }.isSuccess
                             withUIContext {
-                                val message = if (success) {
-                                    MR.strings.pref_reset_viewer_flags_success
-                                } else {
-                                    MR.strings.pref_reset_viewer_flags_error
+                                val message = when {
+                                    localSuccess && serverSuccess -> {
+                                        context.contextStringResource(MR.strings.pref_reset_viewer_flags_success)
+                                    }
+                                    localSuccess -> {
+                                        "Local viewer flags reset, but Suwayomi reader settings failed to reset."
+                                    }
+                                    serverSuccess -> {
+                                        "Suwayomi reader settings reset, but local viewer flags failed to reset."
+                                    }
+                                    else -> {
+                                        context.contextStringResource(MR.strings.pref_reset_viewer_flags_error)
+                                    }
                                 }
                                 context.toast(message)
                             }
                         }
                     },
                 ),
-                Preference.PreferenceItem.SwitchPreference(
-                    preference = libraryPreferences.updateMangaTitles,
-                    title = stringResource(MR.strings.pref_update_library_manga_titles),
-                    subtitle = stringResource(MR.strings.pref_update_library_manga_titles_summary),
-                ),
-                Preference.PreferenceItem.SwitchPreference(
-                    preference = libraryPreferences.disallowNonAsciiFilenames,
-                    title = stringResource(MR.strings.pref_disallow_non_ascii_filenames),
-                    subtitle = stringResource(MR.strings.pref_disallow_non_ascii_filenames_details),
-                ),
             ),
         )
+    }
+
+    private suspend fun resetServerViewerFlags(suwayomiClient: SuwayomiGraphQlClient) {
+        withIOContext {
+            suwayomiClient.getLibraryMangas().forEach { manga ->
+                suwayomiClient.setMangaMeta(
+                    mangaId = manga.id,
+                    key = SUWAYOMI_READER_MODE_META_KEY,
+                    value = SUWAYOMI_DEFAULT_READER_MODE,
+                )
+                suwayomiClient.setMangaMeta(
+                    mangaId = manga.id,
+                    key = SUWAYOMI_READER_ORIENTATION_META_KEY,
+                    value = SUWAYOMI_DEFAULT_READER_ORIENTATION,
+                )
+                suwayomiClient.setMangaMeta(
+                    mangaId = manga.id,
+                    key = LEGACY_SUWAYOMI_READER_ORIENTATION_META_KEY,
+                    value = SUWAYOMI_DEFAULT_READER_ORIENTATION,
+                )
+            }
+        }
     }
 
     @Composable
@@ -381,74 +391,9 @@ object SettingsAdvancedScreen : SearchableSettings {
         )
     }
 
-    @Composable
-    private fun getExtensionsGroup(
-        basePreferences: BasePreferences,
-    ): Preference.PreferenceGroup {
-        val context = LocalContext.current
-        val uriHandler = LocalUriHandler.current
-        val extensionInstallerPref = basePreferences.extensionInstaller
-        var shizukuMissing by rememberSaveable { mutableStateOf(false) }
-        val trustExtension = remember { Injekt.get<TrustExtension>() }
-
-        if (shizukuMissing) {
-            val dismiss = { shizukuMissing = false }
-            AlertDialog(
-                onDismissRequest = dismiss,
-                title = { Text(text = stringResource(MR.strings.ext_installer_shizuku)) },
-                text = { Text(text = stringResource(MR.strings.ext_installer_shizuku_unavailable_dialog)) },
-                dismissButton = {
-                    TextButton(onClick = dismiss) {
-                        Text(text = stringResource(MR.strings.action_cancel))
-                    }
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            dismiss()
-                            uriHandler.openUri("https://shizuku.rikka.app/download")
-                        },
-                    ) {
-                        Text(text = stringResource(MR.strings.action_ok))
-                    }
-                },
-            )
-        }
-        return Preference.PreferenceGroup(
-            title = stringResource(MR.strings.label_extensions),
-            preferenceItems = listOf(
-                Preference.PreferenceItem.ListPreference(
-                    preference = extensionInstallerPref,
-                    entries = extensionInstallerPref.entries
-                        .filter {
-                            // TODO: allow private option in stable versions once URL handling is more fleshed out
-                            if (isReleaseBuildType) {
-                                it != BasePreferences.ExtensionInstaller.PRIVATE
-                            } else {
-                                true
-                            }
-                        }
-                        .associateWith { stringResource(it.titleRes) },
-                    title = stringResource(MR.strings.ext_installer_pref),
-                    onValueChanged = {
-                        if (it == BasePreferences.ExtensionInstaller.SHIZUKU &&
-                            !context.isShizukuInstalled
-                        ) {
-                            shizukuMissing = true
-                            false
-                        } else {
-                            true
-                        }
-                    },
-                ),
-                Preference.PreferenceItem.TextPreference(
-                    title = stringResource(MR.strings.ext_revoke_trust),
-                    onClick = {
-                        trustExtension.revokeAll()
-                        context.toast(MR.strings.requires_app_restart)
-                    },
-                ),
-            ),
-        )
-    }
+    private const val SUWAYOMI_READER_MODE_META_KEY = "flutter_readerMode"
+    private const val SUWAYOMI_READER_ORIENTATION_META_KEY = "amatsubu_readerOrientation"
+    private const val LEGACY_SUWAYOMI_READER_ORIENTATION_META_KEY = "sorami" + "hon_readerOrientation"
+    private const val SUWAYOMI_DEFAULT_READER_MODE = "defaultReader"
+    private const val SUWAYOMI_DEFAULT_READER_ORIENTATION = "default"
 }

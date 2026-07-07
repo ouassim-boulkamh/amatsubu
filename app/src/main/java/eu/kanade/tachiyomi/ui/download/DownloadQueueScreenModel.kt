@@ -1,270 +1,193 @@
 package eu.kanade.tachiyomi.ui.download
 
-import android.view.MenuItem
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
-import eu.kanade.tachiyomi.R
-import eu.kanade.tachiyomi.data.download.DownloadManager
-import eu.kanade.tachiyomi.data.download.model.Download
-import eu.kanade.tachiyomi.databinding.DownloadListBinding
-import eu.kanade.tachiyomi.source.model.Page
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiDownloadDto
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
-import kotlin.time.Duration.Companion.milliseconds
+import logcat.LogPriority
+import tachiyomi.core.common.util.lang.launchIO
+import tachiyomi.core.common.util.system.logcat
 
-class DownloadQueueScreenModel(
-    private val downloadManager: DownloadManager = Injekt.get(),
-) : ScreenModel {
+class DownloadQueueScreenModel : ScreenModel {
 
-    private val _state = MutableStateFlow(emptyList<DownloadHeaderItem>())
+    private val suwayomiProvider = SuwayomiClientProvider()
+    private val suwayomiClient = suwayomiProvider.graphQlClient
+
+    private val _state = MutableStateFlow(State())
     val state = _state.asStateFlow()
 
-    lateinit var controllerBinding: DownloadListBinding
-
-    /**
-     * Adapter containing the active downloads.
-     */
-    var adapter: DownloadAdapter? = null
-
-    /**
-     * Map of jobs for active downloads.
-     */
-    private val progressJobs = mutableMapOf<Download, Job>()
-
-    val listener = object : DownloadAdapter.DownloadItemListener {
-        /**
-         * Called when an item is released from a drag.
-         *
-         * @param position The position of the released item.
-         */
-        override fun onItemReleased(position: Int) {
-            val adapter = adapter ?: return
-            val downloads = adapter.headerItems.flatMap { header ->
-                adapter.getSectionItems(header).map { item ->
-                    (item as DownloadItem).download
-                }
-            }
-            reorder(downloads)
-        }
-
-        /**
-         * Called when the menu item of a download is pressed
-         *
-         * @param position The position of the item
-         * @param menuItem The menu Item pressed
-         */
-        override fun onMenuItemClick(position: Int, menuItem: MenuItem) {
-            val item = adapter?.getItem(position) ?: return
-            if (item is DownloadItem) {
-                when (menuItem.itemId) {
-                    R.id.move_to_top, R.id.move_to_bottom -> {
-                        val headerItems = adapter?.headerItems ?: return
-                        val newDownloads = mutableListOf<Download>()
-                        headerItems.forEach { headerItem ->
-                            headerItem as DownloadHeaderItem
-                            if (headerItem == item.header) {
-                                headerItem.removeSubItem(item)
-                                if (menuItem.itemId == R.id.move_to_top) {
-                                    headerItem.addSubItem(0, item)
-                                } else {
-                                    headerItem.addSubItem(item)
-                                }
-                            }
-                            newDownloads.addAll(headerItem.subItems.map { it.download })
-                        }
-                        reorder(newDownloads)
-                    }
-                    R.id.move_to_top_series, R.id.move_to_bottom_series -> {
-                        val (selectedSeries, otherSeries) = adapter?.currentItems
-                            ?.filterIsInstance<DownloadItem>()
-                            ?.map(DownloadItem::download)
-                            ?.partition { item.download.manga.id == it.manga.id }
-                            ?: Pair(emptyList(), emptyList())
-                        if (menuItem.itemId == R.id.move_to_top_series) {
-                            reorder(selectedSeries + otherSeries)
-                        } else {
-                            reorder(otherSeries + selectedSeries)
-                        }
-                    }
-                    R.id.cancel_download -> {
-                        cancel(listOf(item.download))
-                    }
-                    R.id.cancel_series -> {
-                        val allDownloadsForSeries = adapter?.currentItems
-                            ?.filterIsInstance<DownloadItem>()
-                            ?.filter { item.download.manga.id == it.download.manga.id }
-                            ?.map(DownloadItem::download)
-                        if (!allDownloadsForSeries.isNullOrEmpty()) {
-                            cancel(allDownloadsForSeries)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     init {
-        screenModelScope.launch {
-            downloadManager.queueState
-                .map { downloads ->
-                    downloads
-                        .groupBy { it.source }
-                        .map { entry ->
-                            DownloadHeaderItem(entry.key.id, entry.key.name, entry.value.size).apply {
-                                addSubItems(0, entry.value.map { DownloadItem(it, this) })
-                            }
-                        }
+        refresh()
+        screenModelScope.launchIO {
+            suwayomiProvider.liveStatusClient.downloadStatusFlow()
+                .collect { status ->
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            error = null,
+                            downloaderState = status.state,
+                            downloads = status.queue.sortedBy(SuwayomiDownloadDto::position),
+                        )
+                    }
                 }
-                .collect { newList -> _state.update { newList } }
         }
+        ServerStateSync.refreshes
+            .onEach { refresh(showLoading = false) }
+            .launchIn(screenModelScope)
     }
 
-    override fun onDispose() {
-        for (job in progressJobs.values) {
-            job.cancel()
+    fun refresh(showLoading: Boolean = true) {
+        screenModelScope.launchIO {
+            if (showLoading) {
+                _state.update { it.copy(isLoading = true, error = null) }
+            }
+            runCatching {
+                suwayomiClient.getDownloadStatus()
+            }.onSuccess { status ->
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        error = null,
+                        downloaderState = status.state,
+                        downloads = status.queue.sortedBy(SuwayomiDownloadDto::position),
+                    )
+                }
+            }.onFailure { error ->
+                if (error is CancellationException) throw error
+                logcat(LogPriority.ERROR, error) { "Failed to load Suwayomi download queue" }
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        error = error.message ?: error::class.simpleName.orEmpty(),
+                    )
+                }
+            }
         }
-        progressJobs.clear()
-        adapter = null
     }
-
-    val isDownloaderRunning = downloadManager.isDownloaderRunning
-        .stateIn(screenModelScope, SharingStarted.WhileSubscribed(5000), false)
-
-    fun getDownloadStatusFlow() = downloadManager.statusFlow()
-    fun getDownloadProgressFlow() = downloadManager.progressFlow()
 
     fun startDownloads() {
-        downloadManager.startDownloads()
+        runMutation { suwayomiClient.startDownloader() }
     }
 
     fun pauseDownloads() {
-        downloadManager.pauseDownloads()
+        runMutation { suwayomiClient.stopDownloader() }
     }
 
     fun clearQueue() {
-        downloadManager.clearQueue()
+        runMutation { suwayomiClient.clearDownloader() }
     }
 
-    fun reorder(downloads: List<Download>) {
-        downloadManager.reorderQueue(downloads)
+    fun cancel(download: SuwayomiDownloadDto) {
+        runMutation { suwayomiClient.dequeueChapterDownloads(listOf(download.chapter.id)) }
     }
 
-    fun cancel(downloads: List<Download>) {
-        downloadManager.cancelQueuedDownloads(downloads)
+    fun retry(download: SuwayomiDownloadDto) {
+        runMutation {
+            suwayomiClient.dequeueChapterDownloads(listOf(download.chapter.id))
+            suwayomiClient.enqueueChapterDownloads(listOf(download.chapter.id))
+            suwayomiClient.startDownloader()
+        }
     }
 
-    fun <R : Comparable<R>> reorderQueue(selector: (DownloadItem) -> R, reverse: Boolean = false) {
-        val adapter = adapter ?: return
-        val newDownloads = mutableListOf<Download>()
-        adapter.headerItems.forEach { headerItem ->
-            headerItem as DownloadHeaderItem
-            headerItem.subItems = headerItem.subItems.sortedBy(selector).toMutableList().apply {
-                if (reverse) {
-                    reverse()
+    fun move(download: SuwayomiDownloadDto, to: Int) {
+        runMutation {
+            val status = suwayomiClient.reorderChapterDownload(download.chapter.id, to)
+            _state.update {
+                it.copy(
+                    downloaderState = status.state,
+                    downloads = status.queue.sortedBy(SuwayomiDownloadDto::position),
+                )
+            }
+        }
+    }
+
+    fun sortByUploadDate(descending: Boolean) {
+        sortQueue(
+            sortedDownloads = if (descending) {
+                state.value.downloads.sortedWith(
+                    compareByDescending<SuwayomiDownloadDto> { it.chapter.uploadDate }
+                        .thenBy { it.position },
+                )
+            } else {
+                state.value.downloads.sortedWith(
+                    compareBy<SuwayomiDownloadDto> { it.chapter.uploadDate }
+                        .thenBy { it.position },
+                )
+            },
+        )
+    }
+
+    fun sortByChapterNumber(descending: Boolean) {
+        sortQueue(
+            sortedDownloads = if (descending) {
+                state.value.downloads.sortedWith(
+                    compareByDescending<SuwayomiDownloadDto> { it.chapter.chapterNumber }
+                        .thenBy { it.position },
+                )
+            } else {
+                state.value.downloads.sortedWith(
+                    compareBy<SuwayomiDownloadDto> { it.chapter.chapterNumber }
+                        .thenBy { it.position },
+                )
+            },
+        )
+    }
+
+    private fun sortQueue(sortedDownloads: List<SuwayomiDownloadDto>) {
+        if (sortedDownloads.map { it.chapter.id } == state.value.downloads.map { it.chapter.id }) return
+
+        runMutation {
+            var status = suwayomiClient.getDownloadStatus()
+            sortedDownloads.forEachIndexed { index, download ->
+                status = suwayomiClient.reorderChapterDownload(download.chapter.id, index)
+            }
+            _state.update {
+                it.copy(
+                    error = null,
+                    downloaderState = status.state,
+                    downloads = status.queue.sortedBy(SuwayomiDownloadDto::position),
+                )
+            }
+        }
+    }
+
+    private fun runMutation(action: suspend () -> Unit) {
+        screenModelScope.launchIO {
+            runCatching {
+                action()
+                suwayomiClient.getDownloadStatus()
+            }.onSuccess { status ->
+                _state.update {
+                    it.copy(
+                        error = null,
+                        downloaderState = status.state,
+                        downloads = status.queue.sortedBy(SuwayomiDownloadDto::position),
+                    )
                 }
-            }
-            newDownloads.addAll(headerItem.subItems.map { it.download })
-        }
-        reorder(newDownloads)
-    }
-
-    /**
-     * Called when the status of a download changes.
-     *
-     * @param download the download whose status has changed.
-     */
-    fun onStatusChange(download: Download) {
-        when (download.status) {
-            Download.State.DOWNLOADING -> {
-                launchProgressJob(download)
-                // Initial update of the downloaded pages
-                onUpdateDownloadedPages(download)
-            }
-            Download.State.DOWNLOADED -> {
-                cancelProgressJob(download)
-                onUpdateProgress(download)
-                onUpdateDownloadedPages(download)
-            }
-            Download.State.ERROR -> cancelProgressJob(download)
-            else -> {
-                /* unused */
+                ServerStateSync.requestRefresh()
+            }.onFailure { error ->
+                if (error is CancellationException) throw error
+                logcat(LogPriority.ERROR, error) { "Failed to update Suwayomi download queue" }
+                _state.update { it.copy(error = error.message ?: error::class.simpleName.orEmpty()) }
             }
         }
     }
 
-    /**
-     * Observe the progress of a download and notify the view.
-     *
-     * @param download the download to observe its progress.
-     */
-    private fun launchProgressJob(download: Download) {
-        val job = screenModelScope.launch {
-            while (download.pages == null) {
-                delay(50.milliseconds)
-            }
-
-            val progressFlows = download.pages!!.map(Page::progressFlow)
-            combine(progressFlows, Array<Int>::sum)
-                .distinctUntilChanged()
-                .debounce(50.milliseconds)
-                .collectLatest {
-                    onUpdateProgress(download)
-                }
-        }
-
-        // Avoid leaking jobs
-        progressJobs.remove(download)?.cancel()
-
-        progressJobs[download] = job
-    }
-
-    /**
-     * Unsubscribes the given download from the progress subscriptions.
-     *
-     * @param download the download to unsubscribe.
-     */
-    private fun cancelProgressJob(download: Download) {
-        progressJobs.remove(download)?.cancel()
-    }
-
-    /**
-     * Called when the progress of a download changes.
-     *
-     * @param download the download whose progress has changed.
-     */
-    private fun onUpdateProgress(download: Download) {
-        getHolder(download)?.notifyProgress()
-    }
-
-    /**
-     * Called when a page of a download is downloaded.
-     *
-     * @param download the download whose page has been downloaded.
-     */
-    fun onUpdateDownloadedPages(download: Download) {
-        getHolder(download)?.notifyDownloadedPages()
-    }
-
-    /**
-     * Returns the holder for the given download.
-     *
-     * @param download the download to find.
-     * @return the holder of the download or null if it's not bound.
-     */
-    private fun getHolder(download: Download): DownloadHolder? {
-        return controllerBinding.root.findViewHolderForItemId(download.chapter.id) as? DownloadHolder
+    data class State(
+        val isLoading: Boolean = false,
+        val error: String? = null,
+        val downloaderState: String = "STOPPED",
+        val downloads: List<SuwayomiDownloadDto> = emptyList(),
+    ) {
+        val isDownloaderRunning: Boolean
+            get() = downloaderState.equals("STARTED", ignoreCase = true)
     }
 }

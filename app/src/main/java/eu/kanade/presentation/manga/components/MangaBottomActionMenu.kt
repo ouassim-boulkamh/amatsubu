@@ -76,7 +76,11 @@ fun MangaBottomActionMenu(
     onMarkAsUnreadClicked: (() -> Unit)? = null,
     onMarkPreviousAsReadClicked: (() -> Unit)? = null,
     onDownloadClicked: (() -> Unit)? = null,
+    onDownloadClickedLabel: String? = null,
+    onSaveDeviceCopiesClicked: (() -> Unit)? = null,
+    onRemoveDeviceCopiesClicked: (() -> Unit)? = null,
     onDeleteClicked: (() -> Unit)? = null,
+    onDeleteClickedLabel: String? = null,
 ) {
     AnimatedVisibility(
         visible = visible,
@@ -90,7 +94,7 @@ fun MangaBottomActionMenu(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
             val haptic = LocalHapticFeedback.current
-            val confirm = remember { mutableStateListOf(false, false, false, false, false, false, false) }
+            val confirm = remember { mutableStateListOf(false, false, false, false, false, false, false, false, false) }
             var resetJob by remember { mutableStateOf<Job?>(null) }
             val onLongClickItem: (Int) -> Unit = { toConfirmIndex ->
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -155,23 +159,79 @@ fun MangaBottomActionMenu(
                         onClick = onMarkPreviousAsReadClicked,
                     )
                 }
-                if (onDownloadClicked != null) {
+                if (onDownloadClicked != null || onSaveDeviceCopiesClicked != null) {
+                    var downloadExpanded by remember { mutableStateOf(false) }
                     Button(
                         title = stringResource(MR.strings.action_download),
                         icon = Icons.Outlined.Download,
                         toConfirm = confirm[5],
                         onLongClick = { onLongClickItem(5) },
-                        onClick = onDownloadClicked,
-                    )
+                        onClick = { downloadExpanded = true },
+                    ) {
+                        DropdownMenu(
+                            expanded = downloadExpanded,
+                            onDismissRequest = { downloadExpanded = false },
+                            offset = BottomBarMenuDpOffset,
+                        ) {
+                            if (onDownloadClicked != null) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(onDownloadClickedLabel ?: stringResource(MR.strings.action_download))
+                                    },
+                                    onClick = {
+                                        downloadExpanded = false
+                                        onDownloadClicked()
+                                    },
+                                )
+                            }
+                            if (onSaveDeviceCopiesClicked != null) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(MR.strings.action_download_locally)) },
+                                    onClick = {
+                                        downloadExpanded = false
+                                        onSaveDeviceCopiesClicked()
+                                    },
+                                )
+                            }
+                        }
+                    }
                 }
-                if (onDeleteClicked != null) {
+                if (onRemoveDeviceCopiesClicked != null || onDeleteClicked != null) {
+                    var deleteExpanded by remember { mutableStateOf(false) }
                     Button(
                         title = stringResource(MR.strings.action_delete),
                         icon = Icons.Outlined.Delete,
                         toConfirm = confirm[6],
                         onLongClick = { onLongClickItem(6) },
-                        onClick = onDeleteClicked,
-                    )
+                        onClick = { deleteExpanded = true },
+                    ) {
+                        DropdownMenu(
+                            expanded = deleteExpanded,
+                            onDismissRequest = { deleteExpanded = false },
+                            offset = BottomBarMenuDpOffset,
+                        ) {
+                            if (onDeleteClicked != null) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(onDeleteClickedLabel ?: stringResource(MR.strings.action_delete))
+                                    },
+                                    onClick = {
+                                        deleteExpanded = false
+                                        onDeleteClicked()
+                                    },
+                                )
+                            }
+                            if (onRemoveDeviceCopiesClicked != null) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(MR.strings.action_delete_local_download)) },
+                                    onClick = {
+                                        deleteExpanded = false
+                                        onRemoveDeviceCopiesClicked()
+                                    },
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -236,7 +296,7 @@ fun LibraryBottomActionMenu(
     onMarkAsUnreadClicked: () -> Unit,
     onDownloadClicked: ((DownloadAction) -> Unit)?,
     onDeleteClicked: () -> Unit,
-    onMigrateClicked: () -> Unit,
+    onMigrateClicked: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     AnimatedVisibility(
@@ -262,7 +322,7 @@ fun LibraryBottomActionMenu(
                     if (isActive) confirm[toConfirmIndex] = false
                 }
             }
-            val itemOverflow = onDownloadClicked != null
+            val itemOverflow = onDownloadClicked != null && onMigrateClicked != null
             Row(
                 modifier = Modifier
                     .windowInsetsPadding(
@@ -295,7 +355,7 @@ fun LibraryBottomActionMenu(
                 if (onDownloadClicked != null) {
                     var downloadExpanded by remember { mutableStateOf(false) }
                     Button(
-                        title = stringResource(MR.strings.action_download),
+                        title = stringResource(MR.strings.action_download_to_server),
                         icon = Icons.Outlined.Download,
                         toConfirm = confirm[3],
                         onLongClick = { onLongClickItem(3) },
@@ -310,13 +370,15 @@ fun LibraryBottomActionMenu(
                     }
                 }
                 if (!itemOverflow) {
-                    Button(
-                        title = stringResource(MR.strings.migrate),
-                        icon = Icons.Outlined.SwapCalls,
-                        toConfirm = confirm[4],
-                        onLongClick = { onLongClickItem(4) },
-                        onClick = onMigrateClicked,
-                    )
+                    if (onMigrateClicked != null) {
+                        Button(
+                            title = stringResource(MR.strings.migrate),
+                            icon = Icons.Outlined.SwapCalls,
+                            toConfirm = confirm[4],
+                            onLongClick = { onLongClickItem(4) },
+                            onClick = onMigrateClicked,
+                        )
+                    }
                     Button(
                         title = stringResource(MR.strings.action_delete),
                         icon = Icons.Outlined.Delete,

@@ -10,23 +10,18 @@ import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.LocalLibrary
-import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import eu.kanade.presentation.more.stats.components.StatsItem
 import eu.kanade.presentation.more.stats.components.StatsOverviewItem
 import eu.kanade.presentation.more.stats.data.StatsData
-import eu.kanade.presentation.util.toDurationString
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.SectionCard
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import java.util.Locale
-import kotlin.time.DurationUnit
-import kotlin.time.toDuration
 
 @Composable
 fun StatsScreenContent(
@@ -56,13 +51,6 @@ fun StatsScreenContent(
 private fun LazyItemScope.OverviewSection(
     data: StatsData.Overview,
 ) {
-    val none = stringResource(MR.strings.none)
-    val context = LocalContext.current
-    val readDurationString = remember(data.totalReadDuration) {
-        data.totalReadDuration
-            .toDuration(DurationUnit.MILLISECONDS)
-            .toDurationString(context, fallback = none)
-    }
     SectionCard(MR.strings.label_overview_section) {
         Row(
             modifier = Modifier.height(IntrinsicSize.Min),
@@ -71,11 +59,6 @@ private fun LazyItemScope.OverviewSection(
                 title = data.libraryMangaCount.toString(),
                 subtitle = stringResource(MR.strings.in_library),
                 icon = Icons.Outlined.CollectionsBookmark,
-            )
-            StatsOverviewItem(
-                title = readDurationString,
-                subtitle = stringResource(MR.strings.label_read_duration),
-                icon = Icons.Outlined.Schedule,
             )
             StatsOverviewItem(
                 title = data.completedMangaCount.toString(),

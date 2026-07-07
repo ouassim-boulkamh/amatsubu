@@ -62,7 +62,12 @@ class PagerTransitionHolder(
         addView(transitionView)
         addView(pagesContainer)
 
-        transitionView.bind(transition, viewer.downloadManager, viewer.activity.viewModel.manga)
+        transitionView.bind(
+            transition = transition,
+            manga = viewer.activity.viewModel.manga,
+            currChapterDownloaded = viewer.activity.viewModel.isServerChapterDownloadedForReader(transition.from),
+            goingToChapterDownloaded = viewer.activity.viewModel.isServerChapterDownloadedForReader(transition.to),
+        )
 
         transition.to?.let(::observeStatus)
     }

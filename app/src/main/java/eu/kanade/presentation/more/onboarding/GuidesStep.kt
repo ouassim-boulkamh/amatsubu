@@ -35,9 +35,9 @@ internal class GuidesStep(
             Text(stringResource(MR.strings.onboarding_guides_new_user, stringResource(MR.strings.app_name)))
             Button(
                 modifier = Modifier.fillMaxWidth(),
-                onClick = { handler.openUri(GETTING_STARTED_URL) },
+                onClick = { handler.openUri(SUWAYOMI_SETUP_URL) },
             ) {
-                Text(stringResource(MR.strings.getting_started_guide))
+                Text(stringResource(MR.strings.onboarding_guides_getting_started_action))
             }
 
             HorizontalDivider(
@@ -50,13 +50,14 @@ internal class GuidesStep(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = onRestoreBackup,
             ) {
-                Text(stringResource(MR.strings.pref_restore_backup))
+                Text(stringResource(MR.strings.onboarding_guides_restore_client_backup_action))
             }
         }
     }
 }
 
-const val GETTING_STARTED_URL = "https://mihon.app/docs/guides/getting-started"
+const val GETTING_STARTED_URL = "https://github.com/Suwayomi/Suwayomi-Server/wiki"
+private const val SUWAYOMI_SETUP_URL = "https://github.com/Suwayomi/Suwayomi-Server/wiki/Configuring-Suwayomi%E2%80%90Server"
 
 @PreviewLightDark
 @Composable

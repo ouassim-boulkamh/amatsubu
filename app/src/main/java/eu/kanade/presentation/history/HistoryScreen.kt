@@ -24,6 +24,7 @@ import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
 import tachiyomi.presentation.core.components.ListGroupHeader
+import tachiyomi.presentation.core.components.material.PullRefresh
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
@@ -39,6 +40,7 @@ fun HistoryScreen(
     onClickResume: (mangaId: Long, chapterId: Long) -> Unit,
     onClickFavorite: (mangaId: Long) -> Unit,
     onDialogChange: (HistoryScreenModel.Dialog?) -> Unit,
+    onRefresh: () -> Unit,
 ) {
     Scaffold(
         topBar = { scrollBehavior ->
@@ -52,9 +54,7 @@ fun HistoryScreen(
                             AppBar.Action(
                                 title = stringResource(MR.strings.pref_clear_history),
                                 icon = Icons.Outlined.DeleteSweep,
-                                onClick = {
-                                    onDialogChange(HistoryScreenModel.Dialog.DeleteAll)
-                                },
+                                onClick = { onDialogChange(HistoryScreenModel.Dialog.DeleteAll) },
                             ),
                         ),
                     )
@@ -64,28 +64,40 @@ fun HistoryScreen(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { contentPadding ->
-        state.list.let {
-            if (it == null) {
-                LoadingScreen(Modifier.padding(contentPadding))
-            } else if (it.isEmpty()) {
-                val msg = if (!state.searchQuery.isNullOrEmpty()) {
-                    MR.strings.no_results_found
+        PullRefresh(
+            refreshing = state.isRefreshing,
+            enabled = state.list != null,
+            onRefresh = onRefresh,
+            indicatorPadding = contentPadding,
+        ) {
+            state.list.let {
+                if (it == null) {
+                    LoadingScreen(Modifier.padding(contentPadding))
+                } else if (state.serverUnavailable) {
+                    EmptyScreen(
+                        stringRes = MR.strings.server_unreachable,
+                        modifier = Modifier.padding(contentPadding),
+                    )
+                } else if (it.isEmpty()) {
+                    val msg = if (!state.searchQuery.isNullOrEmpty()) {
+                        MR.strings.no_results_found
+                    } else {
+                        MR.strings.information_no_recent_manga
+                    }
+                    EmptyScreen(
+                        stringRes = msg,
+                        modifier = Modifier.padding(contentPadding),
+                    )
                 } else {
-                    MR.strings.information_no_recent_manga
+                    HistoryScreenContent(
+                        history = it,
+                        contentPadding = contentPadding,
+                        onClickCover = { history -> onClickCover(history.mangaId) },
+                        onClickResume = { history -> onClickResume(history.mangaId, history.chapterId) },
+                        onClickDelete = { item -> onDialogChange(HistoryScreenModel.Dialog.Delete(item)) },
+                        onClickFavorite = { history -> onClickFavorite(history.mangaId) },
+                    )
                 }
-                EmptyScreen(
-                    stringRes = msg,
-                    modifier = Modifier.padding(contentPadding),
-                )
-            } else {
-                HistoryScreenContent(
-                    history = it,
-                    contentPadding = contentPadding,
-                    onClickCover = { history -> onClickCover(history.mangaId) },
-                    onClickResume = { history -> onClickResume(history.mangaId, history.chapterId) },
-                    onClickDelete = { item -> onDialogChange(HistoryScreenModel.Dialog.Delete(item)) },
-                    onClickFavorite = { history -> onClickFavorite(history.mangaId) },
-                )
             }
         }
     }
@@ -97,7 +109,7 @@ private fun HistoryScreenContent(
     contentPadding: PaddingValues,
     onClickCover: (HistoryWithRelations) -> Unit,
     onClickResume: (HistoryWithRelations) -> Unit,
-    onClickDelete: (HistoryWithRelations) -> Unit,
+    onClickDelete: ((HistoryWithRelations) -> Unit)?,
     onClickFavorite: (HistoryWithRelations) -> Unit,
 ) {
     FastScrollLazyColumn(
@@ -127,8 +139,9 @@ private fun HistoryScreenContent(
                         history = value,
                         onClickCover = { onClickCover(value) },
                         onClickResume = { onClickResume(value) },
-                        onClickDelete = { onClickDelete(value) },
+                        onClickDelete = onClickDelete?.let { onDelete -> { onDelete(value) } },
                         onClickFavorite = { onClickFavorite(value) },
+                        read = item.read,
                     )
                 }
             }
@@ -138,7 +151,7 @@ private fun HistoryScreenContent(
 
 sealed interface HistoryUiModel {
     data class Header(val date: LocalDate) : HistoryUiModel
-    data class Item(val item: HistoryWithRelations) : HistoryUiModel
+    data class Item(val item: HistoryWithRelations, val read: Boolean = false) : HistoryUiModel
 }
 
 @PreviewLightDark
@@ -154,8 +167,9 @@ internal fun HistoryScreenPreviews(
             onSearchQueryChange = {},
             onClickCover = {},
             onClickResume = { _, _ -> run {} },
-            onDialogChange = {},
             onClickFavorite = {},
+            onDialogChange = {},
+            onRefresh = {},
         )
     }
 }

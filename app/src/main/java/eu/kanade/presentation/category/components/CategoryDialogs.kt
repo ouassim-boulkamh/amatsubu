@@ -12,6 +12,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TriStateCheckbox
@@ -27,6 +28,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import eu.kanade.core.preference.asToggleableState
 import eu.kanade.presentation.category.visualName
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiCategoryFlag
 import kotlinx.coroutines.delay
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.domain.category.model.Category
@@ -189,6 +191,116 @@ fun CategoryDeleteDialog(
             Text(text = stringResource(MR.strings.delete_category_confirmation, category))
         },
     )
+}
+
+@Composable
+fun CategoryFlagsDialog(
+    category: String,
+    includeInUpdate: SuwayomiCategoryFlag,
+    includeInDownload: SuwayomiCategoryFlag,
+    onDismissRequest: () -> Unit,
+    onConfirm: (SuwayomiCategoryFlag, SuwayomiCategoryFlag) -> Unit,
+) {
+    var updateFlag by remember { mutableStateOf(includeInUpdate) }
+    var downloadFlag by remember { mutableStateOf(includeInDownload) }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(updateFlag, downloadFlag)
+                    onDismissRequest()
+                },
+            ) {
+                Text(text = stringResource(MR.strings.action_ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text(text = stringResource(MR.strings.action_cancel))
+            }
+        },
+        title = {
+            Text(text = "Category behavior")
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+            ) {
+                Text(
+                    text = category,
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(bottom = MaterialTheme.padding.medium),
+                )
+                CategoryFlagPicker(
+                    title = "Library update",
+                    selected = updateFlag,
+                    onSelected = { updateFlag = it },
+                )
+                CategoryFlagPicker(
+                    title = "Auto-download",
+                    selected = downloadFlag,
+                    onSelected = { downloadFlag = it },
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun CategoryFlagPicker(
+    title: String,
+    selected: SuwayomiCategoryFlag,
+    onSelected: (SuwayomiCategoryFlag) -> Unit,
+) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(top = MaterialTheme.padding.small),
+    )
+    CategoryFlagRow(
+        label = "Use server default",
+        flag = SuwayomiCategoryFlag.UNSET,
+        selected = selected,
+        onSelected = onSelected,
+    )
+    CategoryFlagRow(
+        label = "Include",
+        flag = SuwayomiCategoryFlag.INCLUDE,
+        selected = selected,
+        onSelected = onSelected,
+    )
+    CategoryFlagRow(
+        label = "Exclude",
+        flag = SuwayomiCategoryFlag.EXCLUDE,
+        selected = selected,
+        onSelected = onSelected,
+    )
+}
+
+@Composable
+private fun CategoryFlagRow(
+    label: String,
+    flag: SuwayomiCategoryFlag,
+    selected: SuwayomiCategoryFlag,
+    onSelected: (SuwayomiCategoryFlag) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onSelected(flag) },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(
+            selected = selected == flag,
+            onClick = { onSelected(flag) },
+        )
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = MaterialTheme.padding.medium),
+        )
+    }
 }
 
 @Composable

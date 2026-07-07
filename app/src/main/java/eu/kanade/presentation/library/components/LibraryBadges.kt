@@ -21,6 +21,17 @@ internal fun DownloadsBadge(count: Int) {
 }
 
 @Composable
+internal fun LocalDownloadsBadge(count: Int) {
+    if (count > 0) {
+        Badge(
+            text = "$count",
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            textColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+    }
+}
+
+@Composable
 internal fun UnreadBadge(count: Long) {
     if (count > 0) {
         Badge(text = "$count")
@@ -53,6 +64,7 @@ private fun BadgePreview() {
     TachiyomiPreviewTheme {
         Column {
             DownloadsBadge(count = 10)
+            LocalDownloadsBadge(count = 3)
             UnreadBadge(count = 10)
             LanguageBadge(isLocal = true, sourceLanguage = "EN")
             LanguageBadge(isLocal = false, sourceLanguage = "EN")

@@ -1,27 +1,30 @@
 package eu.kanade.presentation.more.settings.screen
 
-import android.content.Context
+import android.net.Uri
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,37 +33,29 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.semantics.contentType
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import dev.icerock.moko.resources.StringResource
-import eu.kanade.domain.track.model.AutoTrackState
-import eu.kanade.domain.track.service.TrackPreferences
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import eu.kanade.presentation.more.settings.Preference
-import eu.kanade.tachiyomi.data.track.EnhancedTracker
-import eu.kanade.tachiyomi.data.track.Tracker
-import eu.kanade.tachiyomi.data.track.TrackerManager
-import eu.kanade.tachiyomi.data.track.anilist.AnilistApi
-import eu.kanade.tachiyomi.data.track.bangumi.BangumiApi
-import eu.kanade.tachiyomi.data.track.hikka.HikkaApi
-import eu.kanade.tachiyomi.data.track.myanimelist.MyAnimeListApi
-import eu.kanade.tachiyomi.data.track.shikimori.ShikimoriApi
+import eu.kanade.presentation.more.settings.widget.PrefsHorizontalPadding
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiTrackerDto
+import eu.kanade.tachiyomi.ui.setting.track.SuwayomiTrackLoginActivity
 import eu.kanade.tachiyomi.util.system.openInBrowser
 import eu.kanade.tachiyomi.util.system.toast
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import logcat.LogPriority
 import tachiyomi.core.common.util.lang.launchIO
-import tachiyomi.core.common.util.lang.withUIContext
-import tachiyomi.domain.source.service.SourceManager
+import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
-import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -74,7 +69,7 @@ object SettingsTrackingScreen : SearchableSettings {
     @Composable
     override fun RowScope.AppBarAction() {
         val uriHandler = LocalUriHandler.current
-        IconButton(onClick = { uriHandler.openUri("https://mihon.app/docs/guides/tracking") }) {
+        IconButton(onClick = { uriHandler.openUri(TRACKING_HELP_URL) }) {
             Icon(
                 imageVector = Icons.AutoMirrored.Outlined.HelpOutline,
                 contentDescription = stringResource(MR.strings.tracking_guide),
@@ -84,282 +79,250 @@ object SettingsTrackingScreen : SearchableSettings {
 
     @Composable
     override fun getPreferences(): List<Preference> {
-        val context = LocalContext.current
-        val trackPreferences = remember { Injekt.get<TrackPreferences>() }
-        val trackerManager = remember { Injekt.get<TrackerManager>() }
-        val sourceManager = remember { Injekt.get<SourceManager>() }
-
-        var dialog by remember { mutableStateOf<Any?>(null) }
-        dialog?.run {
-            when (this) {
-                is LoginDialog -> {
-                    TrackingLoginDialog(
-                        tracker = tracker,
-                        uNameStringRes = uNameStringRes,
-                        onDismissRequest = { dialog = null },
-                    )
-                }
-                is LogoutDialog -> {
-                    TrackingLogoutDialog(
-                        tracker = tracker,
-                        onDismissRequest = { dialog = null },
-                    )
-                }
-            }
-        }
-
-        val enhancedTrackers = trackerManager.trackers
-            .filter { it is EnhancedTracker }
-            .partition { service ->
-                val acceptedSources = (service as EnhancedTracker).getAcceptedSources()
-                sourceManager.getAll().any { it::class.qualifiedName in acceptedSources }
-            }
-        var enhancedTrackerInfo = stringResource(MR.strings.enhanced_tracking_info)
-        if (enhancedTrackers.second.isNotEmpty()) {
-            val missingSourcesInfo = stringResource(
-                MR.strings.enhanced_services_not_installed,
-                enhancedTrackers.second.joinToString { it.name },
-            )
-            enhancedTrackerInfo += "\n\n$missingSourcesInfo"
-        }
-
         return listOf(
-            Preference.PreferenceItem.SwitchPreference(
-                preference = trackPreferences.autoUpdateTrack,
-                title = stringResource(MR.strings.pref_auto_update_manga_sync),
-            ),
-            Preference.PreferenceItem.ListPreference(
-                preference = trackPreferences.autoUpdateTrackOnMarkRead,
-                entries = AutoTrackState.entries
-                    .associateWith { stringResource(it.titleRes) },
-                title = stringResource(MR.strings.pref_auto_update_manga_on_mark_read),
-            ),
-            Preference.PreferenceGroup(
-                title = stringResource(MR.strings.services),
-                preferenceItems = listOf(
-                    Preference.PreferenceItem.TrackerPreference(
-                        tracker = trackerManager.myAnimeList,
-                        login = { context.openInBrowser(MyAnimeListApi.authUrl(), forceDefaultBrowser = true) },
-                        logout = { dialog = LogoutDialog(trackerManager.myAnimeList) },
-                    ),
-                    Preference.PreferenceItem.TrackerPreference(
-                        tracker = trackerManager.aniList,
-                        login = { context.openInBrowser(AnilistApi.authUrl(), forceDefaultBrowser = true) },
-                        logout = { dialog = LogoutDialog(trackerManager.aniList) },
-                    ),
-                    Preference.PreferenceItem.TrackerPreference(
-                        tracker = trackerManager.kitsu,
-                        login = { dialog = LoginDialog(trackerManager.kitsu, MR.strings.email) },
-                        logout = { dialog = LogoutDialog(trackerManager.kitsu) },
-                    ),
-                    Preference.PreferenceItem.TrackerPreference(
-                        tracker = trackerManager.mangaUpdates,
-                        login = { dialog = LoginDialog(trackerManager.mangaUpdates, MR.strings.username) },
-                        logout = { dialog = LogoutDialog(trackerManager.mangaUpdates) },
-                    ),
-                    Preference.PreferenceItem.TrackerPreference(
-                        tracker = trackerManager.shikimori,
-                        login = { context.openInBrowser(ShikimoriApi.authUrl(), forceDefaultBrowser = true) },
-                        logout = { dialog = LogoutDialog(trackerManager.shikimori) },
-                    ),
-                    Preference.PreferenceItem.TrackerPreference(
-                        tracker = trackerManager.bangumi,
-                        login = { context.openInBrowser(BangumiApi.authUrl(), forceDefaultBrowser = true) },
-                        logout = { dialog = LogoutDialog(trackerManager.bangumi) },
-                    ),
-                    Preference.PreferenceItem.TrackerPreference(
-                        tracker = trackerManager.hikka,
-                        login = { context.openInBrowser(HikkaApi.authUrl(), forceDefaultBrowser = true) },
-                        logout = { dialog = LogoutDialog(trackerManager.hikka) },
-                    ),
-                    Preference.PreferenceItem.InfoPreference(stringResource(MR.strings.tracking_info)),
-                ),
-            ),
-            Preference.PreferenceGroup(
-                title = stringResource(MR.strings.enhanced_services),
-                preferenceItems = (
-                    enhancedTrackers.first
-                        .map { service ->
-                            Preference.PreferenceItem.TrackerPreference(
-                                tracker = service,
-                                login = { (service as EnhancedTracker).loginNoop() },
-                                logout = service::logout,
-                            )
-                        } + listOf(Preference.PreferenceItem.InfoPreference(enhancedTrackerInfo))
-                    ),
+            Preference.PreferenceItem.CustomPreference(
+                title = "Suwayomi trackers",
+                content = { SuwayomiTrackingSettings() },
             ),
         )
     }
 
     @Composable
-    private fun TrackingLoginDialog(
-        tracker: Tracker,
-        uNameStringRes: StringResource,
-        onDismissRequest: () -> Unit,
-    ) {
+    private fun SuwayomiTrackingSettings() {
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
+        val lifecycleOwner = LocalLifecycleOwner.current
+        val client = remember { SuwayomiClientProvider().graphQlClient }
 
-        var username by remember { mutableStateOf(TextFieldValue(tracker.getUsername())) }
-        var password by remember { mutableStateOf(TextFieldValue(tracker.getPassword())) }
-        var processing by remember { mutableStateOf(false) }
-        var inputError by remember { mutableStateOf(false) }
+        var trackers by remember { mutableStateOf<List<SuwayomiTrackerDto>>(emptyList()) }
+        var loading by remember { mutableStateOf(true) }
+        var error by remember { mutableStateOf<String?>(null) }
+        var credentialLogin by remember { mutableStateOf<SuwayomiTrackerDto?>(null) }
+
+        fun reload() {
+            scope.launchIO {
+                loading = true
+                error = null
+                try {
+                    trackers = client.trackerList()
+                } catch (e: Throwable) {
+                    if (e is CancellationException) throw e
+                    logcat(LogPriority.ERROR, e) { "Failed to load Suwayomi trackers" }
+                    error = e.message ?: "Failed to load Suwayomi trackers"
+                } finally {
+                    loading = false
+                }
+            }
+        }
+
+        LaunchedEffect(Unit) {
+            reload()
+        }
+
+        DisposableEffect(lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    reload()
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(observer)
+            }
+        }
+
+        credentialLogin?.let { tracker ->
+            CredentialsLoginDialog(
+                tracker = tracker,
+                onDismissRequest = { credentialLogin = null },
+                onConfirm = { username, password ->
+                    scope.launchIO {
+                        try {
+                            client.loginTrackerCredentials(tracker.id, username, password)
+                            context.toast(MR.strings.login_success)
+                            credentialLogin = null
+                            reload()
+                        } catch (e: Throwable) {
+                            if (e is CancellationException) throw e
+                            logcat(LogPriority.ERROR, e) { "Failed to login Suwayomi tracker ${tracker.id}" }
+                            context.toast(e.message ?: "Login failed")
+                        }
+                    }
+                },
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+        ) {
+            if (loading) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(PrefsHorizontalPadding, 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    CircularProgressIndicator()
+                    Text(text = "Loading Suwayomi trackers")
+                }
+            }
+
+            error?.let {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(PrefsHorizontalPadding, 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(text = it, color = MaterialTheme.colorScheme.error)
+                    OutlinedButton(onClick = ::reload) {
+                        Text(text = stringResource(MR.strings.action_retry))
+                    }
+                }
+            }
+
+            trackers.forEach { tracker ->
+                SuwayomiTrackerRow(
+                    tracker = tracker,
+                    onLogin = {
+                        if (tracker.authUrl != null) {
+                            SuwayomiTrackLoginActivity.setPendingTrackerId(context, tracker.id)
+                            context.openInBrowser(tracker.authUrl.withSuwayomiCallbackState())
+                        } else {
+                            credentialLogin = tracker
+                        }
+                    },
+                    onLogout = {
+                        scope.launch {
+                            try {
+                                client.logoutTracker(tracker.id)
+                                context.toast(MR.strings.logout_success)
+                                reload()
+                            } catch (e: Throwable) {
+                                if (e is CancellationException) throw e
+                                logcat(LogPriority.ERROR, e) { "Failed to logout Suwayomi tracker ${tracker.id}" }
+                                context.toast(e.message ?: "Logout failed")
+                            }
+                        }
+                    },
+                )
+            }
+
+            Preference.PreferenceItem.InfoPreference(
+                "These accounts are stored on the Suwayomi server. Manga-level tracking is configured from each manga's tracking action.",
+            ).let {
+                eu.kanade.presentation.more.settings.PreferenceItem(item = it, highlightKey = null)
+            }
+        }
+    }
+
+    @Composable
+    private fun SuwayomiTrackerRow(
+        tracker: SuwayomiTrackerDto,
+        onLogin: () -> Unit,
+        onLogout: () -> Unit,
+    ) {
+        Row(
+            modifier = Modifier
+                .clickable { if (tracker.isLoggedIn) onLogout() else onLogin() }
+                .fillMaxWidth()
+                .padding(horizontal = PrefsHorizontalPadding, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = tracker.name,
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                Text(
+                    text = if (tracker.isLoggedIn) "Logged in" else "Not logged in",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (tracker.isLoggedIn) {
+                Icon(
+                    imageVector = Icons.Outlined.Check,
+                    contentDescription = stringResource(MR.strings.login_success),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                TextButton(onClick = onLogout) {
+                    Text(text = stringResource(MR.strings.logout))
+                }
+            } else {
+                Button(onClick = onLogin) {
+                    Text(text = stringResource(MR.strings.login))
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun CredentialsLoginDialog(
+        tracker: SuwayomiTrackerDto,
+        onDismissRequest: () -> Unit,
+        onConfirm: (String, String) -> Unit,
+    ) {
+        var username by remember { mutableStateOf("") }
+        var password by remember { mutableStateOf("") }
 
         AlertDialog(
             onDismissRequest = onDismissRequest,
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = stringResource(MR.strings.login_title, tracker.name),
-                        modifier = Modifier.weight(1f),
-                    )
-                    IconButton(onClick = onDismissRequest) {
-                        Icon(
-                            imageVector = Icons.Outlined.Close,
-                            contentDescription = stringResource(MR.strings.action_close),
-                        )
-                    }
-                }
-            },
+            title = { Text(text = stringResource(MR.strings.login_title, tracker.name)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .semantics { contentType = ContentType.Username + ContentType.EmailAddress },
                         value = username,
                         onValueChange = { username = it },
-                        label = { Text(text = stringResource(uNameStringRes)) },
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        label = { Text(text = stringResource(if (tracker.name == "Kitsu") MR.strings.email else MR.strings.username)) },
                         singleLine = true,
-                        isError = inputError && !processing,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     )
-
-                    var hidePassword by remember { mutableStateOf(true) }
                     OutlinedTextField(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .semantics { contentType = ContentType.Password },
                         value = password,
                         onValueChange = { password = it },
                         label = { Text(text = stringResource(MR.strings.password)) },
-                        trailingIcon = {
-                            IconButton(onClick = { hidePassword = !hidePassword }) {
-                                Icon(
-                                    imageVector = if (hidePassword) {
-                                        Icons.Filled.Visibility
-                                    } else {
-                                        Icons.Filled.VisibilityOff
-                                    },
-                                    contentDescription = null,
-                                )
-                            }
-                        },
-                        visualTransformation = if (hidePassword) {
-                            PasswordVisualTransformation()
-                        } else {
-                            VisualTransformation.None
-                        },
+                        singleLine = true,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
                             imeAction = ImeAction.Done,
                         ),
-                        singleLine = true,
-                        isError = inputError && !processing,
                     )
                 }
             },
             confirmButton = {
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !processing && username.text.isNotBlank() && password.text.isNotBlank(),
-                    onClick = {
-                        scope.launchIO {
-                            processing = true
-                            val result = checkLogin(
-                                context = context,
-                                tracker = tracker,
-                                username = username.text,
-                                password = password.text,
-                            )
-                            inputError = !result
-                            if (result) onDismissRequest()
-                            processing = false
-                        }
-                    },
+                TextButton(
+                    enabled = username.isNotBlank() && password.isNotBlank(),
+                    onClick = { onConfirm(username, password) },
                 ) {
-                    val id = if (processing) MR.strings.logging_in else MR.strings.login
-                    Text(text = stringResource(id))
+                    Text(text = stringResource(MR.strings.login))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissRequest) {
+                    Text(text = stringResource(MR.strings.action_cancel))
                 }
             },
         )
     }
 
-    private suspend fun checkLogin(
-        context: Context,
-        tracker: Tracker,
-        username: String,
-        password: String,
-    ): Boolean {
-        return try {
-            tracker.login(username, password)
-            withUIContext { context.toast(MR.strings.login_success) }
-            true
-        } catch (e: Throwable) {
-            tracker.logout()
-            withUIContext { context.toast(e.message.toString()) }
-            false
-        }
-    }
+    private const val TRACKING_HELP_URL = "https://github.com/Suwayomi/Suwayomi-Server/wiki"
+    private const val CALLBACK_URI = "amatsubu://tracker-oauth"
 
-    @Composable
-    private fun TrackingLogoutDialog(
-        tracker: Tracker,
-        onDismissRequest: () -> Unit,
-    ) {
-        val context = LocalContext.current
-        AlertDialog(
-            onDismissRequest = onDismissRequest,
-            title = {
-                Text(
-                    text = stringResource(MR.strings.logout_title, tracker.name),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            },
-            confirmButton = {
-                Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.extraSmall)) {
-                    OutlinedButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = onDismissRequest,
-                    ) {
-                        Text(text = stringResource(MR.strings.action_cancel))
-                    }
-                    Button(
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            tracker.logout()
-                            onDismissRequest()
-                            context.toast(MR.strings.logout_success)
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError,
-                        ),
-                    ) {
-                        Text(text = stringResource(MR.strings.logout))
-                    }
-                }
-            },
-        )
+    private fun String.withSuwayomiCallbackState(): String {
+        val callbackState = buildJsonObject {
+            put("redirectUrl", CALLBACK_URI)
+            put("clientName", "Amatsubu")
+        }.toString()
+
+        return Uri.parse(this)
+            .buildUpon()
+            .appendQueryParameter("state", callbackState)
+            .build()
+            .toString()
     }
 }
-
-private data class LoginDialog(
-    val tracker: Tracker,
-    val uNameStringRes: StringResource,
-)
-
-private data class LogoutDialog(
-    val tracker: Tracker,
-)

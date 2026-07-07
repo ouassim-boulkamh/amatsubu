@@ -9,7 +9,6 @@ import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
-import android.provider.Settings
 import androidx.appcompat.view.ContextThemeWrapper
 import androidx.core.content.getSystemService
 import androidx.core.net.toUri
@@ -21,7 +20,6 @@ import eu.kanade.tachiyomi.ui.base.delegate.ThemingDelegate
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.util.lang.truncateCenter
 import logcat.LogPriority
-import rikka.sui.Sui
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
@@ -149,16 +147,5 @@ fun Context.isPackageInstalled(packageName: String): Boolean {
         true
     } catch (e: PackageManager.NameNotFoundException) {
         false
-    }
-}
-
-val Context.hasMiuiPackageInstaller get() = isPackageInstalled("com.miui.packageinstaller")
-
-val Context.isShizukuInstalled get() = isPackageInstalled("moe.shizuku.privileged.api") || Sui.isSui()
-
-fun Context.launchRequestPackageInstallsPermission() {
-    Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-        data = "package:$packageName".toUri()
-        startActivity(this)
     }
 }

@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.manga.model.downloadedFilter
+import eu.kanade.domain.manga.model.localDownloadedFilter
 import eu.kanade.presentation.components.TabbedDialog
 import eu.kanade.presentation.components.TabbedDialogPaddings
 import tachiyomi.core.common.preference.TriState
@@ -48,6 +49,7 @@ fun ChapterSettingsDialog(
     onDismissRequest: () -> Unit,
     manga: Manga? = null,
     onDownloadFilterChanged: (TriState) -> Unit,
+    onLocalDownloadFilterChanged: (TriState) -> Unit,
     onUnreadFilterChanged: (TriState) -> Unit,
     onBookmarkedFilterChanged: (TriState) -> Unit,
     scanlatorFilterActive: Boolean,
@@ -102,6 +104,8 @@ fun ChapterSettingsDialog(
                         downloadFilter = manga?.downloadedFilter ?: TriState.DISABLED,
                         onDownloadFilterChanged = onDownloadFilterChanged
                             .takeUnless { downloadedOnly },
+                        localDownloadFilter = manga?.localDownloadedFilter ?: TriState.DISABLED,
+                        onLocalDownloadFilterChanged = onLocalDownloadFilterChanged,
                         unreadFilter = manga?.unreadFilter ?: TriState.DISABLED,
                         onUnreadFilterChanged = onUnreadFilterChanged,
                         bookmarkedFilter = manga?.bookmarkedFilter ?: TriState.DISABLED,
@@ -132,6 +136,8 @@ fun ChapterSettingsDialog(
 private fun ColumnScope.FilterPage(
     downloadFilter: TriState,
     onDownloadFilterChanged: ((TriState) -> Unit)?,
+    localDownloadFilter: TriState,
+    onLocalDownloadFilterChanged: (TriState) -> Unit,
     unreadFilter: TriState,
     onUnreadFilterChanged: (TriState) -> Unit,
     bookmarkedFilter: TriState,
@@ -143,6 +149,11 @@ private fun ColumnScope.FilterPage(
         label = stringResource(MR.strings.label_downloaded),
         state = downloadFilter,
         onClick = onDownloadFilterChanged,
+    )
+    TriStateItem(
+        label = stringResource(MR.strings.label_locally_downloaded),
+        state = localDownloadFilter,
+        onClick = onLocalDownloadFilterChanged,
     )
     TriStateItem(
         label = stringResource(MR.strings.action_filter_unread),

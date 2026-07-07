@@ -3,9 +3,9 @@ package eu.kanade.tachiyomi.ui.library
 import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.source.service.SourceManager
-import tachiyomi.source.local.LocalSource
 
 private const val LOCAL_SOURCE_ID_ALIAS = "local"
+private const val RETIRED_LOCAL_SOURCE_ID = 0L
 
 data class LibraryItem(
     val libraryManga: LibraryManga,
@@ -13,6 +13,7 @@ data class LibraryItem(
     val unreadCount: Long,
     val isLocal: Boolean,
     val badges: Badges,
+    val staleSnapshotSyncedAt: Long? = null,
 ) {
     val id: Long = libraryManga.id
 
@@ -30,7 +31,7 @@ data class LibraryItem(
         } else if (constraint.startsWith("src:", true)) {
             val querySource = constraint.substringAfter("src:")
             return if (querySource.equals(LOCAL_SOURCE_ID_ALIAS, ignoreCase = true)) {
-                source.id == LocalSource.ID
+                source.id == RETIRED_LOCAL_SOURCE_ID
             } else {
                 source.id == querySource.toLongOrNull()
             }
@@ -68,6 +69,7 @@ data class LibraryItem(
 
     data class Badges(
         val downloadCount: Int,
+        val localDownloadCount: Int,
         val unreadCount: Long,
         val isLocal: Boolean,
         val sourceLanguage: String,

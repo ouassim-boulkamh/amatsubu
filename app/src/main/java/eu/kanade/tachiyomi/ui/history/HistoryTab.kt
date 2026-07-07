@@ -17,9 +17,9 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
+import eu.kanade.presentation.history.HistoryClearAllDialog
+import eu.kanade.presentation.history.HistoryDeleteDialog
 import eu.kanade.presentation.history.HistoryScreen
-import eu.kanade.presentation.history.components.HistoryDeleteAllDialog
-import eu.kanade.presentation.history.components.HistoryDeleteDialog
 import eu.kanade.presentation.manga.DuplicateMangaDialog
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
@@ -71,28 +71,23 @@ data object HistoryTab : Tab {
             onSearchQueryChange = screenModel::updateSearchQuery,
             onClickCover = { navigator.push(MangaScreen(it)) },
             onClickResume = screenModel::getNextChapterForManga,
-            onDialogChange = screenModel::setDialog,
             onClickFavorite = screenModel::addFavorite,
+            onDialogChange = screenModel::setDialog,
+            onRefresh = screenModel::syncServerState,
         )
 
         val onDismissRequest = { screenModel.setDialog(null) }
         when (val dialog = state.dialog) {
+            is HistoryScreenModel.Dialog.DeleteAll -> {
+                HistoryClearAllDialog(
+                    onDismissRequest = onDismissRequest,
+                    onConfirm = screenModel::clearHistory,
+                )
+            }
             is HistoryScreenModel.Dialog.Delete -> {
                 HistoryDeleteDialog(
                     onDismissRequest = onDismissRequest,
-                    onDelete = { all ->
-                        if (all) {
-                            screenModel.removeAllFromHistory(dialog.history.mangaId)
-                        } else {
-                            screenModel.removeFromHistory(dialog.history)
-                        }
-                    },
-                )
-            }
-            is HistoryScreenModel.Dialog.DeleteAll -> {
-                HistoryDeleteAllDialog(
-                    onDismissRequest = onDismissRequest,
-                    onDelete = screenModel::removeAllHistory,
+                    onConfirm = { screenModel.removeFromHistory(dialog.history) },
                 )
             }
             is HistoryScreenModel.Dialog.DuplicateManga -> {
@@ -137,8 +132,14 @@ data object HistoryTab : Tab {
                 when (e) {
                     HistoryScreenModel.Event.InternalError ->
                         snackbarHostState.showSnackbar(context.stringResource(MR.strings.internal_error))
+                    HistoryScreenModel.Event.ServerUnavailable ->
+                        snackbarHostState.showSnackbar(context.stringResource(MR.strings.server_unreachable))
                     HistoryScreenModel.Event.HistoryCleared ->
                         snackbarHostState.showSnackbar(context.stringResource(MR.strings.clear_history_completed))
+                    HistoryScreenModel.Event.ServerSyncSuccess ->
+                        snackbarHostState.showSnackbar(context.stringResource(MR.strings.sync_server_state_success))
+                    HistoryScreenModel.Event.ServerSyncFailed ->
+                        snackbarHostState.showSnackbar(context.stringResource(MR.strings.sync_server_state_failed))
                     is HistoryScreenModel.Event.OpenChapter -> openChapter(context, e.chapter)
                 }
             }
@@ -153,7 +154,7 @@ data object HistoryTab : Tab {
 
     private suspend fun openChapter(context: Context, chapter: Chapter?) {
         if (chapter != null) {
-            val intent = ReaderActivity.newIntent(context, chapter.mangaId, chapter.id)
+            val intent = ReaderActivity.newIntent(context, chapter.mangaId, chapter.id, isServerBacked = true)
             context.startActivity(intent)
         } else {
             snackbarHostState.showSnackbar(context.stringResource(MR.strings.no_next_chapter))

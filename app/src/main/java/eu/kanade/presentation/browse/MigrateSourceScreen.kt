@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -24,7 +25,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import eu.kanade.domain.source.interactor.SetMigrateSorting
 import eu.kanade.presentation.browse.components.BaseSourceItem
 import eu.kanade.presentation.browse.components.SourceIcon
-import eu.kanade.tachiyomi.ui.browse.migration.sources.MigrateSourceScreenModel
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import tachiyomi.domain.source.model.Source
 import tachiyomi.i18n.MR
@@ -43,11 +43,12 @@ import tachiyomi.presentation.core.util.secondaryItemAlpha
 
 @Composable
 fun MigrateSourceScreen(
-    state: MigrateSourceScreenModel.State,
+    state: MigrateSourceState,
     contentPadding: PaddingValues,
     onClickItem: (Source) -> Unit,
     onToggleSortingDirection: () -> Unit,
     onToggleSortingMode: () -> Unit,
+    sourceIcon: (@Composable RowScope.(Source) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     when {
@@ -69,8 +70,19 @@ fun MigrateSourceScreen(
                 onToggleSortingMode = onToggleSortingMode,
                 sortingDirection = state.sortingDirection,
                 onToggleSortingDirection = onToggleSortingDirection,
+                sourceIcon = sourceIcon,
             )
     }
+}
+
+data class MigrateSourceState(
+    val isLoading: Boolean = true,
+    val items: List<Pair<Source, Long>> = emptyList(),
+    val sortingMode: SetMigrateSorting.Mode = SetMigrateSorting.Mode.ALPHABETICAL,
+    val sortingDirection: SetMigrateSorting.Direction = SetMigrateSorting.Direction.ASCENDING,
+) {
+    val isEmpty: Boolean
+        get() = items.isEmpty()
 }
 
 @Composable
@@ -83,6 +95,7 @@ private fun MigrateSourceList(
     onToggleSortingMode: () -> Unit,
     sortingDirection: SetMigrateSorting.Direction,
     onToggleSortingDirection: () -> Unit,
+    sourceIcon: (@Composable RowScope.(Source) -> Unit)?,
 ) {
     ScrollbarLazyColumn(
         contentPadding = contentPadding + topSmallPaddingValues,
@@ -137,6 +150,7 @@ private fun MigrateSourceList(
                 count = count,
                 onClickItem = { onClickItem(source) },
                 onLongClickItem = { onLongClickItem(source) },
+                sourceIcon = sourceIcon,
             )
         }
     }
@@ -149,6 +163,7 @@ private fun MigrateSourceItem(
     onClickItem: () -> Unit,
     onLongClickItem: () -> Unit,
     modifier: Modifier = Modifier,
+    sourceIcon: (@Composable RowScope.(Source) -> Unit)? = null,
 ) {
     BaseSourceItem(
         modifier = modifier,
@@ -156,7 +171,7 @@ private fun MigrateSourceItem(
         showLanguageInContent = source.lang != "",
         onClickItem = onClickItem,
         onLongClickItem = onLongClickItem,
-        icon = { SourceIcon(source = source) },
+        icon = sourceIcon ?: { SourceIcon(source = source) },
         action = {
             BadgeGroup {
                 Badge(text = "$count")

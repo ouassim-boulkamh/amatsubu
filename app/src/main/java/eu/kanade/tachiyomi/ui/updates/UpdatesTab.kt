@@ -26,11 +26,13 @@ import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import eu.kanade.tachiyomi.ui.updates.UpdatesScreenModel.Event
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import mihon.feature.upcoming.UpcomingScreen
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
+import kotlin.time.Duration.Companion.seconds
 
 data object UpdatesTab : Tab {
 
@@ -72,7 +74,7 @@ data object UpdatesTab : Tab {
             onMultiDeleteClicked = screenModel::showConfirmDeleteChapters,
             onUpdateSelected = screenModel::toggleSelection,
             onOpenChapter = {
-                val intent = ReaderActivity.newIntent(context, it.update.mangaId, it.update.chapterId)
+                val intent = ReaderActivity.newIntent(context, it.update.mangaId, it.update.chapterId, isServerBacked = true)
                 context.startActivity(intent)
             },
             onCalendarClicked = { navigator.push(UpcomingScreen()) },
@@ -103,6 +105,12 @@ data object UpdatesTab : Tab {
                     Event.InternalError -> screenModel.snackbarHostState.showSnackbar(
                         context.stringResource(MR.strings.internal_error),
                     )
+                    Event.ServerUnavailable -> screenModel.snackbarHostState.showSnackbar(
+                        context.stringResource(MR.strings.server_unreachable),
+                    )
+                    Event.LibraryUpdateStopped -> screenModel.snackbarHostState.showSnackbar(
+                        context.stringResource(MR.strings.library_update_stopped),
+                    )
                     is Event.LibraryUpdateTriggered -> {
                         val msg = if (event.started) {
                             MR.strings.updating_library
@@ -112,6 +120,13 @@ data object UpdatesTab : Tab {
                         screenModel.snackbarHostState.showSnackbar(context.stringResource(msg))
                     }
                 }
+            }
+        }
+
+        LaunchedEffect(screenModel) {
+            while (true) {
+                delay(SERVER_UPDATES_STATE_POLL_INTERVAL)
+                screenModel.refreshServerState()
             }
         }
 
@@ -133,3 +148,5 @@ data object UpdatesTab : Tab {
         }
     }
 }
+
+private val SERVER_UPDATES_STATE_POLL_INTERVAL = 30.seconds

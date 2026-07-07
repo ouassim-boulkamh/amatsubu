@@ -131,22 +131,22 @@ private fun ColumnScope.FilterPage(
             // No trackers
         }
         1 -> {
-            val service = trackers[0]
-            val filterTracker by screenModel.libraryPreferences.filterTracking(service.id.toInt()).collectAsState()
+            val tracker = trackers[0]
+            val filterTracker by screenModel.libraryPreferences.filterTracking(tracker.id).collectAsState()
             TriStateItem(
                 label = stringResource(MR.strings.action_filter_tracked),
                 state = filterTracker,
-                onClick = { screenModel.toggleTracker(service.id.toInt()) },
+                onClick = { screenModel.toggleTracker(tracker.id) },
             )
         }
         else -> {
             HeadingItem(MR.strings.action_filter_tracked)
-            trackers.map { service ->
-                val filterTracker by screenModel.libraryPreferences.filterTracking(service.id.toInt()).collectAsState()
+            trackers.map { tracker ->
+                val filterTracker by screenModel.libraryPreferences.filterTracking(tracker.id).collectAsState()
                 TriStateItem(
-                    label = service.name,
+                    label = tracker.name,
                     state = filterTracker,
-                    onClick = { screenModel.toggleTracker(service.id.toInt()) },
+                    onClick = { screenModel.toggleTracker(tracker.id) },
                 )
             }
         }
@@ -268,6 +268,10 @@ private fun ColumnScope.DisplayPage(
     CheckboxItem(
         label = stringResource(MR.strings.action_display_download_badge),
         pref = screenModel.libraryPreferences.downloadBadge,
+    )
+    CheckboxItem(
+        label = stringResource(MR.strings.action_display_local_download_badge),
+        pref = screenModel.libraryPreferences.localDownloadBadge,
     )
     CheckboxItem(
         label = stringResource(MR.strings.action_display_unread_badge),

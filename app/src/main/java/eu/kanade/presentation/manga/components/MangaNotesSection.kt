@@ -29,7 +29,7 @@ import tachiyomi.presentation.core.i18n.stringResource
 fun MangaNotesSection(
     content: String,
     expanded: Boolean,
-    onEditNotes: () -> Unit,
+    onEditNotes: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     if (content.isBlank()) return
@@ -41,7 +41,7 @@ fun MangaNotesSection(
             content = content,
             modifier = modifier.fillMaxWidth(),
         )
-        if (expanded) {
+        if (expanded && onEditNotes != null) {
             Button(
                 onClick = onEditNotes,
                 colors = ButtonDefaults.buttonColors(

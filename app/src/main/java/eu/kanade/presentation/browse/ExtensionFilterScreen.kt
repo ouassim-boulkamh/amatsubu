@@ -4,12 +4,12 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.more.settings.widget.SwitchPreferenceWidget
-import eu.kanade.tachiyomi.ui.browse.extension.ExtensionFilterState
 import eu.kanade.tachiyomi.util.system.LocaleHelper
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
@@ -43,6 +43,17 @@ fun ExtensionFilterScreen(
             state = state,
             onClickLang = onClickToggle,
         )
+    }
+}
+
+sealed interface ExtensionFilterState {
+    @Immutable
+    data class Success(
+        val languages: List<String>,
+        val enabledLanguages: Set<String> = emptySet(),
+    ) : ExtensionFilterState {
+        val isEmpty: Boolean
+            get() = languages.isEmpty()
     }
 }
 

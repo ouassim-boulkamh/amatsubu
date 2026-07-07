@@ -3,6 +3,7 @@ package eu.kanade.presentation.manga.components
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.FileDownloadOff
 import androidx.compose.material.icons.outlined.RemoveDone
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
@@ -37,6 +39,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import eu.kanade.tachiyomi.data.download.model.Download
+import eu.kanade.tachiyomi.ui.manga.DeviceCopyState
 import me.saket.swipe.SwipeableActionsBox
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.i18n.MR
@@ -57,6 +60,10 @@ fun MangaChapterListItem(
     downloadIndicatorEnabled: Boolean,
     downloadStateProvider: () -> Download.State,
     downloadProgressProvider: () -> Int,
+    deviceCopyState: DeviceCopyState,
+    deviceCopyProgress: Int,
+    serverActionsEnabled: Boolean,
+    deviceSaveEnabled: Boolean,
     chapterSwipeStartAction: LibraryPreferences.ChapterSwipeAction,
     chapterSwipeEndAction: LibraryPreferences.ChapterSwipeAction,
     onLongClick: () -> Unit,
@@ -142,6 +149,7 @@ fun MangaChapterListItem(
                             color = LocalContentColor.current
                                 .copy(alpha = if (read) DISABLED_ALPHA else SECONDARY_ALPHA),
                         )
+                    val deviceCopyLabel = deviceCopyState.label(deviceCopyProgress)
                     ProvideTextStyle(value = subtitleStyle) {
                         if (date != null) {
                             Text(
@@ -166,8 +174,25 @@ fun MangaChapterListItem(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
+                            if (deviceCopyLabel != null) DotSeparatorText()
+                        }
+                        if (deviceCopyLabel != null) {
+                            Text(
+                                text = deviceCopyLabel,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
                         }
                     }
+                }
+                if (deviceCopyState == DeviceCopyState.DOWNLOADING) {
+                    LinearProgressIndicator(
+                        progress = { deviceCopyProgress / 100f },
+                        modifier = Modifier
+                            .padding(top = 4.dp)
+                            .fillMaxWidth(),
+                    )
                 }
             }
 
@@ -176,9 +201,27 @@ fun MangaChapterListItem(
                 modifier = Modifier.padding(start = 4.dp),
                 downloadStateProvider = downloadStateProvider,
                 downloadProgressProvider = downloadProgressProvider,
+                deviceCopyStateProvider = { deviceCopyState },
+                serverActionsEnabled = serverActionsEnabled,
+                deviceSaveEnabled = deviceSaveEnabled,
+                showDeviceCopyActions = true,
                 onClick = { onDownloadClick?.invoke(it) },
             )
         }
+    }
+}
+
+@Composable
+private fun DeviceCopyState.label(progress: Int): String? {
+    return when (this) {
+        DeviceCopyState.NONE -> null
+        DeviceCopyState.FRESH -> stringResource(MR.strings.device_copy_fresh)
+        DeviceCopyState.STALE -> stringResource(MR.strings.device_copy_stale)
+        DeviceCopyState.UNVERIFIED -> stringResource(MR.strings.device_copy_unverified)
+        DeviceCopyState.INCOMPLETE -> stringResource(MR.strings.device_copy_incomplete)
+        DeviceCopyState.DOWNLOADING -> "${stringResource(MR.strings.device_copy_saving)} $progress%"
+        DeviceCopyState.FAILED -> stringResource(MR.strings.device_copy_failed)
+        DeviceCopyState.ORPHANED -> stringResource(MR.strings.device_copy_orphaned)
     }
 }
 
