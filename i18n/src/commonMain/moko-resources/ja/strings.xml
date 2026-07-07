@@ -58,7 +58,6 @@
     <string name="loading">読み込み中…</string>
     <string name="app_not_available">アプリは利用不可</string>
     <string name="pref_category_general">全般</string>
-    <string name="pref_category_downloads">ダウンロード</string>
     <string name="pref_category_advanced">その他</string>
     <string name="pref_category_about">アプリについて</string>
     <string name="portrait">縦向き</string>
@@ -74,7 +73,6 @@
     <string name="pref_library_update_restriction">自動更新の条件</string>
     <string name="charging">充電中</string>
     <string name="pref_update_only_non_completed">ステータスが「完結済み」の作品をスキップ</string>
-    <string name="pref_auto_update_manga_sync">読んだ後に読書進捗を更新</string>
     <string name="default_category">デフォルトカテゴリー</string>
     <string name="default_category_summary">毎回尋ねる</string>
     <string name="ext_update">更新</string>
@@ -126,10 +124,7 @@
     <string name="color_filter_b_value">青</string>
     <string name="color_filter_a_value">アルファ</string>
     <string name="pref_remove_after_marked_as_read">手動で既読にした後</string>
-    <string name="pref_remove_after_read">読んだ後自動で削除</string>
     <string name="disabled">無効</string>
-    <string name="second_to_last">最後に読んだ章の2番目</string>
-    <string name="pref_download_new">新しい章をダウンロード</string>
     <string name="pref_create_backup">バックアップを作成</string>
     <string name="pref_create_backup_summ">現在のライブラリを復元するために使用できます</string>
     <string name="pref_restore_backup">バックアップを復元</string>
@@ -166,10 +161,6 @@
     <string name="scale_type_fit_height">高さに合わせる</string>
     <string name="double_tap_anim_speed_0">アニメ効果をOFF</string>
     <string name="rotation_force_landscape">横向き画面を強制</string>
-    <string name="last_read_chapter">最後に読んだ章</string>
-    <string name="third_to_last">最後に読んだ章の3番目</string>
-    <string name="fourth_to_last">最後に読んだ章の4番目</string>
-    <string name="fifth_to_last">最後に読んだ章の5番目</string>
     <string name="services">トラッカー</string>
     <string name="restore_completed">復元が完了しました</string>
     <string name="backup_choice">バックアップしたいのは？</string>
@@ -240,18 +231,11 @@
     <string name="notification_first_add_to_library">まずは項目をライブラリに追加してください</string>
     <string name="file_select_cover">カバー画像を選択</string>
     <string name="file_select_backup">バックアップファイルを選択</string>
-    <string name="update_check_confirm">ダウンロード</string>
-    <string name="update_check_no_new_updates">新しいバージョンがありません</string>
-    <string name="update_check_notification_download_in_progress">ダウンロード中…</string>
-    <string name="update_check_notification_download_complete">タップでアップデートをインストール</string>
-    <string name="update_check_notification_download_error">ダウンロード中にエラー発生</string>
-    <string name="update_check_notification_update_available">アップデート利用可能！</string>
     <string name="information_no_downloads">ダウンロードがありません</string>
     <string name="information_no_recent">最近の更新はありません</string>
     <string name="information_no_recent_manga">最近は何も読んでいません</string>
     <string name="information_empty_library">ライブラリは空です</string>
     <string name="information_empty_category">カテゴリーがありません。「+」をタップしてカテゴリーを追加し、ライブラリを整理できます。</string>
-    <string name="download_notifier_downloader_title">ダウンロード</string>
     <string name="download_notifier_title_error">エラー</string>
     <string name="download_notifier_unknown_error">予期せぬエラーが発生したため、ダウンロードは失敗しました</string>
     <string name="download_notifier_text_only_wifi">Wi-Fi接続は利用できません</string>
@@ -310,7 +294,6 @@
     <string name="email">メールアドレス</string>
     <string name="downloaded_only_summary">ライブラリにある項目はフィルターされます</string>
     <string name="label_downloaded_only">ダウンロード済みのみ</string>
-    <string name="check_for_updates">更新を確認</string>
     <string name="licenses">オープンソースライセンス</string>
     <string name="website">Webサイト</string>
     <string name="battery_optimization_setting_activity_not_found">デバイス設定を開きませんでした</string>
@@ -364,7 +347,6 @@
     <string name="updating_library">ライブラリを更新中</string>
     <string name="viewer">ビューアモード</string>
     <string name="manga_info_collapse">詳細を非表示</string>
-    <string name="channel_ext_updates">拡張機能の更新</string>
     <string name="information_cloudflare_bypass_failure">Cloudflareをバイパスできませんでした</string>
     <string name="notification_chapters_single_and_more">第%1$s章とその他%2$d章</string>
     <string name="notification_chapters_multiple">第%1$s章</string>
@@ -405,7 +387,6 @@
     <string name="channel_errors">エラー</string>
     <string name="backup_restore_missing_trackers">ログインしていないトラッカー:</string>
     <string name="pref_remove_bookmarked_chapters">ブックマークした章の削除を許可</string>
-    <string name="pref_category_delete_chapters">章を削除</string>
     <string name="ext_nsfw_warning">この拡張機能のソースには成人向けのコンテンツが含まれる可能性があります</string>
     <string name="ext_nsfw_short">成人向け</string>
     <string name="parental_controls_info">非公式や誤ってフラグ付けされた可能性のある拡張機能の成人向けのコンテンツはこれからも表示される恐れがあります。</string>
@@ -457,7 +438,6 @@
     <string name="pref_show_navigation_mode_summary">ビューアが立ち上がるとしばらく表示します</string>
     <string name="pref_show_navigation_mode">タップ可能なゾーンを表示</string>
     <string name="pref_dns_over_https">DNS over HTTPS (DoH)</string>
-    <string name="pref_download_new_categories_details">含まれているカテゴリーに入っていても、除外対象カテゴリーにある項目は更新されません。</string>
     <string name="pref_category_auto_download">自動ダウンロード</string>
     <string name="exclude">下記を除外: %s</string>
     <string name="include">下記を含む: %s</string>
@@ -466,7 +446,6 @@
     <string name="action_show_errors">タップで詳細を表示</string>
     <string name="action_sort_chapter_fetch_date">章の取得された日付順</string>
     <string name="information_empty_category_dialog">まだカテゴリを登録していません。</string>
-    <string name="update_check_eol">このAndroidはもうサポートされていません</string>
     <string name="error_no_match">結果が見つかりませんでした</string>
     <string name="source_unsupported">非対応ソースです</string>
     <string name="unread">未読</string>
@@ -527,10 +506,7 @@
     <string name="ext_installer_legacy">レガシー</string>
     <string name="ext_installer_pref">インストーラ</string>
     <string name="ext_app_info">アプリの情報</string>
-    <string name="ext_installer_shizuku_unavailable_dialog">Shizukuを拡張機能インストーラーとして使用するには、Shizukuをインストールして起動してください。</string>
-    <string name="ext_installer_shizuku_stopped">Shizukuは実行中ではありません</string>
     <string name="action_sort_count">項目数</string>
-    <string name="ext_install_service_notif">拡張機能をインストール中…</string>
     <string name="enhanced_services">高度な追跡サービス</string>
     <string name="enhanced_tracking_info">特定ソース専用の高度な機能を提供します。項目はライブラリに追加される時、自動で追跡され始めます。</string>
     <string name="backup_info">ほかの場所にもバックアップのコピーを保管してください。バックアップには保存されたパスワードなどの機密性の高い情報が含まれることがあります。共有時に十分ご注意ください。</string>
@@ -543,7 +519,6 @@
     <string name="update_72hour">3日ごと</string>
     <string name="connected_to_wifi">Wi-Fi接続時のみ</string>
     <string name="ext_update_all">全て更新</string>
-    <string name="channel_app_updates">アプリ更新</string>
     <string name="clear_database_source_item_count">データベースにはライブラリにない項目は%1$d件あります</string>
     <string name="pref_auto_clear_chapter_cache">アプリ起動時に章のキャッシュを消去</string>
     <string name="database_clean">消去できるものはありませんでした</string>
@@ -568,7 +543,6 @@
     <string name="action_move_to_top_all_for_series">シリーズをトップに移動</string>
     <string name="disabled_nav">無効</string>
     <string name="empty_backup_error">バックアップできるライブラリ項目はありません</string>
-    <string name="update_check_open">GitHubに移動</string>
     <string name="error_saving_picture">画像の保存時にエラー発生</string>
     <string name="action_close">閉じる</string>
     <string name="pref_clear_webview_data">WebViewデータを消去</string>
@@ -611,9 +585,6 @@
     <string name="update_already_running">アップデートはすでに進行中です</string>
     <string name="error_user_agent_string_blank">ユーザーエージェント文字列を入力してください</string>
     <string name="theme_tidalwave">津波</string>
-    <string name="download_ahead">事前ダウンロード</string>
-    <string name="auto_download_while_reading">読書中に自動でダウンロード</string>
-    <string name="download_ahead_info">現在のと次の章は既にダウンロード済みの場合のみ有効です。</string>
     <string name="are_you_sure">本当に実行しますか？</string>
     <string name="multi_lang">多言語</string>
     <string name="updates_last_update_info">前回のライブラリ更新: %s</string>
@@ -622,7 +593,6 @@
     <string name="missing_storage_permission">ストレージ権限を持っていません</string>
     <string name="skipped_reason_not_always_update">シリーズは更新を必要としないため、スキップされました</string>
     <string name="action_search_hint">検索…</string>
-    <string name="crash_screen_description">%sでは予期せぬエラーが発生しました。お手数ですが、クラッシュ ログを Discord のサポート チャネルで共有するようお願い致します。</string>
     <string name="invalid_location">無効な場所: %s</string>
     <string name="unknown_title">不明なタイトル</string>
     <string name="error_user_agent_string_invalid">ユーザー エージェント文字列が無効です</string>
@@ -630,7 +600,6 @@
     <string name="updates_last_update_info_just_now">ちょうど今</string>
     <string name="crash_screen_restart_application">アプリケーションを再起動</string>
     <string name="pref_reader_summary">ビューアモード、表示、ナビゲーション</string>
-    <string name="pref_downloads_summary">自動ダウンロード、事前ダウンロード</string>
     <string name="pref_tracking_summary">一方同期、高度な同期</string>
     <string name="pref_browse_summary">ソース、拡張機能、グローバル検索</string>
     <string name="pref_backup_summary">手動・自動バックアップ、ストレージ領域</string>
@@ -800,8 +769,6 @@
     <string name="onboarding_permission_analytics">分析を許可する</string>
     <string name="pref_security">安全</string>
     <string name="pref_firebase">分析とクラッシュログ</string>
-    <string name="pref_download_new_unread_chapters_only">重複して読んだ章のダウンロードをスキップする</string>
-    <string name="pref_auto_update_manga_on_mark_read">既読としてマークされた場合の更新の進行状況</string>
     <string name="non_library_settings">すべての既読エントリ</string>
     <string name="onboarding_permission_crashlytics">クラッシュログを送信する</string>
     <string name="onboarding_permission_analytics_description">アプリの機能を向上させるために、匿名化された使用状況データを送信します。</string>

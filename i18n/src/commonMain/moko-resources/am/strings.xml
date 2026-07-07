@@ -56,7 +56,6 @@
     <string name="pref_category_about">ስለ</string>
     <string name="pref_category_advanced">የላቀ</string>
     <string name="pref_category_tracking">መከታተል</string>
-    <string name="pref_category_downloads">ውርዶች</string>
     <string name="pref_category_reader">አንባቢ</string>
     <string name="pref_category_library">ቤተ መጻሕፍት</string>
     <string name="pref_category_general">ጄኔራል</string>
@@ -156,9 +155,7 @@
     <string name="label_more">ተጨማሪ</string>
     <string name="name">ስም</string>
     <string name="pref_remove_bookmarked_chapters">ዕልባት የተደረገባቸውን ምዕራፎች ሰርዝ</string>
-    <string name="pref_remove_after_read">ካነበብኩ በኋላ</string>
     <string name="pref_remove_after_marked_as_read">በእጅ እንደተነበበ ምልክት ከተደረገ በኋላ</string>
-    <string name="pref_category_delete_chapters">ምዕራፎችን ሰርዝ</string>
     <string name="pref_webtoon_side_padding">የጎን ሽፋን</string>
     <string name="pref_category_reading">ንባብ</string>
     <string name="pref_category_reading_mode">የንባብ ሁነታ</string>
@@ -227,7 +224,6 @@
     <string name="tapping_inverted_horizontal">አግድም</string>
     <string name="tapping_inverted_none">የለም</string>
     <string name="pref_read_with_tapping_inverted">ተገልብጦ መታ ማድረግ</string>
-    <string name="channel_ext_updates">የቅጥያ ዝመናዎች</string>
     <string name="channel_new_chapters">የምዕራፍ ዝመናዎች</string>
     <string name="channel_errors">ስህተቶች</string>
     <string name="channel_complete">ተጠናቀቀ</string>
@@ -246,18 +242,10 @@
     <string name="pref_create_backup">ምትኬን ይፍጠሩ</string>
     <string name="tracking_info">በክትትል አገልግሎቶች ውስጥ የምዕራፍ እድገትን ለማዘመን የአንድ-መንገድ ማመሳሰል። ከመከታተያ አዝራራቸው የግለሰቦችን የማንጋ ግቤቶች መከታተልን ያዘጋጁ።</string>
     <string name="services">አገልግሎቶች</string>
-    <string name="pref_auto_update_manga_sync">ካነበቡ በኋላ የምዕራፍ እድገትን ያዘምኑ</string>
-    <string name="pref_download_new">አዳዲስ ምዕራፎችን ያውርዱ</string>
-    <string name="fifth_to_last">አምስተኛው እስከ መጨረሻው ምዕራፍ</string>
-    <string name="fourth_to_last">ከአራተኛ እስከ መጨረሻው ምዕራፍ</string>
-    <string name="third_to_last">ሦስተኛው እስከ መጨረሻው ምዕራፍ</string>
-    <string name="second_to_last">ሁለተኛ እስከ መጨረሻው ምዕራፍ</string>
-    <string name="last_read_chapter">ለመጨረሻ ጊዜ የተነበበው ምዕራፍ</string>
     <string name="disabled">ተሰናክሏል</string>
     <string name="download_notifier_text_only_wifi">ምንም የ ዋይ-ፋይ ግንኙነት የለም</string>
     <string name="download_notifier_unknown_error">ባልተጠበቀ ስህተት ምክንያት ምዕራፍ ማውረድ አልተቻለም</string>
     <string name="download_notifier_title_error">ስህተት</string>
-    <string name="download_notifier_downloader_title">አውራጅ</string>
     <string name="chapter_settings_updated">ነባሪ የምዕራፍ ቅንጅቶች ተዘምነዋል</string>
     <string name="information_webview_outdated">ለተሻለ ተኳኋኝነት እባክዎ የድር እይታን መተግበሪያውን ያዘምኑ</string>
     <string name="pref_clear_cookies">ኩኪዎችን ያጽዱ</string>

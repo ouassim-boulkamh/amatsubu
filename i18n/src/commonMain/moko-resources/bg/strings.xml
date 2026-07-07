@@ -52,7 +52,6 @@
     <string name="loading">Зареждане…</string>
     <string name="pref_category_general">Основни настройки</string>
     <string name="pref_category_reader">Четец</string>
-    <string name="pref_category_downloads">Изтегляния</string>
     <string name="pref_category_tracking">Следене</string>
     <string name="pref_category_advanced">Разширени настройки</string>
     <string name="pref_category_about">За приложението</string>
@@ -69,7 +68,6 @@
     <string name="pref_library_update_restriction">Автоматични актуализации на ограниченията на устройството</string>
     <string name="charging">На зарядно устройство</string>
     <string name="pref_update_only_non_completed">Със статус \"Завършена\"</string>
-    <string name="pref_auto_update_manga_sync">Обнови прогреса след прочитане</string>
     <string name="pref_fullscreen">Цял екран</string>
     <string name="pref_page_transitions">Анимирани преходи</string>
     <string name="pref_show_page_number">Номер на страница</string>
@@ -107,14 +105,7 @@
     <string name="color_filter_b_value">B</string>
     <string name="color_filter_a_value">A</string>
     <string name="pref_remove_after_marked_as_read">След маркиране като прочетено</string>
-    <string name="pref_remove_after_read">След прочитане автоматично изтрийте</string>
     <string name="disabled">Изключено</string>
-    <string name="last_read_chapter">Последно прочетена глава</string>
-    <string name="second_to_last">Предпоследна прочетена глава</string>
-    <string name="third_to_last">Предпоследна трета прочетена глава</string>
-    <string name="fourth_to_last">Четвърта предпоследна прочетена глава</string>
-    <string name="fifth_to_last">Пета предпоследна прочетена глава</string>
-    <string name="pref_download_new">Изтегляй нови глави</string>
     <string name="services">Услуги</string>
     <string name="pref_clear_chapter_cache">Изчисти кеша на главите</string>
     <string name="used_cache">Използвани: %1$s</string>
@@ -179,17 +170,10 @@
     <string name="notification_first_add_to_library">Моля, добавете мангата в библиотеката си, преди да направите това</string>
     <string name="file_select_cover">Изберете корица</string>
     <string name="file_select_backup">Изберете резервно копие</string>
-    <string name="update_check_confirm">Изтегли</string>
-    <string name="update_check_no_new_updates">Няма налични актуализации</string>
-    <string name="update_check_notification_download_in_progress">Изтегля се…</string>
-    <string name="update_check_notification_download_complete">Изтегляне завършено</string>
-    <string name="update_check_notification_download_error">Грешка при изтегляне</string>
-    <string name="update_check_notification_update_available">Има нова версия!</string>
     <string name="information_no_downloads">Нямате изтегляния</string>
     <string name="information_no_recent">Нямате нови глави</string>
     <string name="information_no_recent_manga">Не сте чели нищо наскоро</string>
     <string name="information_empty_library">Библиотеката Ви е празна</string>
-    <string name="download_notifier_downloader_title">Изтегли</string>
     <string name="download_notifier_title_error">Грешка</string>
     <string name="download_notifier_unknown_error">Получи се неочаквана грешка при изтеглянето на главата</string>
     <string name="download_notifier_text_only_wifi">Няма налична Wi-Fi връзка</string>
@@ -244,7 +228,7 @@
     <string name="untrusted_extension">Непотвърдено разширение</string>
     <string name="untrusted_extension_message">Следното разширение имаше непотвърден сертификат и не беше активирано.
 \n
-\nЗлонамереното разширение може да види всичката информация за вход в системата на Mihon или да компилира неблагонадежден код.
+\nЗлонамереното разширение може да види всичката информация за вход в системата на Amatsubu или да компилира неблагонадежден код.
 \n
 \nПотвърждавайки този сертификат, вие приемате тези рискове.</string>
     <string name="pref_double_tap_anim_speed">Скорост на анимацията</string>
@@ -296,10 +280,9 @@
     <string name="logout_success">Излязохте успешно</string>
     <string name="paused">На пауза</string>
     <string name="secure_screen">Сигурност</string>
-    <string name="channel_ext_updates">Ъпдейти на разширенията</string>
     <string name="channel_new_chapters">Нови глави</string>
     <string name="information_webview_outdated">Моля, обновете WebView за по-добра съвместимост</string>
-    <string name="information_webview_required">WebView е необходим за Mihon</string>
+    <string name="information_webview_required">WebView е необходим за Amatsubu</string>
     <string name="information_cloudflare_bypass_failure">Грешка при минаването през Cloudflare</string>
     <string name="notification_chapters_multiple">Глави %1$s</string>
     <string name="notification_chapters_single_and_more">Глава %1$s и %2$d още</string>
@@ -317,7 +300,6 @@
     <string name="email">Имейл адрес</string>
     <string name="downloaded_only_summary">Филтрира мангата в цялата Ви библиотека</string>
     <string name="label_downloaded_only">Само изтеглени</string>
-    <string name="check_for_updates">Провери за ъпдейт</string>
     <string name="licenses">Лицензи за отворен код</string>
     <string name="website">Уебсайт</string>
     <string name="battery_optimization_disabled">Оптимизацията на батерията е изключена</string>
@@ -403,7 +385,6 @@
     <string name="whats_new">Какво е новото</string>
     <string name="backup_restore_missing_trackers">Не сте влезли като потребител в:</string>
     <string name="pref_remove_bookmarked_chapters">Позволи изтриване на отметнати глави</string>
-    <string name="pref_category_delete_chapters">Изтрий глави</string>
     <string name="pref_category_reading_mode">Режим на четене</string>
     <string name="ext_nsfw_warning">Може да съдържа неприлично (18+) съдържание</string>
     <string name="ext_nsfw_short">18+</string>
@@ -434,7 +415,6 @@
     <string name="local_filter_order_by">Нареди по</string>
     <string name="chapter_settings">Настройки за главите</string>
     <string name="action_start_downloading_now">Започни изтеглянето сега</string>
-    <string name="ext_install_service_notif">Инсталиране на разширение…</string>
     <string name="ext_installer_legacy">Стара версия</string>
     <string name="ext_installer_pref">Инсталатор</string>
     <string name="pref_dump_crash_logs">Разтовари записите от сривовете</string>
@@ -482,8 +462,6 @@
     <string name="none">Никоя</string>
     <string name="include">Включва: %s</string>
     <string name="exclude">Изключва: %s</string>
-    <string name="ext_installer_shizuku_stopped">Shizuku не работи</string>
-    <string name="ext_installer_shizuku_unavailable_dialog">Инсталирайте и стартирайте Shizuku, за да използвате Shizuku като инсталатор на разширения.</string>
     <string name="pref_show_navigation_mode">Покажи оформлението на навигацията</string>
     <string name="pref_dual_page_split">Разделяне на широки страници</string>
     <string name="pref_dual_page_invert_summary">Ако позицията на разделението на широката страница не съвпада с посоката на четене</string>
@@ -498,7 +476,6 @@
     <string name="pref_lowest">Най-ниска</string>
     <string name="pref_remove_exclude_categories">Изключени категории</string>
     <string name="pref_category_auto_download">Автоматично изтегляне</string>
-    <string name="pref_download_new_categories_details">Манга в изключени категории няма да бъде изтеглена, дори да се намира във включени категории.</string>
     <string name="tracking_guide">Наръчник при проследяване</string>
     <string name="enhanced_services">Подобрени услуги</string>
     <string name="enhanced_tracking_info">Услуги, предлагащи подобрени особености за определени източници. Манга се проследява автоматично, щом бъде добавена към библиотеката Ви.</string>
@@ -541,11 +518,9 @@
     <string name="source_unsupported">Източникът не се поддържа</string>
     <string name="error_no_match">Не е намерено съвпадение</string>
     <string name="share_page_info">%1$s: %2$s, страница %3$d</string>
-    <string name="update_check_eol">Тази версия на Android повече не се поддържа</string>
     <string name="pref_tablet_ui_mode">Потребителски интерфейс на таблет</string>
     <string name="clear_database_source_item_count">%1$d небиблиотечна манга в базата данни</string>
     <string name="database_clean">Нищо за почистване</string>
-    <string name="channel_app_updates">Актуализации на приложението</string>
     <string name="pref_auto_clear_chapter_cache">Изчистване на кеша на главата при затваряне на приложението</string>
     <string name="privacy_policy">Политика за поверителност</string>
     <string name="pref_update_only_completely_read">С непрочетени глави</string>
@@ -564,14 +539,12 @@
     <string name="rotation_reverse_portrait">Обърнат портрет</string>
     <string name="ext_info_language">Език</string>
     <string name="crash_screen_title">Случи се неочаквана грешка</string>
-    <string name="auto_download_while_reading">Автоматично изтегляне при четене</string>
     <string name="description_placeholder">Няма описание</string>
     <string name="empty_backup_error">Няма заглавия в библиотеката за резервно копие</string>
     <string name="pref_reset_viewer_flags_summary">Нулирай режима на четене и ориентацията на всички поредици</string>
     <string name="are_you_sure">Сигурни ли сте?</string>
     <string name="popular">Популярни</string>
     <string name="unfinished_list">Списък с незавършени</string>
-    <string name="crash_screen_description">%s се сблъска с неочаквана грешка. Препоръчваме да заснемете това съобщение, да запазите записите от крашовете и да ги споделите в нашия канал за поддръжка в Discord.</string>
     <string name="updates_last_update_info">Последно обновяване на библиотеката: %s</string>
     <string name="reading_list">Списък за четене</string>
     <string name="cant_open_last_read_chapter">Не може да се отвори последната прочетена глава</string>
@@ -581,7 +554,6 @@
     <string name="appwidget_unavailable_locked">Приставката не е достъпна, когато е активирано заключване на приложението</string>
     <string name="skipped_reason_not_always_update">Пропусната, понеже поредицата не изисква обновления</string>
     <string name="skipped_reason_not_started">Пропусната, понеже не е започната</string>
-    <string name="update_check_open">Отвори в GitHub</string>
     <string name="pref_update_only_started">Незапочнати</string>
     <string name="pref_reset_viewer_flags">Нулирай отделните настройки на четеца</string>
     <string name="skipped_reason_not_caught_up">Пропусната, понеже има непрочетени глави</string>
@@ -591,8 +563,6 @@
     <string name="pref_landscape_zoom">Увеличи пейзажно изображение</string>
     <string name="complete_list">Списък със завършени</string>
     <string name="on_hold_list">Списък със спрени</string>
-    <string name="download_ahead">Предстоящо изтегляне</string>
-    <string name="download_ahead_info">Работи само със заглавия в библиотеката и ако текущата и следващата глава са вече изтеглени</string>
     <string name="appwidget_updates_description">Виж наскоро обновената манга</string>
     <string name="download_notifier_split_page_path_not_found">Не можа да бъде намерен файловият път на страница %d</string>
     <string name="action_sort_last_manga_update">Последно обновяване</string>
@@ -626,7 +596,6 @@
     <string name="pref_appearance_summary">Тема, формат на датата и времето</string>
     <string name="pref_library_summary">Категории, глобални обновления</string>
     <string name="pref_reader_summary">Режим на четене, показване, навигация</string>
-    <string name="pref_downloads_summary">Автоматични изтегляния, предстоящи изтегляния</string>
     <string name="pref_tracking_summary">Еднопосочна синхронизация, подобрена синхронизация</string>
     <string name="pref_browse_summary">Източници, разширения, глобално търсене</string>
     <string name="pref_backup_summary">Ръчно и автоматично създаване на бекъп</string>
@@ -681,7 +650,6 @@
     <string name="notification_updating_progress">Обновяване на библиотеката... (%s)</string>
     <string name="information_cloudflare_help">Натисни тук за помощ с Cloudflare</string>
     <string name="day_short">%dд</string>
-    <string name="pref_download_new_unread_chapters_only">Пропусни изтегляне на дублиращи се прочетени глави</string>
     <string name="intervals_header">Интервали</string>
     <string name="relative_time_span_never">Никога</string>
     <string name="action_set_interval">Задай интервал</string>

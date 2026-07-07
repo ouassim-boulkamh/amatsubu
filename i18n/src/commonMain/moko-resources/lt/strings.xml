@@ -77,7 +77,6 @@
     <string name="pref_category_about">Apie</string>
     <string name="pref_category_advanced">Papildomi</string>
     <string name="pref_category_tracking">Sekimas</string>
-    <string name="pref_category_downloads">Atsiuntimai</string>
     <string name="pref_category_reader">Skaityklė</string>
     <string name="pref_category_library">Biblioteka</string>
     <string name="pref_category_appearance">Išvaizda</string>
@@ -186,7 +185,7 @@
     <string name="obsolete_extension_message">Šis plėtinys nebėra prieinamas. Plėtinys gali veikti netinkamai arba sukelti problemas programėlėje. Rekomenduojama išdiegti plėtinį.</string>
     <string name="untrusted_extension_message">Šis plėtinys buvo pasirašytas nepatikimu sertifikatu ir nebuvo aktyvuotas.
 \n
-\nPlėtinys, su negeranoriškais ketinimais, gali perskaityti prisijungimo duomenys patalpintus Mihon arba gali paleisti kenkėjišką kodą.
+\nPlėtinys, su negeranoriškais ketinimais, gali perskaityti prisijungimo duomenys patalpintus Amatsubu arba gali paleisti kenkėjišką kodą.
 \n
 \nJūs priimate šias rizikas pasitikėdami sertifikatu.</string>
     <string name="untrusted_extension">Nepatikimas plėtinys</string>
@@ -206,8 +205,6 @@
     <string name="none">Nėra</string>
     <string name="all">Visi</string>
     <string name="pref_library_update_categories_details">Įrašai, kurie yra įtraukti į neįtraukiamas kategorijas, nebus atnaujinami, net jei yra įtraukti į įtrauktąsias kategorijas.</string>
-    <string name="update_check_notification_download_error">Atsiuntimo klaida</string>
-    <string name="update_check_notification_update_available">Nauja versija pasiekiama!</string>
     <string name="scale_type_fit_height">Pagal aukštį talpinimas</string>
     <string name="white_background">Balta</string>
     <string name="nav_zone_right">Dešinė</string>
@@ -217,7 +214,6 @@
     <string name="ext_installer_pref">Diegimo programa</string>
     <string name="pref_update_only_completely_read">Kai yra neskaitytų skyrių</string>
     <string name="pref_update_only_started">Kai dar neprasidėjo</string>
-    <string name="ext_install_service_notif">Instaliuojamas papildinys…</string>
     <string name="pref_keep_screen_on">Palikti ekraną įjungta</string>
     <string name="pref_skip_read_chapters">Praleisti perskaitytus skyrius</string>
     <string name="pref_skip_filtered_chapters">Praleisti perfiltruotus skyrius</string>
@@ -246,7 +242,6 @@
     <string name="ext_update_all">Atnaujinti viską</string>
     <string name="pref_read_with_volume_keys">Garso mygtukai</string>
     <string name="scale_type_fit_screen">Pritaikyti pagal ekraną</string>
-    <string name="ext_installer_shizuku_stopped">Shizuku neveikia</string>
     <string name="filter_mode_overlay">Perdanga</string>
     <string name="pref_reader_navigation">Navigacija</string>
     <string name="pref_read_with_volume_keys_inverted">Apkeisti garso mygtukus</string>
@@ -288,7 +283,6 @@
     <string name="color_filter_r_value">R</string>
     <string name="action_display_language_badge">Kalba</string>
     <string name="extension_api_error">Nepavyko gauti papildinių sąrašo</string>
-    <string name="ext_installer_shizuku_unavailable_dialog">Instaliuoti ir paleisti Shizuku, kad galėtumėte naudoti Shizuku kaip papildinių instaliuotoją.</string>
     <string name="pref_show_navigation_mode">Rodyti lietimui jautrias zonas</string>
     <string name="label_warning">Įspėjimas</string>
     <string name="update_72hour">Kas 3 dienas</string>
@@ -299,26 +293,18 @@
     <string name="pref_grayscale">Nespalvotai</string>
     <string name="pref_zoom_start">Priartinimo pradinė padėtis</string>
     <string name="pref_backup_interval">Atsarginių kopijų kūrimo dažnis</string>
-    <string name="third_to_last">Trečias nuo paskutinio skaityto</string>
     <string name="disabled">Išjungtas</string>
     <string name="pref_hide_threshold">Jautrumas, skirtas paslėpti meniu slinkant</string>
     <string name="pref_low">Žemas</string>
-    <string name="pref_download_new">Atsisiųsti naujus skyrius</string>
     <string name="save_chapter_as_cbz">Išsaugoti kaip CBZ archyvą</string>
-    <string name="pref_auto_update_manga_sync">Po perskaitymo atnaujinti statusą</string>
     <string name="backup_restore_missing_sources">Trūksta šaltinių:</string>
     <string name="services">Paslaugos</string>
-    <string name="second_to_last">Priešpaskutinis perskaitytas skyrius</string>
-    <string name="fourth_to_last">Ketvirtas skyrius nuo paskutinio skaityto</string>
     <string name="pref_remove_bookmarked_chapters">Leisti naikinti žymėtus skyrius</string>
-    <string name="fifth_to_last">Penktas nuo paskutinio skaityto</string>
     <string name="pref_category_auto_download">Automatinis atsisiuntimas</string>
     <string name="backup_created">Sukurta atsarginė kopija</string>
     <string name="pref_high">aukštas</string>
-    <string name="pref_category_delete_chapters">Naikinti skyrius</string>
     <string name="pref_lowest">Mažiausias</string>
     <string name="pref_remove_after_marked_as_read">Rankinių būdu pažymėtas, kaip skaitytas</string>
-    <string name="pref_remove_after_read">Perskaičius automatiškai naikinti</string>
     <string name="enhanced_services">Patobulintos paslaugos</string>
     <string name="pref_restore_backup_summ">Atkurti biblioteką iš atsarginės failo kopijos</string>
     <string name="invalid_backup_file_missing_manga">Atsarginėje kopijoje nėra jokių bibliotekos įrašų.</string>
@@ -327,8 +313,6 @@
     <string name="pref_create_backup">Kurti atsarginę kopiją</string>
     <string name="pref_restore_backup">Atkurti atsarginę kopiją</string>
     <string name="pref_remove_exclude_categories">Neįtrauktos kategorijos</string>
-    <string name="last_read_chapter">Paskiausiai skaitytas skyrius</string>
-    <string name="pref_download_new_categories_details">Įrašai neįtrauktose kategorijose nebus atsisiųsti, net jei jie taip pat yra įtraukti į kategorijas.</string>
     <string name="learn_more">Palieskite, kad sužinotumėte daugiau</string>
     <string name="file_select_backup">Pasirinkti atsarginės kopijos failą</string>
     <string name="transition_pages_loading">Įkeliami puslapiai…</string>
@@ -350,7 +334,7 @@
     <string name="notification_first_add_to_library">Prieš atlikdami šį veiksmą, pridėkite įrašą į savo biblioteką</string>
     <string name="skipped_reason_not_started">Praleista, nes nėra perskaitytų skyrių</string>
     <string name="information_cloudflare_bypass_failure">Nepavyko apeiti \"Cloudflare\"</string>
-    <string name="information_webview_required">\"WebView\" reikalingas \"Mihon\"</string>
+    <string name="information_webview_required">\"WebView\" reikalingas \"Amatsubu\"</string>
     <string name="loader_not_implemented_error">Šaltinis nerastas</string>
     <string name="migration_selection_prompt">Pasirinkite šaltinį, iš kurio norite perkelti</string>
     <string name="migrate">Perkelti</string>
@@ -358,15 +342,10 @@
     <string name="library_errors_help">Jei reikia pagalbos, kaip ištaisyti bibliotekos naujinimo klaidas, žr. %1$s</string>
     <string name="transition_pages_error">Nepavyko įkelti puslapių: %1$s</string>
     <string name="transition_previous">Ankstesnis:</string>
-    <string name="update_check_confirm">Parsisiųsti</string>
-    <string name="update_check_notification_download_complete">Bakstelėkite, kad įdiegtumėte atnaujinimą</string>
-    <string name="update_check_eol">Ši \"Android\" versija nebepalaikoma</string>
-    <string name="update_check_no_new_updates">Naujų atnaujinimų nėra</string>
     <string name="migration_dialog_what_to_include">Pasirinkite duomenis, kuriuos norite įtraukti</string>
     <string name="copy">Kopijuoti</string>
     <string name="notification_new_chapters">Atrasti nauji skyriai</string>
     <string name="skipped_reason_not_caught_up">Praleista, nes yra neperskaitytų skyrių</string>
-    <string name="update_check_notification_download_in_progress">Atsiunčiama…</string>
     <string name="file_select_cover">Pasirinkti viršelio vaizdą</string>
     <string name="information_empty_category_dialog">Jūs dar neturite jokių kategorijų.</string>
     <string name="transition_no_previous">Ankstesnio skyriaus nėra</string>
@@ -440,9 +419,6 @@
     <string name="cache_deleted">Talpykla išvalyta. %1$d failai buvo ištrinti</string>
     <string name="pref_clear_database">Išvalyti duomenų bazę</string>
     <string name="file_picker_error">Nerandama failų rinkiklio programos</string>
-    <string name="update_check_open">Atidaryti „GitHub“ svetainėje</string>
-    <string name="channel_app_updates">Programėlių atnaujinimai</string>
-    <string name="channel_ext_updates">Plėtinių atnaujinimai</string>
     <string name="spen_previous_page">Ankstesnis puslapis</string>
     <string name="restore_miui_warning">Atsarginės kopijos kūrimas / atkūrimas gali veikti netinkamai, jei \"MIUI Optimization\" yra išjungtas.</string>
     <string name="restoring_backup_canceled">Atšauktas atkūrimas</string>
@@ -471,7 +447,6 @@
     <string name="pref_user_agent_string">Numatytoji vartotojo agento eilutė</string>
     <string name="not_installed">Neįdiegtas</string>
     <string name="chapter_settings_updated">Atnaujinti numatytus skyrių nustatymus</string>
-    <string name="download_notifier_downloader_title">Parsisiuntėjas</string>
     <string name="download_notifier_title_error">Klaida</string>
     <string name="download_notifier_text_only_wifi">Nėra „Wi-Fi“ ryšio</string>
     <string name="channel_progress">Progresas</string>
@@ -522,7 +497,6 @@
     <string name="no_more_results">Daugiau rezultatų nėra</string>
     <string name="confirm_delete_chapters">Ar tikrai norite ištrinti pasirinktus skyrius?</string>
     <string name="completed">Užbaigta</string>
-    <string name="check_for_updates">Ieškoti programos atnaujinimų</string>
     <string name="privacy_policy">Privatumo politika</string>
     <string name="in_library">Bibliotekoje</string>
     <string name="reading">Skaitoma</string>
@@ -618,12 +592,8 @@
     <string name="update_already_running">Atnaujinimas jau vykdomas</string>
     <string name="updates_last_update_info">Biblioteka paskutinį kartą atnaujinta: %s</string>
     <string name="remove_manga">Ketinate pašalinti „%s“ iš bibliotekos</string>
-    <string name="download_ahead_info">Veikia tik bibliotekoje esantiems įrašams ir tik tada, jei jau atsisiųstas dabartinis ir kitas skyrius</string>
-    <string name="download_ahead">Atsisiųsti į priekį</string>
-    <string name="auto_download_while_reading">Automatinis atsisiuntimas beskaitant</string>
     <string name="skipped_reason_not_always_update">Praleista, nes serijai nereikia atnaujinimų</string>
     <string name="missing_storage_permission">Nesuteikti saugojimo leidimai</string>
-    <string name="pref_downloads_summary">Automatinis atsisiuntimas, atsisiuntimas į priekį</string>
     <string name="pref_backup_summary">Rankinės ir automatinės atsarginės kopijos</string>
     <string name="pref_security_summary">Programos užraktas, saugus ekranas</string>
     <string name="pref_appearance_summary">Tema, datos ir laiko formatas</string>
@@ -637,7 +607,6 @@
     <string name="error_user_agent_string_invalid">Netinkama naudotojo agento eilutė</string>
     <string name="unknown_title">Nežinomas pavadinimas</string>
     <string name="updates_last_update_info_just_now">Ką tik</string>
-    <string name="crash_screen_description">%s susidūrė su netikėta klaida. Siūlome padaryti šio pranešimo ekrano nuotrauką, išsisaugoti gedimų žurnalus ir pasidalyti tuo mūsų „Discord“ palaikymo kanale.</string>
     <string name="are_you_sure">Ar esate tikri?</string>
     <string name="popular">Populiaru</string>
     <string name="crash_screen_title">Ups!</string>

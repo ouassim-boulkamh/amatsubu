@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="update_check_notification_download_in_progress">Ndonlot…</string>
-    <string name="update_check_confirm">Donlot</string>
     <string name="track_type">Jinis</string>
     <string name="title">Judhul</string>
     <string name="no_chapters_error">Ora ditemokake bab</string>
@@ -42,7 +40,6 @@
     <string name="theme_dark">Murup</string>
     <string name="theme_light">Mati</string>
     <string name="pref_category_theme">Tema</string>
-    <string name="pref_category_downloads">Donlot</string>
     <string name="action_webview_back">Bali</string>
     <string name="action_open_log">Mbukak log</string>
     <string name="action_save">Simpen</string>
@@ -97,7 +94,6 @@
     <string name="name">Jeneng</string>
     <string name="manga">Entri perpustakaan</string>
     <string name="download_notifier_download_paused">Donlotan mandheg</string>
-    <string name="download_notifier_downloader_title">Donloder</string>
     <string name="channel_complete">Komplit</string>
     <string name="information_no_recent_manga">Durung maca Opo-opo</string>
     <string name="action_pause">Jeda</string>
@@ -222,10 +218,7 @@
     <string name="extension_api_error">Gagal kanggo entuk dhaptar ekstensi</string>
     <string name="ext_nsfw_short">18+</string>
     <string name="ext_nsfw_warning">Sumber saka ekstensi iki bisa ngemot konten NSFW (18+)</string>
-    <string name="ext_install_service_notif">Masang ekstensi…</string>
     <string name="ext_installer_pref">Pemasang</string>
-    <string name="ext_installer_shizuku_stopped">Shizuku ora lumaku</string>
-    <string name="ext_installer_shizuku_unavailable_dialog">Pasang lan wiwit Shizuku kanggo migunakake Shizuku dadi pemasang ekstensi.</string>
     <string name="tapping_inverted_none">Ora</string>
     <string name="tapping_inverted_both">Kaping duane</string>
     <string name="pref_reader_theme">Werna latar</string>
@@ -244,7 +237,7 @@
     <string name="pref_library_update_refresh_metadata">Nganyari metadata otomatis</string>
     <string name="network_not_metered">Jaringan gak kebates tok</string>
     <string name="pref_app_language">Bohoso aplikasi</string>
-    <string name="untrusted_extension_message">Ekstensi iki ditandatangani nganggo sertifikat sing ora dipercaya lan ora diaktifake.\n\nEkstensi angkoro bisa maca kredensial login sing disimpen ing Mihon utawa nglakokake kode sewenang-wenang. Kanthi percaya karo sertifikat iki, sampeyan nampa risiko kasebut.</string>
+    <string name="untrusted_extension_message">Ekstensi iki ditandatangani nganggo sertifikat sing ora dipercaya lan ora diaktifake.\n\nEkstensi angkoro bisa maca kredensial login sing disimpen ing Amatsubu utawa nglakokake kode sewenang-wenang. Kanthi percaya karo sertifikat iki, sampeyan nampa risiko kasebut.</string>
     <string name="ext_downloading">Ndownload</string>
     <string name="pref_show_navigation_mode">Tampilake overlay zona tutul</string>
     <string name="pref_library_update_categories_details">Manga ing kategori sing ora kalebu ora bakal dianyari sanajan uga ana ing kategori sing kalebu.</string>

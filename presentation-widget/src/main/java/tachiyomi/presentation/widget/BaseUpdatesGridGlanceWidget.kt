@@ -25,7 +25,6 @@ import coil3.annotation.ExperimentalCoilApi
 import coil3.asDrawable
 import coil3.executeBlocking
 import coil3.imageLoader
-import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.transformations
 import coil3.size.Precision
@@ -35,9 +34,6 @@ import eu.kanade.tachiyomi.core.security.SecurityPreferences
 import eu.kanade.tachiyomi.util.system.dpToPx
 import kotlinx.coroutines.flow.map
 import tachiyomi.core.common.util.lang.withIOContext
-import tachiyomi.domain.manga.model.MangaCover
-import tachiyomi.domain.updates.interactor.GetUpdates
-import tachiyomi.domain.updates.model.UpdatesWithRelations
 import tachiyomi.presentation.widget.components.CoverHeight
 import tachiyomi.presentation.widget.components.CoverWidth
 import tachiyomi.presentation.widget.components.LockedWidget
@@ -46,12 +42,10 @@ import tachiyomi.presentation.widget.util.appWidgetBackgroundRadius
 import tachiyomi.presentation.widget.util.calculateRowAndColumnCount
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import java.time.Instant
-import java.time.ZonedDateTime
 
 abstract class BaseUpdatesGridGlanceWidget(
     private val context: Context = Injekt.get<Application>(),
-    private val getUpdates: GetUpdates = Injekt.get(),
+    private val dataSource: UpdatesWidgetDataSource = Injekt.get(),
     private val preferences: SecurityPreferences = Injekt.get(),
 ) : GlanceAppWidget() {
 
@@ -89,8 +83,8 @@ abstract class BaseUpdatesGridGlanceWidget(
             }
 
             val flow = remember {
-                getUpdates
-                    .subscribe(false, DateLimit.toEpochMilli())
+                dataSource
+                    .subscribe(rowCount * columnCount)
                     .map { rawData ->
                         rawData.prepareData(rowCount, columnCount)
                     }
@@ -107,7 +101,7 @@ abstract class BaseUpdatesGridGlanceWidget(
     }
 
     @OptIn(ExperimentalCoilApi::class)
-    private suspend fun List<UpdatesWithRelations>.prepareData(
+    private suspend fun List<UpdatesWidgetItem>.prepareData(
         rowCount: Int,
         columnCount: Int,
     ): List<Pair<Long, Bitmap?>> {
@@ -119,18 +113,9 @@ abstract class BaseUpdatesGridGlanceWidget(
             this@prepareData
                 .distinctBy { it.mangaId }
                 .take(rowCount * columnCount)
-                .map { updatesView ->
+                .map { update ->
                     val request = ImageRequest.Builder(context)
-                        .data(
-                            MangaCover(
-                                mangaId = updatesView.mangaId,
-                                sourceId = updatesView.sourceId,
-                                isMangaFavorite = true,
-                                url = updatesView.coverData.url,
-                                lastModified = updatesView.coverData.lastModified,
-                            ),
-                        )
-                        .memoryCachePolicy(CachePolicy.DISABLED)
+                        .data(update.coverUrl)
                         .precision(Precision.EXACT)
                         .size(widthPx, heightPx)
                         .scale(Scale.FILL)
@@ -146,13 +131,8 @@ abstract class BaseUpdatesGridGlanceWidget(
                         .image
                         ?.asDrawable(context.resources)
                         ?.toBitmap()
-                    Pair(updatesView.mangaId, bitmap)
+                    Pair(update.mangaId, bitmap)
                 }
         }
-    }
-
-    companion object {
-        val DateLimit: Instant
-            get() = ZonedDateTime.now().minusMonths(3).toInstant()
     }
 }

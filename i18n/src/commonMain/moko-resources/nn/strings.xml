@@ -131,9 +131,7 @@
     <string name="untrusted_extension">Ikkje-tiltrudd utvidelse</string>
     <string name="extension_api_error">Kunne ikkje henta utvidingslista</string>
     <string name="ext_nsfw_short">18+</string>
-    <string name="ext_install_service_notif">Installerer utviding…</string>
     <string name="ext_installer_pref">Installatør</string>
-    <string name="ext_installer_shizuku_stopped">Shizuku køyrar ikkje</string>
     <string name="pref_show_page_number">Vis sidetal</string>
     <string name="on">På</string>
     <string name="off">Av</string>
@@ -204,7 +202,6 @@
     <string name="version">Versjon</string>
     <string name="help_translate">Hjelp med å omsetje</string>
     <string name="privacy_policy">Personvernerklæring</string>
-    <string name="check_for_updates">Sjå etter oppdateringar</string>
     <string name="pref_incognito_mode">Inkognitomodus</string>
     <string name="username">Brukarnamn</string>
     <string name="email">E-postadresse</string>
@@ -231,12 +228,9 @@
     <string name="landscape">Liggjande</string>
     <string name="update_never">Av</string>
     <string name="update_6hour">Kvar sjette time</string>
-    <string name="ext_installer_shizuku_unavailable_dialog">Installer og start Shizuku for å bruka Shizuku som utvidingsinstallatør.</string>
     <string name="update_12hour">Kvar tolvte time</string>
     <string name="obsolete_extension_message">Denne utvidinga er ikkje lengre tilgjengeleg.</string>
     <string name="ext_nsfw_warning">Kan innehalda NSFW (18+) innhald</string>
-    <string name="pref_category_delete_chapters">Slett kapittel</string>
-    <string name="pref_download_new_categories_details">Manga i utelatne kategoriar vil ikkje bli nedlasta sjølv om dei òg er i inkluderte kategoriar.</string>
     <string name="pref_backup_interval">Reservekopifrekvens</string>
     <string name="restoring_backup_canceled">Avbroten gjenoppretting</string>
     <string name="backup_restore_missing_sources">Manglande kjelder:</string>

@@ -110,7 +110,6 @@
     <string name="pref_category_general">సామాన్యము</string>
     <string name="pref_category_appearance">రూపము</string>
     <string name="pref_category_library">గ్రంథాలయము</string>
-    <string name="pref_category_downloads">దిగుమతులు</string>
     <string name="pref_category_advanced">ఆధునికము</string>
     <string name="action_display_download_badge">దిగుమతి చేసిన అధ్యాయములు</string>
     <string name="action_display_language_badge">భాష</string>

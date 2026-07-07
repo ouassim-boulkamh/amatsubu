@@ -111,7 +111,6 @@
     <string name="pref_category_appearance">Panagway</string>
     <string name="pref_category_library">Library</string>
     <string name="pref_category_reader">Magbabasa</string>
-    <string name="pref_category_downloads">Mga pag-download</string>
     <string name="pref_category_tracking">Pagsubay</string>
     <string name="pref_category_advanced">Abante</string>
     <string name="pref_category_theme">Tema</string>
@@ -194,11 +193,8 @@
     <string name="extension_api_error">Napakyas sa pagkuha sa listahan sa mga extension</string>
     <string name="ext_nsfw_short">18+</string>
     <string name="ext_nsfw_warning">Ang mga tinubdan gikan niini nga extension mahimong adunay sulod nga NSFW (18+)</string>
-    <string name="ext_install_service_notif">Nag-instalar og extension…</string>
     <string name="ext_installer_pref">Installer</string>
     <string name="ext_installer_legacy">Kabilin</string>
-    <string name="ext_installer_shizuku_stopped">Si Shizuku wala modagan</string>
-    <string name="ext_installer_shizuku_unavailable_dialog">I-install ug sugdi ang Shizuku aron gamiton ang Shizuku isip extension installer.</string>
     <string name="pref_fullscreen">Fullscreen</string>
     <string name="pref_dual_page_split">Duha ka panid nga bahin</string>
     <string name="pref_dual_page_invert">Balita ang duha ka panid nga pagbahin sa pagbutang</string>
@@ -248,7 +244,7 @@
     <string name="ext_app_info">Impormasyon sa app</string>
     <string name="untrusted_extension_message">Kini nga extension gipirmahan gamit ang dili kasaligan nga sertipiko ug wala gi-aktibo.
 \n
-\nAng usa ka malisyoso nga extension mahimong makabasa sa bisan unsang mga kredensyal sa pag-login nga gitipigan sa Mihon o ipatuman ang arbitraryong code.
+\nAng usa ka malisyoso nga extension mahimong makabasa sa bisan unsang mga kredensyal sa pag-login nga gitipigan sa Amatsubu o ipatuman ang arbitraryong code.
 \n
 \nPinaagi sa pagsalig niini nga sertipiko gidawat nimo kini nga mga risgo.</string>
     <string name="pref_cutout_short">Ipakita ang sulod sa ginunting nga lugar</string>
@@ -290,15 +286,11 @@
     <string name="pref_category_reading">Pagbasa</string>
     <string name="pref_high">Taas</string>
     <string name="pref_low">Ubos</string>
-    <string name="pref_category_delete_chapters">Pagtangtang sa mga kapitulo</string>
     <string name="pref_remove_after_marked_as_read">Human gimarkahan sa mano-mano ingon nabasa na</string>
-    <string name="pref_remove_after_read">Human sa pagbasa awtomatikong tangtangon</string>
     <string name="pref_remove_bookmarked_chapters">Tugoti ang pagtangtang sa gimarkahan nga mga kapitulo</string>
     <string name="pref_remove_exclude_categories">Wala iapil nga mga kategorya</string>
     <string name="disabled">Nabaldado</string>
-    <string name="fifth_to_last">Ikalima hangtod sa kataposang pagbasa sa kapitulo</string>
     <string name="pref_category_auto_download">Awtomatikong pag-download</string>
-    <string name="pref_download_new_categories_details">Ang manga sa wala iapil nga mga kategorya dili ma-download bisan kung naa usab sila sa mga gilakip nga kategorya.</string>
     <string name="save_chapter_as_cbz">I-save ingon CBZ archive</string>
     <string name="tracking_guide">Giya sa pagsubay</string>
     <string name="network_not_metered">Lamang sa ummetered network</string>
@@ -320,19 +312,13 @@
     <string name="rotation_reverse_portrait">Baliktad nga hulagway</string>
     <string name="color_filter_r_value">R</string>
     <string name="color_filter_g_value">G</string>
-    <string name="second_to_last">Ikaduha hangtod sa kataposang pagbasa sa kapitulo</string>
     <string name="action_track">Track</string>
     <string name="scale_type_smart_fit">Smart angay</string>
     <string name="zoom_start_automatic">Awtomatiko</string>
     <string name="pref_hide_threshold">Pagkasensitibo sa pagtago sa menu sa scroll</string>
-    <string name="last_read_chapter">Katapusan nga nabasa nga kapitulo</string>
-    <string name="third_to_last">Ikatulo hangtod sa kataposang pagbasa sa kapitulo</string>
-    <string name="fourth_to_last">Ika-upat hangtod sa kataposang pagbasa sa kapitulo</string>
-    <string name="pref_download_new">Pag-download sa bag-ong mga kapitulo</string>
     <string name="enhanced_tracking_info">Mga serbisyo nga naghatag dugang nga mga bahin alang sa piho nga mga gigikanan. Awtomatikong gisubay ang Manga kon idugang sa imong librarya.</string>
     <string name="tracking_info">Usa ka paagi nga pag-sync aron ma-update ang pag-uswag sa kapitulo sa mga serbisyo sa pagsubay. I-set up ang tracking para sa indibidwal nga manga entries gikan sa ilang tracking button.</string>
     <string name="enhanced_services">Gipalambo nga mga serbisyo</string>
-    <string name="pref_auto_update_manga_sync">Ang pag-uswag sa pag-update pagkahuman sa pagbasa</string>
     <string name="split_tall_images_summary">Nagpauswag sa pasundayag sa magbabasa pinaagi sa pagbahin sa taas nga na-download nga mga imahe.</string>
     <string name="services">Mga serbisyo</string>
     <string name="pref_viewer_nav">Pag-tap sa mga zone</string>
@@ -418,7 +404,6 @@
     <string name="notification_incognito_text">I-disable ang incognito mode</string>
     <string name="pref_incognito_mode">Incognito mode</string>
     <string name="version">Bersyon</string>
-    <string name="check_for_updates">Susiha ang mga update</string>
     <string name="pref_enable_acra">Ipadala ang mga taho sa pagkahagsa</string>
     <string name="logout_success">Naka-log out ka na karon</string>
     <string name="password">Password</string>
@@ -439,7 +424,7 @@
     <string name="label_local">Lokal</string>
     <string name="pref_appearance_summary">Tema, format sa petsa ug panahon</string>
     <string name="action_not_now">Dili karon</string>
-    <string name="information_webview_required">Gikinahanlan ang WebView alang sa Mihon</string>
+    <string name="information_webview_required">Gikinahanlan ang WebView alang sa Amatsubu</string>
     <string name="information_required_plain">*gikinahanlan</string>
     <string name="selected">Napili</string>
 </resources>
