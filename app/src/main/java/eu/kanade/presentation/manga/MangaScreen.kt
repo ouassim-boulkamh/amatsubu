@@ -397,7 +397,10 @@ private fun MangaScreenSmallImpl(
                             key = MangaScreenItem.OFFLINE_BANNER,
                             contentType = MangaScreenItem.OFFLINE_BANNER,
                         ) {
-                            ServerOfflineBanner(syncedAt = staleSnapshot.syncedAt)
+                            ServerOfflineBanner(
+                                syncedAt = staleSnapshot.syncedAt,
+                                modifier = Modifier.padding(top = topPadding),
+                            )
                         }
                     }
                     if (state.pendingReadStateCount > 0) {
@@ -684,7 +687,10 @@ fun MangaScreenLargeImpl(
                             .padding(bottom = contentPadding.calculateBottomPadding()),
                     ) {
                         state.staleSnapshot?.let { staleSnapshot ->
-                            ServerOfflineBanner(syncedAt = staleSnapshot.syncedAt)
+                            ServerOfflineBanner(
+                                syncedAt = staleSnapshot.syncedAt,
+                                modifier = Modifier.padding(top = contentPadding.calculateTopPadding()),
+                            )
                         }
                         if (state.pendingReadStateCount > 0) {
                             Text(
