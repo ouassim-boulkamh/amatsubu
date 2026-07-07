@@ -63,12 +63,8 @@ import eu.kanade.tachiyomi.data.coil.TachiyomiImageDecoder
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.databinding.ReaderActivityBinding
-import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
 import eu.kanade.tachiyomi.ui.main.MainActivity
-import eu.kanade.tachiyomi.ui.reader.ReaderViewModel.SetAsCoverResult.AddToLibraryFirst
-import eu.kanade.tachiyomi.ui.reader.ReaderViewModel.SetAsCoverResult.Error
-import eu.kanade.tachiyomi.ui.reader.ReaderViewModel.SetAsCoverResult.Success
 import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
@@ -78,7 +74,6 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReaderSettingsScreenModel
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import eu.kanade.tachiyomi.ui.reader.viewer.ReaderProgressIndicator
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.R2LPagerViewer
-import eu.kanade.tachiyomi.ui.webview.WebViewActivity
 import eu.kanade.tachiyomi.util.system.isNightMode
 import eu.kanade.tachiyomi.util.system.openInBrowser
 import eu.kanade.tachiyomi.util.system.toShareIntent
@@ -110,7 +105,8 @@ import kotlin.time.Duration.Companion.seconds
 class ReaderActivity : BaseActivity() {
 
     companion object {
-        fun newIntent(context: Context, mangaId: Long?, chapterId: Long?): Intent {
+        fun newIntent(context: Context, mangaId: Long?, chapterId: Long?, isServerBacked: Boolean = true): Intent {
+            require(isServerBacked) { "ReaderActivity only supports Suwayomi/server-backed manga and chapter ids" }
             return Intent(context, ReaderActivity::class.java).apply {
                 putExtra("manga", mangaId)
                 putExtra("chapter", chapterId)
@@ -241,9 +237,6 @@ class ReaderActivity : BaseActivity() {
                     is ReaderViewModel.Event.CopyImage -> {
                         onCopyImageResult(event.uri)
                     }
-                    is ReaderViewModel.Event.SetCoverResult -> {
-                        onSetAsCoverResult(event.result)
-                    }
                 }
             }
             .launchIn(lifecycleScope)
@@ -326,7 +319,7 @@ class ReaderActivity : BaseActivity() {
             is ReaderViewModel.Dialog.PageActions -> {
                 ReaderPageActionsDialog(
                     onDismissRequest = onDismissRequest,
-                    onSetAsCover = viewModel::setAsCover,
+                    onSetAsCover = null,
                     onShare = viewModel::shareImage,
                     onSave = viewModel::saveImage,
                 )
@@ -454,7 +447,7 @@ class ReaderActivity : BaseActivity() {
             return
         }
 
-        val isHttpSource = viewModel.getSource() is HttpSource
+        val hasChapterUrl = viewModel.getChapterUrl() != null
 
         val cropBorderPaged by readerPreferences.cropBorders.collectAsState()
         val cropBorderWebtoon by readerPreferences.cropBordersWebtoon.collectAsState()
@@ -473,9 +466,9 @@ class ReaderActivity : BaseActivity() {
             onClickTopAppBar = ::openMangaScreen,
             bookmarked = state.bookmarked,
             onToggleBookmarked = viewModel::toggleChapterBookmark,
-            onOpenInWebView = ::openChapterInWebView.takeIf { isHttpSource },
-            onOpenInBrowser = ::openChapterInBrowser.takeIf { isHttpSource },
-            onShare = ::shareChapter.takeIf { isHttpSource },
+            onOpenInWebView = null,
+            onOpenInBrowser = ::openChapterInBrowser.takeIf { hasChapterUrl },
+            onShare = ::shareChapter.takeIf { hasChapterUrl },
 
             chapterNavigatorType = if (isPagerType || !verticalNavigatorForLongStrip) {
                 if (state.viewer is R2LPagerViewer) {
@@ -578,23 +571,14 @@ class ReaderActivity : BaseActivity() {
         }
     }
 
-    private fun openChapterInWebView() {
-        val manga = viewModel.manga ?: return
-        val source = viewModel.getSource() ?: return
-        assistUrl?.let {
-            val intent = WebViewActivity.newIntent(this@ReaderActivity, it, source.id, manga.title)
-            startActivity(intent)
-        }
-    }
-
     private fun openChapterInBrowser() {
-        assistUrl?.let {
+        (assistUrl ?: viewModel.getChapterUrl())?.let {
             openInBrowser(it.toUri(), forceDefaultBrowser = false)
         }
     }
 
     private fun shareChapter() {
-        assistUrl?.let {
+        (assistUrl ?: viewModel.getChapterUrl())?.let {
             val intent = it.toUri().toShareIntent(this, type = "text/plain")
             startActivity(intent)
         }
@@ -767,20 +751,6 @@ class ReaderActivity : BaseActivity() {
                 logcat(LogPriority.ERROR, result.error)
             }
         }
-    }
-
-    /**
-     * Called from the presenter when a page is set as cover or fails. It shows a different message
-     * depending on the [result].
-     */
-    private fun onSetAsCoverResult(result: ReaderViewModel.SetAsCoverResult) {
-        toast(
-            when (result) {
-                Success -> MR.strings.cover_updated
-                AddToLibraryFirst -> MR.strings.notification_first_add_to_library
-                Error -> MR.strings.notification_cover_update_failed
-            },
-        )
     }
 
     /**

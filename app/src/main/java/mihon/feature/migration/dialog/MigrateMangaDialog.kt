@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -17,28 +18,30 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.util.fastForEach
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
-import eu.kanade.domain.manga.model.hasCustomCover
 import eu.kanade.domain.source.service.SourcePreferences
-import eu.kanade.tachiyomi.data.cache.CoverCache
-import eu.kanade.tachiyomi.data.download.DownloadManager
+import eu.kanade.presentation.util.formattedMessage
+import eu.kanade.tachiyomi.data.suwayomi.ServerMigrateMangaUseCase
 import kotlinx.coroutines.flow.update
 import mihon.domain.migration.models.MigrationFlag
-import mihon.domain.migration.usecases.MigrateMangaUseCase
 import mihon.feature.common.utils.getLabel
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.withUIContext
+import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.LabeledCheckbox
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.LoadingScreen
+import logcat.LogPriority
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import kotlin.coroutines.cancellation.CancellationException
 
 @Composable
 internal fun Screen.MigrateMangaDialog(
@@ -48,6 +51,7 @@ internal fun Screen.MigrateMangaDialog(
     onDismissRequest: () -> Unit,
     onComplete: () -> Unit = onDismissRequest,
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     val screenModel = rememberScreenModel { MigrateDialogScreenModel() }
@@ -81,6 +85,14 @@ internal fun Screen.MigrateMangaDialog(
                         onCheckedChange = { screenModel.toggleSelection(flag) },
                     )
                 }
+                state.migrationError?.let { error ->
+                    Spacer(modifier = Modifier.height(MaterialTheme.padding.small))
+                    Text(
+                        text = with(context) { error.formattedMessage },
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         },
         confirmButton = {
@@ -101,8 +113,9 @@ internal fun Screen.MigrateMangaDialog(
                 TextButton(
                     onClick = {
                         scope.launchIO {
-                            screenModel.migrateManga(replace = false)
-                            withUIContext { onComplete() }
+                            if (screenModel.migrateManga(replace = false)) {
+                                withUIContext { onComplete() }
+                            }
                         }
                     },
                 ) {
@@ -111,8 +124,9 @@ internal fun Screen.MigrateMangaDialog(
                 TextButton(
                     onClick = {
                         scope.launchIO {
-                            screenModel.migrateManga(replace = true)
-                            withUIContext { onComplete() }
+                            if (screenModel.migrateManga(replace = true)) {
+                                withUIContext { onComplete() }
+                            }
                         }
                     },
                 ) {
@@ -125,29 +139,29 @@ internal fun Screen.MigrateMangaDialog(
 
 private class MigrateDialogScreenModel(
     private val sourcePreference: SourcePreferences = Injekt.get(),
-    private val coverCache: CoverCache = Injekt.get(),
-    private val downloadManager: DownloadManager = Injekt.get(),
-    private val migrateManga: MigrateMangaUseCase = Injekt.get(),
+    private val serverMigrateManga: ServerMigrateMangaUseCase = ServerMigrateMangaUseCase(),
 ) : StateScreenModel<MigrateDialogScreenModel.State>(State()) {
 
-    fun init(current: Manga, target: Manga) {
+    suspend fun init(current: Manga, target: Manga) {
+        val isServerMigration = serverMigrateManga.isServerManga(current.id) &&
+            serverMigrateManga.isServerManga(target.id)
         val applicableFlags = buildList {
             MigrationFlag.entries.forEach {
                 val applicable = when (it) {
-                    MigrationFlag.CHAPTER -> true
-                    MigrationFlag.CATEGORY -> true
-                    MigrationFlag.CUSTOM_COVER -> current.hasCustomCover(coverCache)
-                    MigrationFlag.NOTES -> current.notes.isNotBlank()
-                    MigrationFlag.REMOVE_DOWNLOAD -> downloadManager.getDownloadCount(current) > 0
+                    MigrationFlag.CHAPTER -> isServerMigration
+                    MigrationFlag.CATEGORY -> isServerMigration
+                    MigrationFlag.NOTES -> isServerMigration && current.notes.isNotBlank()
                 }
                 if (applicable) add(it)
             }
         }
         val selectedFlags = sourcePreference.migrationFlags.get()
+            .filterTo(mutableSetOf()) { it in applicableFlags }
         mutableState.update {
             State(
                 current = current,
                 target = target,
+                isServerMigration = isServerMigration,
                 applicableFlags = applicableFlags,
                 selectedFlags = selectedFlags,
             )
@@ -159,26 +173,45 @@ private class MigrateDialogScreenModel(
             val selectedFlags = it.selectedFlags.toMutableSet()
                 .apply { if (contains(flag)) remove(flag) else add(flag) }
                 .toSet()
-            it.copy(selectedFlags = selectedFlags)
+            it.copy(selectedFlags = selectedFlags, migrationError = null)
         }
     }
 
-    suspend fun migrateManga(replace: Boolean) {
+    suspend fun migrateManga(replace: Boolean): Boolean {
         val state = state.value
-        val current = state.current ?: return
-        val target = state.target ?: return
-        sourcePreference.migrationFlags.set(state.selectedFlags)
-        mutableState.update { it.copy(isMigrating = true) }
-        migrateManga(current, target, replace)
-        mutableState.update { it.copy(isMigrating = false, isMigrated = true) }
+        val current = state.current ?: return false
+        val target = state.target ?: return false
+        mutableState.update { it.copy(isMigrating = true, migrationError = null) }
+        try {
+            sourcePreference.migrationFlags.set(state.selectedFlags)
+            if (state.isServerMigration) {
+                serverMigrateManga(current, target, replace)
+            }
+            mutableState.update { it.copy(isMigrating = false, isMigrated = true) }
+            return true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            logcat(LogPriority.ERROR, e) { "Failed to migrate Suwayomi manga" }
+            mutableState.update {
+                it.copy(
+                    isMigrating = false,
+                    isMigrated = false,
+                    migrationError = e,
+                )
+            }
+            return false
+        }
     }
 
     data class State(
         val current: Manga? = null,
         val target: Manga? = null,
+        val isServerMigration: Boolean = false,
         val applicableFlags: List<MigrationFlag> = emptyList(),
         val selectedFlags: Set<MigrationFlag> = emptySet(),
         val isMigrating: Boolean = false,
         val isMigrated: Boolean = false,
+        val migrationError: Throwable? = null,
     )
 }

@@ -85,6 +85,10 @@ class ClearDatabaseScreen : Screen() {
                                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
                             ) {
                                 Text(text = stringResource(MR.strings.clear_database_text))
+                                Text(
+                                    text = "This only clears Android client database rows. It does not delete Suwayomi server library, history, downloads, or backups.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.extraSmall),
@@ -134,7 +138,7 @@ class ClearDatabaseScreen : Screen() {
                 Scaffold(
                     topBar = { scrollBehavior ->
                         AppBar(
-                            title = stringResource(MR.strings.pref_clear_database),
+                            title = "Clear client database",
                             navigateUp = navigator::pop,
                             actions = {
                                 if (s.items.isNotEmpty()) {

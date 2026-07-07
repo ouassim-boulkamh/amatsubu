@@ -20,6 +20,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.core.net.toUri
+import cafe.adriel.voyager.core.model.screenModelScope
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -27,20 +28,20 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.WarningBanner
 import eu.kanade.presentation.util.Screen
-import eu.kanade.tachiyomi.data.backup.BackupFileValidator
-import eu.kanade.tachiyomi.data.backup.restore.BackupRestoreJob
+import eu.kanade.tachiyomi.data.backup.ServerBackupFileValidator
+import eu.kanade.tachiyomi.data.backup.restore.ServerBackupRestoreJob
 import eu.kanade.tachiyomi.data.backup.restore.RestoreOptions
 import eu.kanade.tachiyomi.util.system.DeviceUtil
 import kotlinx.coroutines.flow.update
+import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.i18n.MR
-import tachiyomi.presentation.core.components.LabeledCheckbox
 import tachiyomi.presentation.core.components.LazyColumnWithAction
 import tachiyomi.presentation.core.components.SectionCard
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 
-class RestoreBackupScreen(
+class ServerRestoreBackupScreen(
     private val uri: String,
 ) : Screen() {
 
@@ -54,7 +55,7 @@ class RestoreBackupScreen(
         Scaffold(
             topBar = {
                 AppBar(
-                    title = stringResource(MR.strings.pref_restore_backup),
+                    title = "Restore server backup",
                     navigateUp = navigator::pop,
                     scrollBehavior = it,
                 )
@@ -63,7 +64,7 @@ class RestoreBackupScreen(
             LazyColumnWithAction(
                 contentPadding = contentPadding,
                 actionLabel = stringResource(MR.strings.action_restore),
-                actionEnabled = state.canRestore && state.options.canRestore(),
+                actionEnabled = state.canRestore,
                 onClickAction = {
                     model.startRestore()
                     navigator.pop()
@@ -72,22 +73,6 @@ class RestoreBackupScreen(
                 if (DeviceUtil.isMiui && DeviceUtil.isMiuiOptimizationDisabled()) {
                     item {
                         WarningBanner(MR.strings.restore_miui_warning)
-                    }
-                }
-
-                if (state.canRestore) {
-                    item {
-                        SectionCard {
-                            RestoreOptions.options.forEach { option ->
-                                LabeledCheckbox(
-                                    label = stringResource(option.label),
-                                    checked = option.getter(state.options),
-                                    onCheckedChange = {
-                                        model.toggle(option.setter, it)
-                                    },
-                                )
-                            }
-                        }
                     }
                 }
 
@@ -173,16 +158,8 @@ private class RestoreBackupScreenModel(
         validate(uri.toUri())
     }
 
-    fun toggle(setter: (RestoreOptions, Boolean) -> RestoreOptions, enabled: Boolean) {
-        mutableState.update {
-            it.copy(
-                options = setter(it.options, enabled),
-            )
-        }
-    }
-
     fun startRestore() {
-        BackupRestoreJob.start(
+        ServerBackupRestoreJob.start(
             context = context,
             uri = uri.toUri(),
             options = state.value.options,
@@ -190,25 +167,27 @@ private class RestoreBackupScreenModel(
     }
 
     private fun validate(uri: Uri) {
-        val results = try {
-            BackupFileValidator(context).validate(uri)
-        } catch (e: Exception) {
-            setError(
-                error = InvalidRestore(uri, e.message.toString()),
-                canRestore = false,
-            )
-            return
-        }
+        screenModelScope.launchIO {
+            val results = try {
+                ServerBackupFileValidator(context).validateOnServer(uri)
+            } catch (e: Exception) {
+                setError(
+                    error = InvalidRestore(uri, e.message.toString()),
+                    canRestore = false,
+                )
+                return@launchIO
+            }
 
-        if (results.missingSources.isNotEmpty() || results.missingTrackers.isNotEmpty()) {
-            setError(
-                error = MissingRestoreComponents(uri, results.missingSources, results.missingTrackers),
-                canRestore = true,
-            )
-            return
-        }
+            if (results.missingSources.isNotEmpty() || results.missingTrackers.isNotEmpty()) {
+                setError(
+                    error = MissingRestoreComponents(uri, results.missingSources, results.missingTrackers),
+                    canRestore = true,
+                )
+                return@launchIO
+            }
 
-        setError(error = null, canRestore = true)
+            setError(error = null, canRestore = true)
+        }
     }
 
     private fun setError(error: Any?, canRestore: Boolean) {

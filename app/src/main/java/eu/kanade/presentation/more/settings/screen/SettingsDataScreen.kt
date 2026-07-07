@@ -1,29 +1,20 @@
 package eu.kanade.presentation.more.settings.screen
 
 import android.content.ActivityNotFoundException
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MultiChoiceSegmentedButtonRow
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.core.net.toUri
@@ -43,18 +33,18 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.hippo.unifile.UniFile
 import eu.kanade.presentation.more.settings.Preference
-import eu.kanade.presentation.more.settings.screen.data.CreateBackupScreen
-import eu.kanade.presentation.more.settings.screen.data.RestoreBackupScreen
-import eu.kanade.presentation.more.settings.screen.data.StorageInfo
-import eu.kanade.presentation.more.settings.widget.BasePreferenceWidget
-import eu.kanade.presentation.more.settings.widget.PrefsHorizontalPadding
-import eu.kanade.presentation.util.relativeTimeSpanString
 import eu.kanade.tachiyomi.data.backup.create.BackupCreateJob
+import eu.kanade.tachiyomi.data.backup.create.BackupCreator
+import eu.kanade.tachiyomi.data.backup.create.BackupOptions
 import eu.kanade.tachiyomi.data.backup.restore.BackupRestoreJob
+import eu.kanade.tachiyomi.data.backup.restore.RestoreOptions
 import eu.kanade.tachiyomi.data.cache.ChapterCache
 import eu.kanade.tachiyomi.data.export.LibraryExporter
 import eu.kanade.tachiyomi.data.export.LibraryExporter.ExportOptions
-import eu.kanade.tachiyomi.util.system.DeviceUtil
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaDto
+import eu.kanade.tachiyomi.data.suwayomi.normalizedGenre
+import eu.kanade.tachiyomi.ui.download.ClientDeviceCopiesScreen
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -62,14 +52,14 @@ import logcat.LogPriority
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.storage.displayablePath
 import tachiyomi.core.common.util.lang.launchNonCancellable
+import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.backup.service.BackupPreferences
 import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.manga.interactor.GetFavorites
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.storage.service.StoragePreferences
 import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.components.LabeledCheckbox
 import tachiyomi.presentation.core.components.material.TextButton
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
@@ -78,8 +68,8 @@ import uy.kohesive.injekt.api.get
 
 object SettingsDataScreen : SearchableSettings {
 
-    val restorePreferenceKeyString = MR.strings.label_backup
-    const val HELP_URL = "https://mihon.app/docs/faq/storage"
+    val restorePreferenceKeyString = MR.strings.label_data_storage
+    const val HELP_URL = "https://github.com/Suwayomi/Suwayomi-Server/wiki"
 
     @ReadOnlyComposable
     @Composable
@@ -98,14 +88,20 @@ object SettingsDataScreen : SearchableSettings {
 
     @Composable
     override fun getPreferences(): List<Preference> {
-        val backupPreferences = Injekt.get<BackupPreferences>()
         val storagePreferences = Injekt.get<StoragePreferences>()
+        val navigator = LocalNavigator.currentOrThrow
 
         return listOf(
             getStorageLocationPref(storagePreferences = storagePreferences),
-            Preference.PreferenceItem.InfoPreference(stringResource(MR.strings.pref_storage_location_info)),
+            Preference.PreferenceItem.InfoPreference(
+                "Used for local source files and any remaining client-local downloads. " +
+                    "Suwayomi server manga/download storage is configured in Server settings.",
+            ),
 
-            getBackupAndRestoreGroup(backupPreferences = backupPreferences),
+            getBackupAndRestoreGroup(),
+            getDeviceCopiesGroup(
+                onOpenDeviceCopies = { navigator.push(ClientDeviceCopiesScreen) },
+            ),
             getDataGroup(),
             getExportGroup(),
         )
@@ -119,7 +115,7 @@ object SettingsDataScreen : SearchableSettings {
 
         return rememberLauncherForActivityResult(
             contract = ActivityResultContracts.OpenDocumentTree(),
-        ) { uri ->
+        ) { uri: Uri? ->
             if (uri != null) {
                 val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
                     Intent.FLAG_GRANT_WRITE_URI_PERMISSION
@@ -168,7 +164,7 @@ object SettingsDataScreen : SearchableSettings {
         val pickStorageLocation = storageLocationPicker(storagePreferences.baseStorageDirectory)
 
         return Preference.PreferenceItem.TextPreference(
-            title = stringResource(MR.strings.pref_storage_location),
+            title = "Client storage location",
             subtitle = storageLocationText(storagePreferences.baseStorageDirectory),
             onClick = {
                 try {
@@ -181,95 +177,194 @@ object SettingsDataScreen : SearchableSettings {
     }
 
     @Composable
-    private fun getBackupAndRestoreGroup(backupPreferences: BackupPreferences): Preference.PreferenceGroup {
+    private fun getBackupAndRestoreGroup(): Preference.PreferenceGroup {
         val context = LocalContext.current
-        val navigator = LocalNavigator.currentOrThrow
-
-        val lastAutoBackup by backupPreferences.lastAutoBackupTimestamp.collectAsState()
-
-        val chooseBackup = rememberLauncherForActivityResult(
-            object : ActivityResultContracts.GetContent() {
-                override fun createIntent(context: Context, input: String): Intent {
-                    val intent = super.createIntent(context, input)
-                    return Intent.createChooser(intent, context.stringResource(MR.strings.file_select_backup))
-                }
-            },
-        ) {
-            if (it == null) {
-                context.toast(MR.strings.file_null_uri_error)
-                return@rememberLauncherForActivityResult
+        var showCreateOptionsDialog by remember { mutableStateOf(false) }
+        var showRestoreOptionsDialog by remember { mutableStateOf(false) }
+        var pendingCreateOptions by remember { mutableStateOf(BackupOptions()) }
+        var pendingRestoreUri by remember { mutableStateOf<Uri?>(null) }
+        val chooseBackupFile = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.CreateDocument("application/*"),
+        ) { uri ->
+            if (uri != null) {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                )
+                BackupCreateJob.startNow(context, uri, pendingCreateOptions)
             }
+        }
+        val chooseRestoreFile = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.OpenDocument(),
+        ) { uri ->
+            if (uri != null) {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+                pendingRestoreUri = uri
+                showRestoreOptionsDialog = true
+            }
+        }
 
-            navigator.push(RestoreBackupScreen(it.toString()))
+        if (showCreateOptionsDialog) {
+            ClientCreateBackupOptionsDialog(
+                onDismissRequest = { showCreateOptionsDialog = false },
+                onConfirm = { options ->
+                    pendingCreateOptions = options.withValidPrivateSelection()
+                    showCreateOptionsDialog = false
+                    try {
+                        chooseBackupFile.launch(BackupCreator.getFilename())
+                    } catch (e: ActivityNotFoundException) {
+                        context.toast(MR.strings.file_picker_error)
+                    }
+                },
+            )
+        }
+
+        if (showRestoreOptionsDialog) {
+            ClientRestoreBackupOptionsDialog(
+                onDismissRequest = { showRestoreOptionsDialog = false },
+                onConfirm = { options ->
+                    val uri = pendingRestoreUri ?: return@ClientRestoreBackupOptionsDialog
+                    showRestoreOptionsDialog = false
+                    BackupRestoreJob.start(context, uri, options.withValidPrivateSelection())
+                },
+            )
         }
 
         return Preference.PreferenceGroup(
-            title = stringResource(MR.strings.label_backup),
+            title = "Client backups",
             preferenceItems = listOf(
-                // Manual actions
-                Preference.PreferenceItem.CustomPreference(
-                    title = stringResource(restorePreferenceKeyString),
-                ) {
-                    BasePreferenceWidget(
-                        subcomponent = {
-                            MultiChoiceSegmentedButtonRow(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(intrinsicSize = IntrinsicSize.Min)
-                                    .padding(horizontal = PrefsHorizontalPadding),
-                            ) {
-                                SegmentedButton(
-                                    modifier = Modifier.fillMaxHeight(),
-                                    checked = false,
-                                    onCheckedChange = { navigator.push(CreateBackupScreen()) },
-                                    shape = SegmentedButtonDefaults.itemShape(0, 2),
-                                ) {
-                                    Text(stringResource(MR.strings.pref_create_backup))
-                                }
-                                SegmentedButton(
-                                    modifier = Modifier.fillMaxHeight(),
-                                    checked = false,
-                                    onCheckedChange = {
-                                        if (!BackupRestoreJob.isRunning(context)) {
-                                            if (DeviceUtil.isMiui && DeviceUtil.isMiuiOptimizationDisabled()) {
-                                                context.toast(MR.strings.restore_miui_warning)
-                                            }
-
-                                            // no need to catch because it's wrapped with a chooser
-                                            chooseBackup.launch("*/*")
-                                        } else {
-                                            context.toast(MR.strings.restore_in_progress)
-                                        }
-                                    },
-                                    shape = SegmentedButtonDefaults.itemShape(1, 2),
-                                ) {
-                                    Text(stringResource(MR.strings.pref_restore_backup))
-                                }
+                Preference.PreferenceItem.TextPreference(
+                    title = "Create client backup",
+                    subtitle = "Save Android client backup data to a local .tachibk file.",
+                    onClick = {
+                        if (!BackupCreateJob.isManualJobRunning(context)) {
+                            showCreateOptionsDialog = true
+                        } else {
+                            context.toast(MR.strings.backup_in_progress)
+                        }
+                    },
+                ),
+                Preference.PreferenceItem.TextPreference(
+                    title = "Restore client backup",
+                    subtitle = "Restore Android client settings from a .tachibk file.",
+                    onClick = {
+                        if (!BackupRestoreJob.isRunning(context)) {
+                            try {
+                                chooseRestoreFile.launch(arrayOf("application/*", "application/octet-stream"))
+                            } catch (e: ActivityNotFoundException) {
+                                context.toast(MR.strings.file_picker_error)
                             }
-                        },
-                    )
-                },
-
-                // Automatic backups
-                Preference.PreferenceItem.ListPreference(
-                    preference = backupPreferences.backupInterval,
-                    entries = mapOf(
-                        0 to stringResource(MR.strings.off),
-                        6 to stringResource(MR.strings.update_6hour),
-                        12 to stringResource(MR.strings.update_12hour),
-                        24 to stringResource(MR.strings.update_24hour),
-                        48 to stringResource(MR.strings.update_48hour),
-                        168 to stringResource(MR.strings.update_weekly),
-                    ),
-                    title = stringResource(MR.strings.pref_backup_interval),
-                    onValueChanged = {
-                        BackupCreateJob.setupTask(context, it)
-                        true
+                        } else {
+                            context.toast(MR.strings.restore_in_progress)
+                        }
                     },
                 ),
                 Preference.PreferenceItem.InfoPreference(
-                    stringResource(MR.strings.backup_info) + "\n\n" +
-                        stringResource(MR.strings.last_auto_backup_info, relativeTimeSpanString(lastAutoBackup)),
+                    "Client backups include Android app, reader, display, source, privacy, storage, " +
+                        "network, and Suwayomi connection settings. Library, chapters, history, " +
+                        "downloads, and tracking records are not restored here.",
+                ),
+            ),
+        )
+    }
+
+    @Composable
+    private fun ClientCreateBackupOptionsDialog(
+        onDismissRequest: () -> Unit,
+        onConfirm: (BackupOptions) -> Unit,
+    ) {
+        var options by remember { mutableStateOf(BackupOptions()) }
+
+        AlertDialog(
+            onDismissRequest = onDismissRequest,
+            title = { Text(text = "Create client backup") },
+            text = {
+                Column {
+                    BackupOptions.settingsOptions.forEach { option ->
+                        LabeledCheckbox(
+                            label = stringResource(option.label),
+                            checked = option.getter(options),
+                            onCheckedChange = { checked ->
+                                options = option.setter(options, checked).withValidPrivateSelection()
+                            },
+                            enabled = option.enabled(options),
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { onConfirm(options) },
+                    enabled = options.canCreate(),
+                ) {
+                    Text(text = stringResource(MR.strings.action_create))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissRequest) {
+                    Text(text = stringResource(MR.strings.action_cancel))
+                }
+            },
+        )
+    }
+
+    @Composable
+    private fun ClientRestoreBackupOptionsDialog(
+        onDismissRequest: () -> Unit,
+        onConfirm: (RestoreOptions) -> Unit,
+    ) {
+        var options by remember { mutableStateOf(RestoreOptions(appSettings = true, sourceSettings = true)) }
+
+        AlertDialog(
+            onDismissRequest = onDismissRequest,
+            title = { Text(text = "Restore client backup") },
+            text = {
+                Column {
+                    RestoreOptions.options.forEach { option ->
+                        LabeledCheckbox(
+                            label = stringResource(option.label),
+                            checked = option.getter(options),
+                            onCheckedChange = { checked ->
+                                options = option.setter(options, checked).withValidPrivateSelection()
+                            },
+                            enabled = option.enabled(options),
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { onConfirm(options) },
+                    enabled = options.canRestore(),
+                ) {
+                    Text(text = stringResource(MR.strings.action_restore))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissRequest) {
+                    Text(text = stringResource(MR.strings.action_cancel))
+                }
+            },
+        )
+    }
+
+    @Composable
+    private fun getDeviceCopiesGroup(
+        onOpenDeviceCopies: () -> Unit,
+    ): Preference.PreferenceGroup {
+        return Preference.PreferenceGroup(
+            title = "Device copies",
+            preferenceItems = listOf(
+                Preference.PreferenceItem.TextPreference(
+                    title = "Manage device copies",
+                    subtitle = "Review orphaned chapter copies stored on this Android device.",
+                    onClick = onOpenDeviceCopies,
+                ),
+                Preference.PreferenceItem.InfoPreference(
+                    "Removing a device copy deletes only Amatsubu local files. Suwayomi server downloads stay unchanged.",
                 ),
             ),
         )
@@ -286,20 +381,8 @@ object SettingsDataScreen : SearchableSettings {
         val cacheReadableSize = remember(cacheReadableSizeSema) { chapterCache.readableSize }
 
         return Preference.PreferenceGroup(
-            title = stringResource(MR.strings.pref_storage_usage),
+            title = "Client cache",
             preferenceItems = listOf(
-                Preference.PreferenceItem.CustomPreference(
-                    title = stringResource(MR.strings.pref_storage_usage),
-                ) {
-                    BasePreferenceWidget(
-                        subcomponent = {
-                            StorageInfo(
-                                modifier = Modifier.padding(horizontal = PrefsHorizontalPadding),
-                            )
-                        },
-                    )
-                },
-
                 Preference.PreferenceItem.TextPreference(
                     title = stringResource(MR.strings.pref_clear_chapter_cache),
                     subtitle = stringResource(MR.strings.used_cache, cacheReadableSize),
@@ -341,10 +424,15 @@ object SettingsDataScreen : SearchableSettings {
 
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
-        val getFavorites = remember { Injekt.get<GetFavorites>() }
+        val suwayomiClient = remember { SuwayomiClientProvider().graphQlClient }
         var favorites by remember { mutableStateOf<List<Manga>>(emptyList()) }
         LaunchedEffect(Unit) {
-            favorites = getFavorites.await()
+            favorites = runCatching {
+                withIOContext {
+                    suwayomiClient.getLibraryMangas()
+                        .map(SuwayomiMangaDto::toExportManga)
+                }
+            }.getOrDefault(emptyList())
         }
 
         val saveFileLauncher = rememberLauncherForActivityResult(
@@ -372,7 +460,7 @@ object SettingsDataScreen : SearchableSettings {
                 options = exportOptions,
                 onConfirm = { options ->
                     exportOptions = options
-                    saveFileLauncher.launch("mihon_library.csv")
+                    saveFileLauncher.launch("amatsubu_library.csv")
                 },
                 onDismissRequest = { showDialog = false },
             )
@@ -461,5 +549,38 @@ object SettingsDataScreen : SearchableSettings {
                 }
             },
         )
+    }
+}
+
+private fun SuwayomiMangaDto.toExportManga(): Manga {
+    return Manga.create().copy(
+        id = id.toLong(),
+        source = sourceId.toLongOrNull() ?: 0L,
+        favorite = inLibrary,
+        dateAdded = inLibraryAt ?: 0L,
+        url = url,
+        title = title,
+        artist = artist,
+        author = author,
+        description = description,
+        genre = normalizedGenre(),
+        thumbnailUrl = thumbnailUrl,
+        initialized = initialized,
+    )
+}
+
+private fun BackupOptions.withValidPrivateSelection(): BackupOptions {
+    return if (appSettings || sourceSettings) {
+        this
+    } else {
+        copy(privateSettings = false)
+    }
+}
+
+private fun RestoreOptions.withValidPrivateSelection(): RestoreOptions {
+    return if (appSettings || sourceSettings) {
+        this
+    } else {
+        copy(privateSettings = false)
     }
 }

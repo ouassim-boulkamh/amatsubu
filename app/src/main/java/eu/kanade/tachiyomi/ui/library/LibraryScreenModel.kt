@@ -1,89 +1,104 @@
 package eu.kanade.tachiyomi.ui.library
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastMap
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.core.preference.PreferenceMutableState
 import eu.kanade.core.preference.asState
-import eu.kanade.core.util.fastFilterNot
 import eu.kanade.domain.base.BasePreferences
-import eu.kanade.domain.chapter.interactor.SetReadStatus
-import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.presentation.library.components.LibraryToolbarTitle
 import eu.kanade.presentation.manga.DownloadAction
 import eu.kanade.tachiyomi.data.cache.CoverCache
-import eu.kanade.tachiyomi.data.download.DownloadCache
-import eu.kanade.tachiyomi.data.download.DownloadManager
-import eu.kanade.tachiyomi.data.track.TrackerManager
+import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyStore
+import eu.kanade.tachiyomi.data.suwayomi.MangaStatus
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiCategoryDto
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterDto
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiDownloadStatusDto
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiFetchEstimate
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiLibraryUpdateStatusDto
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaDto
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiSnapshot
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiStatsTrackRecordDto
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiStaleSnapshotState
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiTrackerDto
+import eu.kanade.tachiyomi.data.suwayomi.estimateFetchInterval
+import eu.kanade.tachiyomi.data.suwayomi.isSuwayomiServerUnavailable
+import eu.kanade.tachiyomi.data.suwayomi.isLocalFolderSource
+import eu.kanade.tachiyomi.data.suwayomi.normalizedGenre
+import eu.kanade.tachiyomi.data.suwayomi.oldestPositive
+import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
+import eu.kanade.tachiyomi.data.suwayomi.serverCoverLastModified
+import eu.kanade.tachiyomi.data.suwayomi.syncTrackerProgressAfterReadStateChange
+import eu.kanade.tachiyomi.data.suwayomi.UpdateStrategy as SuwayomiUpdateStrategy
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
-import eu.kanade.tachiyomi.util.chapter.getNextUnread
 import eu.kanade.tachiyomi.util.removeCovers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.updateAndGet
+import kotlinx.serialization.json.Json
 import mihon.core.common.utils.mutate
+import logcat.LogPriority
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.util.lang.compareToWithCollator
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
+import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.interactor.GetCategories
-import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
-import tachiyomi.domain.chapter.interactor.GetBookmarkedChaptersByMangaId
-import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
-import tachiyomi.domain.history.interactor.GetNextChapters
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.library.model.LibrarySort
+import tachiyomi.domain.library.model.plus
 import tachiyomi.domain.library.model.sort
 import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.manga.interactor.GetLibraryManga
 import tachiyomi.domain.manga.model.Manga
-import tachiyomi.domain.manga.model.MangaUpdate
 import tachiyomi.domain.manga.model.applyFilter
 import tachiyomi.domain.source.service.SourceManager
-import tachiyomi.domain.track.interactor.GetTracksPerManga
-import tachiyomi.domain.track.model.Track
-import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import mihon.core.common.extensions.EMPTY
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 
 class LibraryScreenModel(
-    private val getLibraryManga: GetLibraryManga = Injekt.get(),
     private val getCategories: GetCategories = Injekt.get(),
-    private val getTracksPerManga: GetTracksPerManga = Injekt.get(),
-    private val getNextChapters: GetNextChapters = Injekt.get(),
-    private val getChaptersByMangaId: GetChaptersByMangaId = Injekt.get(),
-    private val getBookmarkedChaptersByMangaId: GetBookmarkedChaptersByMangaId = Injekt.get(),
-    private val setReadStatus: SetReadStatus = Injekt.get(),
-    private val updateManga: UpdateManga = Injekt.get(),
-    private val setMangaCategories: SetMangaCategories = Injekt.get(),
     private val preferences: BasePreferences = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
     private val coverCache: CoverCache = Injekt.get(),
     private val sourceManager: SourceManager = Injekt.get(),
-    private val downloadManager: DownloadManager = Injekt.get(),
-    private val downloadCache: DownloadCache = Injekt.get(),
-    private val trackerManager: TrackerManager = Injekt.get(),
 ) : StateScreenModel<LibraryScreenModel.State>(State()) {
+
+    private val suwayomiProvider = SuwayomiClientProvider()
+    private val json = Injekt.get<Json>()
+    private val suwayomiClient = suwayomiProvider.graphQlClient
+    private val clientDeviceChapterCopyStore: ClientDeviceChapterCopyStore = Injekt.get()
+    private val serverDownloadCounts = mutableMapOf<Long, Int>()
+    private val localDownloadCounts = mutableMapOf<Long, Int>()
+    private val serverSourceLanguages = mutableMapOf<Long, String>()
+    private val serverLocalSourceIds = mutableSetOf<Long>()
+    private val serverStaleSnapshotSyncedAt = mutableMapOf<Long, Long>()
+    private val serverLibraryRefreshes = MutableStateFlow(0)
+    private var activeDownloadChapterMangaIds: Map<Int, Long> = emptyMap()
 
     init {
         mutableState.update { state ->
@@ -92,14 +107,15 @@ class LibraryScreenModel(
         screenModelScope.launchIO {
             combine(
                 state.map { it.searchQuery }.distinctUntilChanged().debounce(0.25.seconds),
-                getCategories.subscribe(),
+                serverLibraryRefreshes.flatMapLatest { getServerCategoriesFlow() },
                 getFavoritesFlow(),
-                combine(getTracksPerManga.subscribe(), getTrackingFiltersFlow(), ::Pair),
+                getTrackingStateFlow(),
                 getLibraryItemPreferencesFlow(),
-            ) { searchQuery, categories, favorites, (tracksMap, trackingFilters), itemPreferences ->
+            ) { searchQuery, categories, favorites, trackingState, itemPreferences ->
+                val staleSnapshot = favorites.mapNotNull { it.staleSnapshotSyncedAt }.minOrNull()
                 val showSystemCategory = favorites.any { it.libraryManga.categories.contains(0) }
                 val filteredFavorites = favorites
-                    .applyFilters(tracksMap, trackingFilters, itemPreferences)
+                    .applyFilters(trackingState.recordsByMangaId, trackingState.filters, itemPreferences)
                     .let { if (searchQuery == null) it else it.filter { m -> m.matches(searchQuery, sourceManager) } }
 
                 LibraryData(
@@ -107,14 +123,18 @@ class LibraryScreenModel(
                     showSystemCategory = showSystemCategory,
                     categories = categories,
                     favorites = filteredFavorites,
-                    tracksMap = tracksMap,
-                    loggedInTrackerIds = trackingFilters.keys,
+                    trackingState = trackingState,
+                    hasActiveFilters = itemPreferences.hasActiveFilters || trackingState.hasActiveFilters,
+                    staleSnapshot = staleSnapshot?.let(::SuwayomiStaleSnapshotState),
                 )
             }
                 .distinctUntilChanged()
                 .collectLatest { libraryData ->
                     mutableState.update { state ->
-                        state.copy(libraryData = libraryData)
+                        state.copy(
+                            libraryData = libraryData,
+                            hasActiveFilters = libraryData.hasActiveFilters,
+                        )
                     }
                 }
         }
@@ -127,7 +147,7 @@ class LibraryScreenModel(
                 .map { data ->
                     data.favorites
                         .applyGrouping(data.categories, data.showSystemCategory)
-                        .applySort(data.favoritesById, data.tracksMap, data.loggedInTrackerIds)
+                        .applySort(data.favoritesById, data.trackingState)
                 }
                 .collectLatest {
                     mutableState.update { state ->
@@ -155,33 +175,40 @@ class LibraryScreenModel(
             }
             .launchIn(screenModelScope)
 
-        combine(
-            getLibraryItemPreferencesFlow(),
-            getTrackingFiltersFlow(),
-        ) { prefs, trackFilters ->
-            listOf(
-                prefs.filterDownloaded,
-                prefs.filterUnread,
-                prefs.filterStarted,
-                prefs.filterBookmarked,
-                prefs.filterCompleted,
-                prefs.filterIntervalCustom,
-                *trackFilters.values.toTypedArray(),
-            )
-                .any { it != TriState.DISABLED }
-        }
-            .distinctUntilChanged()
-            .onEach {
+        ServerStateSync.refreshes
+            .onEach { refreshServerLibrary() }
+            .launchIn(screenModelScope)
+
+        suwayomiProvider.liveStatusClient.libraryUpdateStatusFlow()
+            .onEach { status ->
                 mutableState.update { state ->
-                    state.copy(hasActiveFilters = it)
+                    state.copy(libraryUpdateStatus = status.toLibraryUpdateState())
                 }
             }
             .launchIn(screenModelScope)
+
+        suwayomiProvider.liveStatusClient.downloadStatusFlow()
+            .onEach(::refreshLibraryWhenDownloadLeavesQueue)
+            .launchIn(screenModelScope)
+    }
+
+    private fun refreshLibraryWhenDownloadLeavesQueue(status: SuwayomiDownloadStatusDto) {
+        val nextActiveChapterMangaIds = status.queue.associate { it.chapter.id to it.manga.id.toLong() }
+        val removedMangaIds = activeDownloadChapterMangaIds
+            .filterKeys { it !in nextActiveChapterMangaIds }
+            .values
+            .toSet()
+        activeDownloadChapterMangaIds = nextActiveChapterMangaIds
+
+        val libraryMangaIds = state.value.libraryData.favoritesById.keys
+        if (removedMangaIds.any { it in libraryMangaIds }) {
+            refreshServerLibrary()
+        }
     }
 
     private fun List<LibraryItem>.applyFilters(
-        trackMap: Map<Long, List<Track>>,
-        trackingFilter: Map<Long, TriState>,
+        trackingRecords: Map<Long, List<SuwayomiStatsTrackRecordDto>>,
+        trackingFilters: Map<Int, TriState>,
         preferences: ItemPreferences,
     ): List<LibraryItem> {
         val downloadedOnly = preferences.globalFilterDownloaded
@@ -192,12 +219,6 @@ class LibraryScreenModel(
         val filterBookmarked = preferences.filterBookmarked
         val filterCompleted = preferences.filterCompleted
         val filterIntervalCustom = preferences.filterIntervalCustom
-
-        val isNotLoggedInAnyTrack = trackingFilter.isEmpty()
-
-        val excludedTracks = trackingFilter.mapNotNull { if (it.value == TriState.ENABLED_NOT) it.key else null }
-        val includedTracks = trackingFilter.mapNotNull { if (it.value == TriState.ENABLED_IS) it.key else null }
-        val trackFiltersIsIgnored = includedTracks.isEmpty() && excludedTracks.isEmpty()
 
         val filterFnDownloaded: (LibraryItem) -> Boolean = {
             applyFilter(filterDownloaded) { it.isLocal || it.downloadCount > 0 }
@@ -227,15 +248,12 @@ class LibraryScreenModel(
             }
         }
 
-        val filterFnTracking: (LibraryItem) -> Boolean = tracking@{ item ->
-            if (isNotLoggedInAnyTrack || trackFiltersIsIgnored) return@tracking true
-
-            val mangaTracks = trackMap[item.id].orEmpty().map { it.trackerId }
-
-            val isExcluded = excludedTracks.isNotEmpty() && mangaTracks.fastAny { it in excludedTracks }
-            val isIncluded = includedTracks.isEmpty() || mangaTracks.fastAny { it in includedTracks }
-
-            !isExcluded && isIncluded
+        val filterFnTracking: (LibraryItem) -> Boolean = { item ->
+            trackingFilters.all { (trackerId, filter) ->
+                applyFilter(filter) {
+                    trackingRecords[item.id].orEmpty().any { it.trackerId == trackerId }
+                }
+            }
         }
 
         return fastFilter {
@@ -265,8 +283,7 @@ class LibraryScreenModel(
 
     private fun Map<Category, List</* LibraryItem */ Long>>.applySort(
         favoritesById: Map<Long, LibraryItem>,
-        trackMap: Map<Long, List<Track>>,
-        loggedInTrackerIds: Set<Long>,
+        trackingState: LibraryTrackingState,
     ): Map<Category, List</* LibraryItem */ Long>> {
         val sortAlphabetically: (LibraryItem, LibraryItem) -> Int = { manga1, manga2 ->
             val title1 = manga1.libraryManga.manga.title.lowercase()
@@ -276,14 +293,10 @@ class LibraryScreenModel(
 
         val defaultTrackerScoreSortValue = -1.0
         val trackerScores by lazy {
-            val trackerMap = trackerManager.getAll(loggedInTrackerIds).associateBy { e -> e.id }
-            trackMap.mapValues { entry ->
+            trackingState.recordsByMangaId.mapValues { entry ->
                 when {
                     entry.value.isEmpty() -> null
-                    else ->
-                        entry.value
-                            .mapNotNull { trackerMap[it.trackerId]?.get10PointScore(it) }
-                            .average()
+                    else -> entry.value.map { it.score }.average()
                 }
             }
         }
@@ -347,6 +360,7 @@ class LibraryScreenModel(
     private fun getLibraryItemPreferencesFlow(): Flow<ItemPreferences> {
         return combine(
             libraryPreferences.downloadBadge.changes(),
+            libraryPreferences.localDownloadBadge.changes(),
             libraryPreferences.unreadBadge.changes(),
             libraryPreferences.localBadge.changes(),
             libraryPreferences.languageBadge.changes(),
@@ -362,75 +376,407 @@ class LibraryScreenModel(
         ) {
             ItemPreferences(
                 downloadBadge = it[0] as Boolean,
-                unreadBadge = it[1] as Boolean,
-                localBadge = it[2] as Boolean,
-                languageBadge = it[3] as Boolean,
-                skipOutsideReleasePeriod = LibraryPreferences.MANGA_OUTSIDE_RELEASE_PERIOD in (it[4] as Set<*>),
-                globalFilterDownloaded = it[5] as Boolean,
-                filterDownloaded = it[6] as TriState,
-                filterUnread = it[7] as TriState,
-                filterStarted = it[8] as TriState,
-                filterBookmarked = it[9] as TriState,
-                filterCompleted = it[10] as TriState,
-                filterIntervalCustom = it[11] as TriState,
+                localDownloadBadge = it[1] as Boolean,
+                unreadBadge = it[2] as Boolean,
+                localBadge = it[3] as Boolean,
+                languageBadge = it[4] as Boolean,
+                skipOutsideReleasePeriod = LibraryPreferences.MANGA_OUTSIDE_RELEASE_PERIOD in (it[5] as Set<*>),
+                globalFilterDownloaded = it[6] as Boolean,
+                filterDownloaded = it[7] as TriState,
+                filterUnread = it[8] as TriState,
+                filterStarted = it[9] as TriState,
+                filterBookmarked = it[10] as TriState,
+                filterCompleted = it[11] as TriState,
+                filterIntervalCustom = it[12] as TriState,
             )
         }
     }
 
+    private fun getTrackingStateFlow(): Flow<LibraryTrackingState> {
+        return serverLibraryRefreshes
+            .flatMapLatest { getServerLibraryTrackingFlow() }
+            .flatMapLatest { trackingState ->
+                val trackerIds = trackingState.loggedInTrackers.map { it.id }
+                if (trackerIds.isEmpty()) {
+                    return@flatMapLatest flowOf(trackingState)
+                }
+                val filterFlows = trackerIds.map { trackerId ->
+                    libraryPreferences.filterTracking(trackerId).changes().map { trackerId to it }
+                }
+                combine(filterFlows) { filters ->
+                    trackingState.copy(filters = filters.toMap())
+                }
+            }
+    }
+
+    private fun getServerLibraryTrackingFlow(): Flow<LibraryTrackingState> = flow {
+        val trackingData = runCatching {
+            suwayomiClient.getLibraryTrackingData()
+        }.onFailure { error ->
+            if (error is CancellationException) throw error
+            logcat(LogPriority.ERROR, error) { "Failed to load server library tracking data" }
+        }.getOrNull()
+
+        val loggedInTrackers = trackingData
+            ?.trackers
+            ?.nodes
+            .orEmpty()
+            .filter { it.isLoggedIn }
+        val loggedInTrackerIds = loggedInTrackers.map { it.id }.toSet()
+        val recordsByMangaId = trackingData
+            ?.libraryTrackingMangas
+            ?.nodes
+            .orEmpty()
+            .associate { manga ->
+                manga.id.toLong() to manga.trackRecords.nodes.fastFilter { it.trackerId in loggedInTrackerIds }
+            }
+
+        emit(
+            LibraryTrackingState(
+                loggedInTrackers = loggedInTrackers,
+                recordsByMangaId = recordsByMangaId,
+            ),
+        )
+    }
+
     private fun getFavoritesFlow(): Flow<List<LibraryItem>> {
         return combine(
-            getLibraryManga.subscribe(),
+            serverLibraryRefreshes.flatMapLatest { getServerLibraryMangaFlow() },
             getLibraryItemPreferencesFlow(),
-            downloadCache.changes,
-        ) { libraryManga, preferences, _ ->
-            libraryManga.map { manga ->
-                LibraryItem(
-                    libraryManga = manga,
-                    downloadCount = downloadManager.getDownloadCount(manga.manga),
-                    unreadCount = manga.unreadCount,
-                    isLocal = manga.manga.isLocal(),
-                    badges = LibraryItem.Badges(
-                        downloadCount = if (preferences.downloadBadge) {
-                            downloadManager.getDownloadCount(manga.manga)
-                        } else {
-                            0
-                        },
-                        unreadCount = if (preferences.unreadBadge) {
-                            manga.unreadCount
-                        } else {
-                            0
-                        },
-                        isLocal = if (preferences.localBadge) {
-                            manga.manga.isLocal()
-                        } else {
-                            false
-                        },
-                        sourceLanguage = if (preferences.languageBadge) {
-                            sourceManager.getOrStub(manga.manga.source).lang
-                        } else {
-                            ""
-                        },
-                    ),
-                )
+        ) { libraryManga, preferences ->
+            libraryManga.toLibraryItems(preferences)
+        }
+    }
+
+    fun refreshServerLibrary() {
+        serverLibraryRefreshes.update { it + 1 }
+    }
+
+    suspend fun updateServerLibrary(category: Category? = null): Boolean {
+        return try {
+            val started = category
+                ?.let { suwayomiClient.updateCategoryMangas(it.id.toInt()) }
+                ?: suwayomiClient.updateLibraryMangas()
+            libraryPreferences.lastUpdatedTimestamp.set(System.currentTimeMillis())
+            refreshServerLibrary()
+            ServerStateSync.requestRefresh()
+            started
+        } catch (e: Throwable) {
+            if (e is CancellationException) throw e
+            logcat(LogPriority.ERROR, e) { "Failed to trigger server library update" }
+            false
+        }
+    }
+
+    fun stopServerLibraryUpdate() {
+        screenModelScope.launchIO {
+            runCatching {
+                suwayomiClient.stopLibraryUpdate()
+            }.onSuccess {
+                refreshServerLibrary()
+            }.onFailure { error ->
+                if (error is CancellationException) throw error
+                logcat(LogPriority.ERROR, error) { "Failed to stop server library update" }
             }
         }
     }
 
-    /**
-     * Flow of tracking filter preferences
-     *
-     * @return map of track id with the filter value
-     */
-    private fun getTrackingFiltersFlow(): Flow<Map<Long, TriState>> {
-        return trackerManager.loggedInTrackersFlow().flatMapLatest { loggedInTrackers ->
-            if (loggedInTrackers.isEmpty()) {
-                flowOf(emptyMap())
-            } else {
-                val filterFlows = loggedInTrackers.map { tracker ->
-                    libraryPreferences.filterTracking(tracker.id.toInt()).changes().map { tracker.id to it }
+    private fun getServerCategoriesFlow(): Flow<List<Category>> {
+        val serverCategoriesFlow = flow {
+            val result = runCatching {
+                suwayomiClient.getCategories()
+                    .ifEmpty { listOf(SuwayomiCategoryDto(id = 0, name = "Default")) }
+            }.onFailure { error ->
+                if (error is CancellationException) throw error
+                logcat(LogPriority.ERROR, error) { "Failed to load server library categories" }
+                if (error.isSuwayomiServerUnavailable()) {
+                    mutableState.update { it.copy(serverUnavailable = true) }
                 }
-                combine(filterFlows) { it.toMap() }
+            }.onSuccess {
+                mutableState.update { it.copy(serverUnavailable = false) }
             }
+            emit(result.getOrDefault(listOf(SuwayomiCategoryDto(id = 0, name = "Default"))))
+        }
+
+        return combine(
+            serverCategoriesFlow,
+            getCategories.subscribe(),
+            libraryPreferences.sortingMode.changes(),
+            libraryPreferences.categorizedDisplaySettings.changes(),
+        ) { serverCategories, localCategories, sortingMode, categorizedDisplaySettings ->
+            val globalFlags = sortingMode.type + sortingMode.direction
+            val localCategoriesById = localCategories.associateBy { it.id }
+
+            serverCategories.map { category ->
+                val flags = if (categorizedDisplaySettings) {
+                    localCategoriesById[category.id.toLong()]?.flags ?: globalFlags
+                } else {
+                    globalFlags
+                }
+                category.toCategory(flags)
+            }
+        }
+    }
+
+    private fun getServerLibraryMangaFlow(): Flow<List<LibraryManga>> = flow {
+        var serverUnavailable = false
+        val categories = runCatching {
+            suwayomiClient.getCategories()
+                .ifEmpty { listOf(SuwayomiCategoryDto(id = 0, name = "Default")) }
+        }.onFailure { error ->
+            if (error is CancellationException) throw error
+            logcat(LogPriority.ERROR, error) { "Failed to load server library categories" }
+            serverUnavailable = error.isSuwayomiServerUnavailable()
+        }.getOrDefault(listOf(SuwayomiCategoryDto(id = 0, name = "Default")))
+
+        serverDownloadCounts.clear()
+        localDownloadCounts.clear()
+        serverSourceLanguages.clear()
+        serverLocalSourceIds.clear()
+        serverStaleSnapshotSyncedAt.clear()
+
+        if (serverUnavailable) {
+            val snapshot = suwayomiClient.getLibraryMangasSnapshot()
+            mutableState.update { it.copy(serverUnavailable = true) }
+            emit(snapshot.toLibraryMangaSnapshotItems())
+            return@flow
+        }
+
+        runCatching {
+            suwayomiClient.sourceList().forEach { source ->
+                val sourceId = source.id.toLongOrNull()
+                    ?: 0L.takeIf { source.isLocalFolderSource() }
+                sourceId?.let {
+                    serverSourceLanguages[sourceId] = source.lang
+                    if (source.isLocalFolderSource()) {
+                        serverLocalSourceIds += sourceId
+                    }
+                }
+            }
+        }.onFailure { error ->
+            if (error is CancellationException) throw error
+            logcat(LogPriority.ERROR, error) { "Failed to load server source languages for Library" }
+        }
+
+        val libraryChaptersByMangaId = runCatching {
+            suwayomiClient.getLibraryChapters()
+                .groupBy { it.mangaId.toLong() }
+        }.onFailure { error ->
+            if (error is CancellationException) throw error
+            logcat(LogPriority.ERROR, error) { "Failed to load server chapter dates for Library" }
+        }.getOrDefault(emptyMap())
+
+        val mangaById = linkedMapOf<Long, LibraryManga>()
+        categories.forEach { category ->
+            val categoryMangasResult = runCatching {
+                suwayomiClient.getCategoryMangas(category.id)
+            }.recoverCatching { error ->
+                if (error is CancellationException) throw error
+                if (category.id == 0) {
+                    logcat(LogPriority.ERROR, error) {
+                        "Failed to load default category manga; falling back to full server library"
+                    }
+                    suwayomiClient.getLibraryMangas()
+                } else {
+                    throw error
+                }
+            }.onFailure { error ->
+                logcat(LogPriority.ERROR, error) { "Failed to load server category ${category.id} manga" }
+                serverUnavailable = serverUnavailable || error.isSuwayomiServerUnavailable()
+            }
+            val categorySnapshot = if (categoryMangasResult.isFailure && serverUnavailable) {
+                if (category.id == 0) {
+                    suwayomiClient.getLibraryMangasSnapshot()
+                } else {
+                    suwayomiClient.getCategoryMangasSnapshot(category.id)
+                }
+            } else {
+                null
+            }
+            val categoryMangas = categoryMangasResult.getOrNull()
+                ?: categorySnapshot?.value
+                ?: emptyList()
+            val categorySyncedAt = categorySnapshot?.syncedAt
+
+            categoryMangas.forEach { manga ->
+                val mangaId = manga.id.toLong()
+                val existing = mangaById[mangaId]
+                val categoriesForManga = existing?.categories.orEmpty() + category.id.toLong()
+                val baseManga = manga.toDomainManga()
+                val excludedScanlators = manga.serverExcludedScanlators(json)
+                val chapterSnapshot = if (serverUnavailable && libraryChaptersByMangaId[mangaId].isNullOrEmpty()) {
+                    suwayomiClient.getChaptersSnapshot(manga.id)
+                } else {
+                    null
+                }
+                val snapshotSyncedAt = categorySyncedAt.oldestPositive(chapterSnapshot?.syncedAt)
+                val chaptersForAggregate = libraryChaptersByMangaId[mangaId] ?: chapterSnapshot?.value
+                val deviceCopyChapterIds = clientDeviceChapterCopyStore
+                    .getCopiesForManga(suwayomiProvider.serverKey(), manga.id)
+                    .filter { it.isComplete }
+                    .map { it.chapterId }
+                    .toSet()
+                val chapterAggregate = chaptersForAggregate
+                    ?.toLibraryChapterAggregate(excludedScanlators)
+                    ?: manga.toFallbackLibraryChapterAggregate()
+                serverDownloadCounts[mangaId] = chapterAggregate.downloadCount
+                localDownloadCounts[mangaId] = chaptersForAggregate
+                    ?.deviceCopyCount(
+                        excludedScanlators = excludedScanlators,
+                        deviceCopyChapterIds = deviceCopyChapterIds,
+                    )
+                    ?: deviceCopyChapterIds.size
+                snapshotSyncedAt?.let { syncedAt ->
+                    serverStaleSnapshotSyncedAt[mangaId] = serverStaleSnapshotSyncedAt[mangaId].oldestPositive(syncedAt)!!
+                }
+                mangaById[mangaId] = manga.toLibraryManga(
+                    categories = categoriesForManga.distinct(),
+                    chapterAggregate = chapterAggregate,
+                    fetchEstimate = chaptersForAggregate?.estimateFetchInterval(baseManga),
+                )
+            }
+        }
+        mutableState.update { it.copy(serverUnavailable = serverUnavailable) }
+        emit(mangaById.values.toList())
+    }
+
+    private suspend fun SuwayomiSnapshot<List<SuwayomiMangaDto>>?.toLibraryMangaSnapshotItems(): List<LibraryManga> {
+        val snapshot = this ?: return emptyList()
+        return snapshot.value.map { manga ->
+            val chaptersSnapshot = suwayomiClient.getChaptersSnapshot(manga.id)
+            val baseManga = manga.toDomainManga()
+            val excludedScanlators = manga.serverExcludedScanlators(json)
+            val chapters = chaptersSnapshot?.value
+            val deviceCopyChapterIds = clientDeviceChapterCopyStore
+                .getCopiesForManga(suwayomiProvider.serverKey(), manga.id)
+                .filter { it.isComplete }
+                .map { it.chapterId }
+                .toSet()
+            val chapterAggregate = chapters
+                ?.toLibraryChapterAggregate(excludedScanlators)
+                ?: manga.toFallbackLibraryChapterAggregate()
+            serverDownloadCounts[manga.id.toLong()] = chapterAggregate.downloadCount
+            localDownloadCounts[manga.id.toLong()] = chapters
+                ?.deviceCopyCount(
+                    excludedScanlators = excludedScanlators,
+                    deviceCopyChapterIds = deviceCopyChapterIds,
+                )
+                ?: deviceCopyChapterIds.size
+            serverStaleSnapshotSyncedAt[manga.id.toLong()] = snapshot.syncedAt.oldestPositive(chaptersSnapshot?.syncedAt)!!
+            manga.toLibraryManga(
+                categories = listOf(Category.UNCATEGORIZED_ID),
+                chapterAggregate = chapterAggregate,
+                fetchEstimate = chapters?.estimateFetchInterval(baseManga),
+            )
+        }
+    }
+
+    private fun List<LibraryManga>.toLibraryItems(preferences: ItemPreferences): List<LibraryItem> {
+        return map { manga ->
+            val serverDownloadCount = serverDownloadCounts[manga.manga.id] ?: 0
+            val localDownloadCount = localDownloadCounts[manga.manga.id] ?: 0
+            val downloadCount = maxOf(serverDownloadCount, localDownloadCount)
+            val isLocal = manga.manga.source in serverLocalSourceIds
+            LibraryItem(
+                libraryManga = manga,
+                downloadCount = downloadCount,
+                unreadCount = manga.unreadCount,
+                isLocal = isLocal,
+                badges = LibraryItem.Badges(
+                    downloadCount = if (preferences.downloadBadge) serverDownloadCount else 0,
+                    localDownloadCount = if (preferences.localDownloadBadge) localDownloadCount else 0,
+                    unreadCount = if (preferences.unreadBadge) manga.unreadCount else 0,
+                    isLocal = preferences.localBadge && isLocal,
+                    sourceLanguage = if (preferences.languageBadge) {
+                        serverSourceLanguages[manga.manga.source]
+                            ?: sourceManager.getOrStub(manga.manga.source).lang
+                    } else {
+                        ""
+                    },
+                ),
+                staleSnapshotSyncedAt = serverStaleSnapshotSyncedAt[manga.manga.id],
+            )
+        }
+    }
+
+    private fun SuwayomiCategoryDto.toCategory(flags: Long): Category {
+        return Category(
+            id = id.toLong(),
+            name = name,
+            order = order.toLong(),
+            flags = flags,
+        )
+    }
+
+    private fun SuwayomiMangaDto.toLibraryManga(
+        categories: List<Long>,
+        chapterAggregate: ServerLibraryChapterAggregate,
+        fetchEstimate: SuwayomiFetchEstimate?,
+    ): LibraryManga {
+        return LibraryManga(
+            manga = toDomainManga(fetchEstimate).copy(favorite = true),
+            categories = categories,
+            totalChapters = chapterAggregate.totalChapters,
+            readCount = chapterAggregate.readCount,
+            bookmarkCount = chapterAggregate.bookmarkCount,
+            latestUpload = latestUploadedChapter?.uploadDate ?: chapterAggregate.latestUpload,
+            chapterFetchedAt = latestFetchedChapter?.fetchedAt?.seconds?.inWholeMilliseconds
+                ?: chapterAggregate.chapterFetchedAt,
+            lastRead = latestReadChapter?.lastReadAt ?: 0L,
+            unreadCount = chapterAggregate.unreadCount,
+        )
+    }
+
+    private fun SuwayomiMangaDto.toDomainManga(
+        fetchEstimate: SuwayomiFetchEstimate? = null,
+    ): Manga {
+        return Manga(
+            id = id.toLong(),
+            source = sourceId.toLongOrNull() ?: 0L,
+            favorite = inLibrary,
+            lastUpdate = chaptersLastFetchedAt?.seconds?.inWholeMilliseconds
+                ?: latestFetchedChapter?.fetchedAt?.seconds?.inWholeMilliseconds
+                ?: 0L,
+            nextUpdate = fetchEstimate?.nextUpdate ?: 0L,
+            fetchInterval = fetchEstimate?.fetchInterval ?: 0,
+            dateAdded = inLibraryAt ?: 0L,
+            viewerFlags = 0L,
+            chapterFlags = Manga.CHAPTER_SORTING_NUMBER or Manga.CHAPTER_SORT_DESC,
+            coverLastModified = serverCoverLastModified(),
+            url = url,
+            title = title,
+            artist = artist,
+            author = author,
+            description = description,
+            genre = normalizedGenre(),
+            status = status.toDomainStatus(),
+            thumbnailUrl = thumbnailUrl?.let { resolveServerUrl(suwayomiProvider.baseUrl(), it) },
+            updateStrategy = updateStrategy.toDomainUpdateStrategy(),
+            initialized = initialized,
+            lastModifiedAt = 0L,
+            favoriteModifiedAt = null,
+            version = 0L,
+            notes = "",
+            memo = kotlinx.serialization.json.JsonObject.EMPTY,
+        )
+    }
+
+    private fun MangaStatus.toDomainStatus(): Long {
+        return when (this) {
+            MangaStatus.UNKNOWN -> SManga.UNKNOWN
+            MangaStatus.ONGOING -> SManga.ONGOING
+            MangaStatus.COMPLETED -> SManga.COMPLETED
+            MangaStatus.LICENSED -> SManga.LICENSED
+            MangaStatus.PUBLISHING_FINISHED -> SManga.PUBLISHING_FINISHED
+            MangaStatus.CANCELLED -> SManga.CANCELLED
+            MangaStatus.ON_HIATUS -> SManga.ON_HIATUS
+        }.toLong()
+    }
+
+    private fun SuwayomiUpdateStrategy.toDomainUpdateStrategy(): eu.kanade.tachiyomi.source.model.UpdateStrategy {
+        return when (this) {
+            SuwayomiUpdateStrategy.ALWAYS_UPDATE -> eu.kanade.tachiyomi.source.model.UpdateStrategy.ALWAYS_UPDATE
+            SuwayomiUpdateStrategy.ONLY_FETCH_ONCE -> eu.kanade.tachiyomi.source.model.UpdateStrategy.ONLY_FETCH_ONCE
         }
     }
 
@@ -441,13 +787,36 @@ class LibraryScreenModel(
      */
     private suspend fun getCommonCategories(mangas: List<Manga>): Collection<Category> {
         if (mangas.isEmpty()) return emptyList()
-        return mangas
-            .map { getCategories.await(it.id).toSet() }
+        val commonCategoryIds = mangas
+            .map { getCategoryIdsForManga(it.id).toSet() }
             .reduce { set1, set2 -> set1.intersect(set2) }
+
+        return state.value.displayedCategories.filter { it.id in commonCategoryIds }
     }
 
-    suspend fun getNextUnreadChapter(manga: Manga): Chapter? {
-        return getChaptersByMangaId.await(manga.id, applyScanlatorFilter = true).getNextUnread(manga, downloadManager)
+    suspend fun getServerNextUnreadChapter(manga: Manga): Chapter? {
+        return suwayomiClient.getChapters(manga.id.toInt())
+            .filterNot { it.isRead }
+            .minByOrNull { it.sourceOrder }
+            ?.let { chapter ->
+                Chapter(
+                    id = chapter.id.toLong(),
+                    mangaId = chapter.mangaId.toLong(),
+                    read = chapter.isRead,
+                    bookmark = false,
+                    lastPageRead = chapter.lastPageRead.toLong(),
+                    dateFetch = chapter.fetchedAt.toLongOrNull()?.seconds?.inWholeMilliseconds ?: 0L,
+                    sourceOrder = chapter.sourceOrder.toLong(),
+                    url = chapter.url,
+                    name = chapter.name,
+                    dateUpload = chapter.uploadDate,
+                    chapterNumber = chapter.chapterNumber.toDouble(),
+                    scanlator = chapter.scanlator,
+                    lastModifiedAt = 0L,
+                    version = 0L,
+                    memo = kotlinx.serialization.json.JsonObject.EMPTY,
+                )
+            }
     }
 
     /**
@@ -457,9 +826,11 @@ class LibraryScreenModel(
      */
     private suspend fun getMixCategories(mangas: List<Manga>): Collection<Category> {
         if (mangas.isEmpty()) return emptyList()
-        val mangaCategories = mangas.map { getCategories.await(it.id).toSet() }
+        val mangaCategories = mangas.map { getCategoryIdsForManga(it.id).toSet() }
         val common = mangaCategories.reduce { set1, set2 -> set1.intersect(set2) }
-        return mangaCategories.flatten().distinct().subtract(common)
+        val mixedCategoryIds = mangaCategories.flatten().distinct().subtract(common)
+
+        return state.value.displayedCategories.filter { it.id in mixedCategoryIds }
     }
 
     /**
@@ -480,21 +851,11 @@ class LibraryScreenModel(
     private fun downloadNextChapters(amount: Int?) {
         val mangas = state.value.selectedManga
         screenModelScope.launchNonCancellable {
-            mangas.forEach { manga ->
-                val chapters = getNextChapters.await(manga.id)
-                    .fastFilterNot { chapter ->
-                        downloadManager.getQueuedDownloadOrNull(chapter.id) != null ||
-                            downloadManager.isChapterDownloaded(
-                                chapter.name,
-                                chapter.scanlator,
-                                chapter.url,
-                                manga.title,
-                                manga.source,
-                            )
-                    }
+            enqueueServerDownloads(mangas) { manga, chapters ->
+                chapters
+                    .filterNot { it.isRead || it.isDownloaded }
+                    .sortedWith(manga.serverChapterSort(sortDescending = false))
                     .let { if (amount != null) it.take(amount) else it }
-
-                downloadManager.downloadChapters(manga, chapters)
             }
         }
     }
@@ -502,19 +863,67 @@ class LibraryScreenModel(
     private fun downloadBookmarkedChapters() {
         val mangas = state.value.selectedManga
         screenModelScope.launchNonCancellable {
-            mangas.forEach { manga ->
-                val chapters = getBookmarkedChaptersByMangaId.await(manga.id)
-                    .fastFilterNot { chapter ->
-                        downloadManager.getQueuedDownloadOrNull(chapter.id) != null ||
-                            downloadManager.isChapterDownloaded(
-                                chapter.name,
-                                chapter.scanlator,
-                                chapter.url,
-                                manga.title,
-                                manga.source,
-                            )
-                    }
-                downloadManager.downloadChapters(manga, chapters)
+            enqueueServerDownloads(mangas) { manga, chapters ->
+                chapters
+                    .filter { it.isBookmarked && !it.isDownloaded }
+                    .sortedWith(manga.serverChapterSort(sortDescending = false))
+            }
+        }
+    }
+
+    private suspend fun enqueueServerDownloads(
+        mangas: List<Manga>,
+        selectChapters: (Manga, List<SuwayomiChapterDto>) -> List<SuwayomiChapterDto>,
+    ) {
+        try {
+            val queuedChapterIds = suwayomiClient.getDownloadStatus()
+                .queue
+                .map { it.chapter.id }
+                .toSet()
+            val chapterIds = mangas
+                .flatMap { manga ->
+                    selectChapters(manga, suwayomiClient.getChapters(manga.id.toInt()))
+                }
+                .map { it.id }
+                .filterNot { it in queuedChapterIds }
+                .distinct()
+
+            if (chapterIds.isNotEmpty()) {
+                suwayomiClient.enqueueChapterDownloads(chapterIds)
+                suwayomiClient.startDownloader()
+                refreshServerLibrary()
+                ServerStateSync.requestRefresh()
+            }
+        } catch (e: Throwable) {
+            if (e is CancellationException) throw e
+            logcat(LogPriority.ERROR, e) { "Failed to enqueue server chapter downloads from Library" }
+        }
+    }
+
+    private fun Manga.serverChapterSort(sortDescending: Boolean): Comparator<SuwayomiChapterDto> {
+        return Comparator { chapter1, chapter2 ->
+            when (sorting) {
+                Manga.CHAPTER_SORTING_SOURCE -> if (sortDescending) {
+                    chapter1.sourceOrder.compareTo(chapter2.sourceOrder)
+                } else {
+                    chapter2.sourceOrder.compareTo(chapter1.sourceOrder)
+                }
+                Manga.CHAPTER_SORTING_NUMBER -> if (sortDescending) {
+                    chapter2.chapterNumber.compareTo(chapter1.chapterNumber)
+                } else {
+                    chapter1.chapterNumber.compareTo(chapter2.chapterNumber)
+                }
+                Manga.CHAPTER_SORTING_UPLOAD_DATE -> if (sortDescending) {
+                    chapter2.uploadDate.compareTo(chapter1.uploadDate)
+                } else {
+                    chapter1.uploadDate.compareTo(chapter2.uploadDate)
+                }
+                Manga.CHAPTER_SORTING_ALPHABET -> if (sortDescending) {
+                    chapter2.name.compareToWithCollator(chapter1.name)
+                } else {
+                    chapter1.name.compareToWithCollator(chapter2.name)
+                }
+                else -> chapter2.sourceOrder.compareTo(chapter1.sourceOrder)
             }
         }
     }
@@ -525,11 +934,26 @@ class LibraryScreenModel(
     fun markReadSelection(read: Boolean) {
         val selection = state.value.selectedManga
         screenModelScope.launchNonCancellable {
-            selection.forEach { manga ->
-                setReadStatus.await(
-                    manga = manga,
-                    read = read,
-                )
+            try {
+                selection.forEach { manga ->
+                    val chapterIds = suwayomiClient.getChapters(manga.id.toInt())
+                        .filter { it.isRead != read || (!read && it.lastPageRead > 0) }
+                        .map { it.id }
+                    suwayomiClient.updateChaptersRead(chapterIds, read)
+                    syncTrackerProgressAfterReadStateChange(
+                        read = read,
+                        changedMangaIds = chapterIds.map { manga.id.toInt() },
+                        trackProgress = suwayomiClient::trackProgress,
+                        onFailure = { error ->
+                            logcat(LogPriority.ERROR, error) { "Failed to update server tracker progress from Library" }
+                        },
+                    )
+                }
+                refreshServerLibrary()
+                ServerStateSync.requestRefresh()
+            } catch (e: Throwable) {
+                if (e is CancellationException) throw e
+                logcat(LogPriority.ERROR, e) { "Failed to update server chapter read state from Library" }
             }
         }
         clearSelection()
@@ -545,23 +969,28 @@ class LibraryScreenModel(
     fun removeMangas(mangas: List<Manga>, deleteFromLibrary: Boolean, deleteChapters: Boolean) {
         screenModelScope.launchNonCancellable {
             if (deleteFromLibrary) {
-                val toDelete = mangas.map {
+                mangas.forEach {
                     it.removeCovers(coverCache)
-                    MangaUpdate(
-                        favorite = false,
-                        id = it.id,
+                    suwayomiClient.updateMangaLibrary(
+                        mangaId = it.id.toInt(),
+                        inLibrary = false,
                     )
                 }
-                updateManga.awaitAll(toDelete)
+                refreshServerLibrary()
+                ServerStateSync.requestRefresh()
             }
 
             if (deleteChapters) {
                 mangas.forEach { manga ->
-                    val source = sourceManager.get(manga.source) as? HttpSource
-                    if (source != null) {
-                        downloadManager.deleteManga(manga, source)
+                    val downloadedChapterIds = suwayomiClient.getChapters(manga.id.toInt())
+                        .filter { it.isDownloaded }
+                        .map { it.id }
+                    if (downloadedChapterIds.isNotEmpty()) {
+                        suwayomiClient.deleteDownloadedChapters(downloadedChapterIds)
                     }
                 }
+                refreshServerLibrary()
+                ServerStateSync.requestRefresh()
             }
         }
     }
@@ -575,16 +1004,21 @@ class LibraryScreenModel(
      */
     fun setMangaCategories(mangaList: List<Manga>, addCategories: List<Long>, removeCategories: List<Long>) {
         screenModelScope.launchNonCancellable {
-            mangaList.forEach { manga ->
-                val categoryIds = getCategories.await(manga.id)
-                    .map { it.id }
-                    .subtract(removeCategories.toSet())
-                    .plus(addCategories)
-                    .toList()
-
-                setMangaCategories.await(manga.id, categoryIds)
-            }
+            suwayomiClient.updateMangasCategories(
+                mangaIds = mangaList.map { it.id.toInt() },
+                addCategoryIds = addCategories.map { it.toInt() },
+                removeCategoryIds = removeCategories.map { it.toInt() },
+            )
+            refreshServerLibrary()
+            ServerStateSync.requestRefresh()
         }
+    }
+
+    private suspend fun getCategoryIdsForManga(mangaId: Long): List<Long> {
+        return state.value.libraryData.favoritesById[mangaId]
+            ?.libraryManga
+            ?.categories
+            ?: suwayomiClient.getMangaCategories(mangaId.toInt()).map { it.id.toLong() }
     }
 
     fun getDisplayMode(): PreferenceMutableState<LibraryDisplayMode> {
@@ -733,6 +1167,7 @@ class LibraryScreenModel(
     @Immutable
     private data class ItemPreferences(
         val downloadBadge: Boolean,
+        val localDownloadBadge: Boolean,
         val unreadBadge: Boolean,
         val localBadge: Boolean,
         val languageBadge: Boolean,
@@ -745,7 +1180,25 @@ class LibraryScreenModel(
         val filterBookmarked: TriState,
         val filterCompleted: TriState,
         val filterIntervalCustom: TriState,
-    )
+    ) {
+        val hasActiveFilters = listOf(
+            filterDownloaded,
+            filterUnread,
+            filterStarted,
+            filterBookmarked,
+            filterCompleted,
+            filterIntervalCustom,
+        ).any { it != TriState.DISABLED }
+    }
+
+    @Immutable
+    data class LibraryTrackingState(
+        val loggedInTrackers: List<SuwayomiTrackerDto> = emptyList(),
+        val recordsByMangaId: Map</* Manga */ Long, List<SuwayomiStatsTrackRecordDto>> = emptyMap(),
+        val filters: Map</* Tracker */ Int, TriState> = emptyMap(),
+    ) {
+        val hasActiveFilters = filters.values.any { it != TriState.DISABLED }
+    }
 
     @Immutable
     data class LibraryData(
@@ -753,8 +1206,9 @@ class LibraryScreenModel(
         val showSystemCategory: Boolean = false,
         val categories: List<Category> = emptyList(),
         val favorites: List<LibraryItem> = emptyList(),
-        val tracksMap: Map</* Manga */ Long, List<Track>> = emptyMap(),
-        val loggedInTrackerIds: Set<Long> = emptySet(),
+        val trackingState: LibraryTrackingState = LibraryTrackingState(),
+        val hasActiveFilters: Boolean = false,
+        val staleSnapshot: SuwayomiStaleSnapshotState? = null,
     ) {
         val favoritesById by lazy { favorites.associateBy { it.id } }
     }
@@ -763,6 +1217,7 @@ class LibraryScreenModel(
     data class State(
         val isInitialized: Boolean = false,
         val isLoading: Boolean = true,
+        val serverUnavailable: Boolean = false,
         val searchQuery: String? = null,
         val selection: Set</* Manga */ Long> = setOf(),
         val hasActiveFilters: Boolean = false,
@@ -770,6 +1225,7 @@ class LibraryScreenModel(
         val showMangaCount: Boolean = false,
         val showMangaContinueButton: Boolean = false,
         val dialog: Dialog? = null,
+        val libraryUpdateStatus: LibraryUpdateState = LibraryUpdateState(),
         val libraryData: LibraryData = LibraryData(),
         private val activeCategoryIndex: Int = 0,
         private val groupedFavorites: Map<Category, List</* LibraryItem */ Long>> = emptyMap(),
@@ -788,6 +1244,8 @@ class LibraryScreenModel(
         val selectionMode = selection.isNotEmpty()
 
         val selectedManga by lazy { selection.mapNotNull { libraryData.favoritesById[it]?.libraryManga?.manga } }
+
+        val selectedMangaContainsLocal by lazy { selection.any { libraryData.favoritesById[it]?.isLocal == true } }
 
         fun getItemsForCategoryId(categoryId: Long?): List<LibraryItem> {
             if (categoryId == null) return emptyList()
@@ -822,4 +1280,21 @@ class LibraryScreenModel(
             return LibraryToolbarTitle(title, count)
         }
     }
+}
+
+@Immutable
+data class LibraryUpdateState(
+    val isRunning: Boolean = false,
+    val totalJobs: Int = 0,
+    val finishedJobs: Int = 0,
+) {
+    val hasProgress: Boolean = totalJobs > 0
+}
+
+private fun SuwayomiLibraryUpdateStatusDto.toLibraryUpdateState(): LibraryUpdateState {
+    return LibraryUpdateState(
+        isRunning = jobsInfo.isRunning,
+        totalJobs = jobsInfo.totalJobs,
+        finishedJobs = jobsInfo.finishedJobs,
+    )
 }

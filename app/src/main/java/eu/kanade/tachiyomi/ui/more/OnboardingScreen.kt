@@ -41,6 +41,7 @@ class OnboardingScreen : Screen() {
             onComplete = finishOnboarding,
             onRestoreBackup = {
                 finishOnboarding()
+                // Client backup restore lives in Data and storage. Server backup restore stays under Server settings.
                 SearchableSettings.highlightKey = restoreSettingKey
                 navigator.push(SettingsScreen(SettingsScreen.Destination.DataAndStorage))
             },

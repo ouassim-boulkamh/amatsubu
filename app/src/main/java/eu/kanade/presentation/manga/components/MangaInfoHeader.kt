@@ -116,7 +116,7 @@ fun MangaInfoBox(
     manga: Manga,
     sourceName: String,
     isStubSource: Boolean,
-    onCoverClick: () -> Unit,
+    onCoverClick: (() -> Unit)?,
     doSearch: (query: String, global: Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -179,7 +179,7 @@ fun MangaActionRow(
     onAddToLibraryClicked: () -> Unit,
     onWebViewClicked: (() -> Unit)?,
     onWebViewLongClicked: (() -> Unit)?,
-    onTrackingClicked: () -> Unit,
+    onTrackingClicked: (() -> Unit)?,
     onEditIntervalClicked: (() -> Unit)?,
     onEditCategory: (() -> Unit)?,
     modifier: Modifier = Modifier,
@@ -222,16 +222,18 @@ fun MangaActionRow(
             color = if (isUserIntervalMode) MaterialTheme.colorScheme.primary else defaultActionButtonColor,
             onClick = { onEditIntervalClicked?.invoke() },
         )
-        MangaActionButton(
-            title = if (trackingCount == 0) {
-                stringResource(MR.strings.manga_tracking_tab)
-            } else {
-                pluralStringResource(MR.plurals.num_trackers, count = trackingCount, trackingCount)
-            },
-            icon = if (trackingCount == 0) Icons.Outlined.Sync else Icons.Outlined.Done,
-            color = if (trackingCount == 0) defaultActionButtonColor else MaterialTheme.colorScheme.primary,
-            onClick = onTrackingClicked,
-        )
+        if (onTrackingClicked != null) {
+            MangaActionButton(
+                title = if (trackingCount == 0) {
+                    stringResource(MR.strings.manga_tracking_tab)
+                } else {
+                    pluralStringResource(MR.plurals.num_trackers, count = trackingCount, trackingCount)
+                },
+                icon = if (trackingCount == 0) Icons.Outlined.Sync else Icons.Outlined.Done,
+                color = if (trackingCount == 0) defaultActionButtonColor else MaterialTheme.colorScheme.primary,
+                onClick = onTrackingClicked,
+            )
+        }
         if (onWebViewClicked != null) {
             MangaActionButton(
                 title = stringResource(MR.strings.action_web_view),
@@ -252,7 +254,7 @@ fun ExpandableMangaDescription(
     notes: String,
     onTagSearch: (String) -> Unit,
     onCopyTagToClipboard: (tag: String) -> Unit,
-    onEditNotes: () -> Unit,
+    onEditNotes: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -346,7 +348,7 @@ private fun MangaAndSourceTitlesLarge(
     manga: Manga,
     sourceName: String,
     isStubSource: Boolean,
-    onCoverClick: () -> Unit,
+    onCoverClick: (() -> Unit)?,
     doSearch: (query: String, global: Boolean) -> Unit,
 ) {
     Column(
@@ -384,7 +386,7 @@ private fun MangaAndSourceTitlesSmall(
     manga: Manga,
     sourceName: String,
     isStubSource: Boolean,
-    onCoverClick: () -> Unit,
+    onCoverClick: (() -> Unit)?,
     doSearch: (query: String, global: Boolean) -> Unit,
 ) {
     Row(
@@ -614,7 +616,7 @@ private fun MangaSummary(
     description: String,
     notes: String,
     expanded: Boolean,
-    onEditNotesClicked: () -> Unit,
+    onEditNotesClicked: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val preferences = remember { Injekt.get<UiPreferences>() }

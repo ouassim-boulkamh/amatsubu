@@ -12,8 +12,10 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.category.CategoryScreen
 import eu.kanade.presentation.category.components.CategoryCreateDialog
 import eu.kanade.presentation.category.components.CategoryDeleteDialog
+import eu.kanade.presentation.category.components.CategoryFlagsDialog
 import eu.kanade.presentation.category.components.CategoryRenameDialog
 import eu.kanade.presentation.util.Screen
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiCategoryFlag
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.flow.collectLatest
 import tachiyomi.presentation.core.screens.LoadingScreen
@@ -39,6 +41,7 @@ class CategoryScreen : Screen() {
             state = successState,
             onClickCreate = { screenModel.showDialog(CategoryDialog.Create) },
             onClickRename = { screenModel.showDialog(CategoryDialog.Rename(it)) },
+            onClickEditFlags = { screenModel.showDialog(CategoryDialog.EditFlags(it)) },
             onClickDelete = { screenModel.showDialog(CategoryDialog.Delete(it)) },
             onChangeOrder = screenModel::changeOrder,
             navigateUp = navigator::pop,
@@ -59,6 +62,24 @@ class CategoryScreen : Screen() {
                     onRename = { screenModel.renameCategory(dialog.category, it) },
                     categories = successState.categories.fastMap { it.name },
                     category = dialog.category.name,
+                )
+            }
+            is CategoryDialog.EditFlags -> {
+                val flags = successState.categoryFlags[dialog.category.id]
+                CategoryFlagsDialog(
+                    onDismissRequest = screenModel::dismissDialog,
+                    onConfirm = { includeInUpdate, includeInDownload ->
+                        screenModel.updateCategoryFlags(
+                            category = dialog.category,
+                            includeInUpdate = includeInUpdate,
+                            includeInDownload = includeInDownload,
+                        )
+                    },
+                    category = dialog.category.name,
+                    includeInUpdate = flags?.includeInUpdate
+                        ?: SuwayomiCategoryFlag.UNSET,
+                    includeInDownload = flags?.includeInDownload
+                        ?: SuwayomiCategoryFlag.UNSET,
                 )
             }
             is CategoryDialog.Delete -> {

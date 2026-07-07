@@ -43,7 +43,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import eu.kanade.domain.extension.interactor.ExtensionSourceItem
 import eu.kanade.presentation.browse.components.ExtensionIcon
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
@@ -53,7 +52,7 @@ import eu.kanade.presentation.more.settings.widget.TrailingWidgetBuffer
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.extension.model.Extension
 import eu.kanade.tachiyomi.source.ConfigurableSource
-import eu.kanade.tachiyomi.ui.browse.extension.details.ExtensionDetailsScreenModel
+import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.util.system.LocaleHelper
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import tachiyomi.i18n.MR
@@ -66,7 +65,7 @@ import tachiyomi.presentation.core.screens.EmptyScreen
 @Composable
 fun ExtensionDetailsScreen(
     navigateUp: () -> Unit,
-    state: ExtensionDetailsScreenModel.State,
+    state: ExtensionDetailsState,
     onClickSourcePreferences: (sourceId: Long) -> Unit,
     onClickEnableAll: () -> Unit,
     onClickDisableAll: () -> Unit,
@@ -74,6 +73,8 @@ fun ExtensionDetailsScreen(
     onClickUninstall: () -> Unit,
     onClickSource: (sourceId: Long) -> Unit,
     onClickIncognito: (Boolean) -> Unit,
+    extensionIcon: (@Composable (Extension, Modifier) -> Unit)? = null,
+    showAppInfoButton: Boolean = true,
 ) {
     val uriHandler = LocalUriHandler.current
     val url = remember(state.extension) {
@@ -145,9 +146,29 @@ fun ExtensionDetailsScreen(
             onClickUninstall = onClickUninstall,
             onClickSource = onClickSource,
             onClickIncognito = onClickIncognito,
+            extensionIcon = extensionIcon,
+            showAppInfoButton = showAppInfoButton,
         )
     }
 }
+
+data class ExtensionDetailsState(
+    val extension: Extension.Installed? = null,
+    val isIncognito: Boolean = false,
+    private val _sources: List<ExtensionSourceItem>? = null,
+) {
+    val sources: List<ExtensionSourceItem>
+        get() = _sources ?: listOf()
+
+    val isLoading: Boolean
+        get() = extension == null || _sources == null
+}
+
+data class ExtensionSourceItem(
+    val source: Source,
+    val enabled: Boolean,
+    val labelAsName: Boolean,
+)
 
 @Composable
 private fun ExtensionDetails(
@@ -159,6 +180,8 @@ private fun ExtensionDetails(
     onClickUninstall: () -> Unit,
     onClickSource: (sourceId: Long) -> Unit,
     onClickIncognito: (Boolean) -> Unit,
+    extensionIcon: (@Composable (Extension, Modifier) -> Unit)? = null,
+    showAppInfoButton: Boolean = true,
 ) {
     val context = LocalContext.current
     var showNsfwWarning by remember { mutableStateOf(false) }
@@ -183,11 +206,12 @@ private fun ExtensionDetails(
                         context.startActivity(this)
                     }
                     Unit
-                }.takeIf { extension.isShared },
+                }.takeIf { showAppInfoButton && extension.isShared },
                 onClickAgeRating = {
                     showNsfwWarning = true
                 },
                 onExtIncognitoChange = onClickIncognito,
+                extensionIcon = extensionIcon,
             )
         }
 
@@ -220,6 +244,7 @@ private fun DetailsHeader(
     onClickUninstall: () -> Unit,
     onClickAppInfo: (() -> Unit)?,
     onExtIncognitoChange: (Boolean) -> Unit,
+    extensionIcon: (@Composable (Extension, Modifier) -> Unit)? = null,
 ) {
     val context = LocalContext.current
 
@@ -261,12 +286,16 @@ private fun DetailsHeader(
                 },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            ExtensionIcon(
-                modifier = Modifier
-                    .size(112.dp),
-                extension = extension,
-                density = DisplayMetrics.DENSITY_XXXHIGH,
-            )
+            val iconModifier = Modifier.size(112.dp)
+            if (extensionIcon != null) {
+                extensionIcon(extension, iconModifier)
+            } else {
+                ExtensionIcon(
+                    modifier = iconModifier,
+                    extension = extension,
+                    density = DisplayMetrics.DENSITY_XXXHIGH,
+                )
+            }
 
             Text(
                 text = extension.name,

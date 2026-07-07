@@ -11,6 +11,7 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -29,6 +30,7 @@ import eu.kanade.presentation.util.formatChapterNumber
 import eu.kanade.tachiyomi.util.lang.toTimestampString
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.components.material.DISABLED_ALPHA
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 
@@ -39,10 +41,13 @@ fun HistoryItem(
     history: HistoryWithRelations,
     onClickCover: () -> Unit,
     onClickResume: () -> Unit,
-    onClickDelete: () -> Unit,
+    onClickDelete: (() -> Unit)?,
     onClickFavorite: () -> Unit,
     modifier: Modifier = Modifier,
+    read: Boolean = false,
 ) {
+    val textAlpha = if (read) DISABLED_ALPHA else 1f
+
     Row(
         modifier = modifier
             .clickable(onClick = onClickResume)
@@ -66,6 +71,7 @@ fun HistoryItem(
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                color = LocalContentColor.current.copy(alpha = textAlpha),
                 style = textStyle,
             )
             val readAt = remember { history.readAt?.toTimestampString() ?: "" }
@@ -80,6 +86,7 @@ fun HistoryItem(
                     readAt
                 },
                 modifier = Modifier.padding(top = 4.dp),
+                color = LocalContentColor.current.copy(alpha = textAlpha),
                 style = textStyle,
             )
         }
@@ -94,12 +101,14 @@ fun HistoryItem(
             }
         }
 
-        IconButton(onClick = onClickDelete) {
-            Icon(
-                imageVector = Icons.Outlined.Delete,
-                contentDescription = stringResource(MR.strings.action_delete),
-                tint = MaterialTheme.colorScheme.onSurface,
-            )
+        if (onClickDelete != null) {
+            IconButton(onClick = onClickDelete) {
+                Icon(
+                    imageVector = Icons.Outlined.Delete,
+                    contentDescription = stringResource(MR.strings.action_delete),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
         }
     }
 }

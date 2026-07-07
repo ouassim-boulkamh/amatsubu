@@ -26,9 +26,9 @@ import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.manga.components.BaseMangaListItem
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
+import eu.kanade.tachiyomi.ui.browse.migration.search.ServerMigrateSearchScreen
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.flow.collectLatest
-import mihon.feature.migration.config.MigrationConfigScreen
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
@@ -40,7 +40,7 @@ import tachiyomi.presentation.core.util.selectedBackground
 import tachiyomi.presentation.core.util.shouldExpandFAB
 
 data class MigrateMangaScreen(
-    private val sourceId: Long,
+    private val sourceId: String,
 ) : Screen() {
 
     @Composable
@@ -65,7 +65,7 @@ data class MigrateMangaScreen(
         Scaffold(
             topBar = { scrollBehavior ->
                 AppBar(
-                    title = state.source!!.name,
+                    title = state.sourceName.orEmpty(),
                     navigateUp = {
                         if (state.selectionMode) {
                             screenModel.clearSelection()
@@ -85,7 +85,7 @@ data class MigrateMangaScreen(
                     onClick = {
                         val selection = state.selection
                         screenModel.clearSelection()
-                        navigator.push(MigrationConfigScreen(selection))
+                        navigator.push(ServerMigrateSearchScreen(selection.first()))
                     },
                     expanded = lazyListState.shouldExpandFAB(),
                     modifier = Modifier.animateFloatingActionButton(

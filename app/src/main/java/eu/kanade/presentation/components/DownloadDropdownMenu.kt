@@ -52,12 +52,30 @@ private fun DownloadDropdownMenuItems(
     onDownloadClicked: (DownloadAction) -> Unit,
 ) {
     val options = listOf(
-        DownloadAction.NEXT_1_CHAPTER to pluralStringResource(MR.plurals.download_amount, 1, 1),
-        DownloadAction.NEXT_5_CHAPTERS to pluralStringResource(MR.plurals.download_amount, 5, 5),
-        DownloadAction.NEXT_10_CHAPTERS to pluralStringResource(MR.plurals.download_amount, 10, 10),
-        DownloadAction.NEXT_25_CHAPTERS to pluralStringResource(MR.plurals.download_amount, 25, 25),
-        DownloadAction.UNREAD_CHAPTERS to stringResource(MR.strings.download_unread),
-        DownloadAction.BOOKMARKED_CHAPTERS to stringResource(MR.strings.download_bookmarked),
+        DownloadAction.NEXT_1_CHAPTER to stringResource(
+            MR.strings.download_to_server_option,
+            pluralStringResource(MR.plurals.download_amount, 1, 1),
+        ),
+        DownloadAction.NEXT_5_CHAPTERS to stringResource(
+            MR.strings.download_to_server_option,
+            pluralStringResource(MR.plurals.download_amount, 5, 5),
+        ),
+        DownloadAction.NEXT_10_CHAPTERS to stringResource(
+            MR.strings.download_to_server_option,
+            pluralStringResource(MR.plurals.download_amount, 10, 10),
+        ),
+        DownloadAction.NEXT_25_CHAPTERS to stringResource(
+            MR.strings.download_to_server_option,
+            pluralStringResource(MR.plurals.download_amount, 25, 25),
+        ),
+        DownloadAction.UNREAD_CHAPTERS to stringResource(
+            MR.strings.download_to_server_option,
+            stringResource(MR.strings.download_unread),
+        ),
+        DownloadAction.BOOKMARKED_CHAPTERS to stringResource(
+            MR.strings.download_to_server_option,
+            stringResource(MR.strings.download_bookmarked),
+        ),
     )
 
     options.map { (downloadAction, string) ->

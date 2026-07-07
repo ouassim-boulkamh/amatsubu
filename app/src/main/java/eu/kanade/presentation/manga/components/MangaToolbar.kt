@@ -36,7 +36,7 @@ fun MangaToolbar(
     onClickEditCategory: (() -> Unit)?,
     onClickRefresh: () -> Unit,
     onClickMigrate: (() -> Unit)?,
-    onClickEditNotes: () -> Unit,
+    onClickEditNotes: (() -> Unit)?,
 
     // For action mode
     actionModeCounter: Int,
@@ -96,7 +96,7 @@ fun MangaToolbar(
                     if (onClickDownload != null) {
                         add(
                             AppBar.Action(
-                                title = stringResource(MR.strings.manga_download),
+                                title = stringResource(MR.strings.action_download_to_server),
                                 icon = Icons.Outlined.Download,
                                 onClick = { downloadExpanded = !downloadExpanded },
                             ),
@@ -140,12 +140,14 @@ fun MangaToolbar(
                             ),
                         )
                     }
-                    add(
-                        AppBar.OverflowAction(
-                            title = stringResource(MR.strings.action_notes),
-                            onClick = onClickEditNotes,
-                        ),
-                    )
+                    if (onClickEditNotes != null) {
+                        add(
+                            AppBar.OverflowAction(
+                                title = stringResource(MR.strings.action_notes),
+                                onClick = onClickEditNotes,
+                            ),
+                        )
+                    }
                 },
             )
         },

@@ -44,6 +44,9 @@ enum class ChapterDownloadAction {
     START_NOW,
     CANCEL,
     DELETE,
+    SAVE_DEVICE,
+    REMOVE_DEVICE,
+    REFRESH_DEVICE,
 }
 
 @Composable
@@ -51,6 +54,12 @@ fun ChapterDownloadIndicator(
     enabled: Boolean,
     downloadStateProvider: () -> Download.State,
     downloadProgressProvider: () -> Int,
+    deviceCopyStateProvider: () -> eu.kanade.tachiyomi.ui.manga.DeviceCopyState = {
+        eu.kanade.tachiyomi.ui.manga.DeviceCopyState.NONE
+    },
+    serverActionsEnabled: Boolean = true,
+    deviceSaveEnabled: Boolean = false,
+    showDeviceCopyActions: Boolean = false,
     onClick: (ChapterDownloadAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -58,6 +67,10 @@ fun ChapterDownloadIndicator(
         Download.State.NOT_DOWNLOADED -> NotDownloadedIndicator(
             enabled = enabled,
             modifier = modifier,
+            deviceCopyStateProvider = deviceCopyStateProvider,
+            serverActionsEnabled = serverActionsEnabled,
+            deviceSaveEnabled = deviceSaveEnabled,
+            showDeviceCopyActions = showDeviceCopyActions,
             onClick = onClick,
         )
         Download.State.QUEUE, Download.State.DOWNLOADING -> DownloadingIndicator(
@@ -65,16 +78,28 @@ fun ChapterDownloadIndicator(
             modifier = modifier,
             downloadState = downloadState,
             downloadProgressProvider = downloadProgressProvider,
+            deviceCopyStateProvider = deviceCopyStateProvider,
+            serverActionsEnabled = serverActionsEnabled,
+            deviceSaveEnabled = deviceSaveEnabled,
+            showDeviceCopyActions = showDeviceCopyActions,
             onClick = onClick,
         )
         Download.State.DOWNLOADED -> DownloadedIndicator(
             enabled = enabled,
             modifier = modifier,
+            deviceCopyStateProvider = deviceCopyStateProvider,
+            serverActionsEnabled = serverActionsEnabled,
+            deviceSaveEnabled = deviceSaveEnabled,
+            showDeviceCopyActions = showDeviceCopyActions,
             onClick = onClick,
         )
         Download.State.ERROR -> ErrorIndicator(
             enabled = enabled,
             modifier = modifier,
+            deviceCopyStateProvider = deviceCopyStateProvider,
+            serverActionsEnabled = serverActionsEnabled,
+            deviceSaveEnabled = deviceSaveEnabled,
+            showDeviceCopyActions = showDeviceCopyActions,
             onClick = onClick,
         )
     }
@@ -84,8 +109,13 @@ fun ChapterDownloadIndicator(
 private fun NotDownloadedIndicator(
     enabled: Boolean,
     modifier: Modifier = Modifier,
+    deviceCopyStateProvider: () -> eu.kanade.tachiyomi.ui.manga.DeviceCopyState,
+    serverActionsEnabled: Boolean,
+    deviceSaveEnabled: Boolean,
+    showDeviceCopyActions: Boolean,
     onClick: (ChapterDownloadAction) -> Unit,
 ) {
+    var isMenuExpanded by remember { mutableStateOf(false) }
     Box(
         modifier = modifier
             .size(IconButtonTokens.StateLayerSize)
@@ -93,16 +123,26 @@ private fun NotDownloadedIndicator(
                 enabled = enabled,
                 hapticFeedback = LocalHapticFeedback.current,
                 onLongClick = { onClick(ChapterDownloadAction.START_NOW) },
-                onClick = { onClick(ChapterDownloadAction.START) },
+                onClick = { isMenuExpanded = true },
             )
             .secondaryItemAlpha(),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_download_chapter_24dp),
-            contentDescription = stringResource(MR.strings.manga_download),
+            contentDescription = stringResource(MR.strings.action_download_to_server),
             modifier = Modifier.size(IndicatorSize),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        ChapterDownloadDropdownMenu(
+            expanded = isMenuExpanded,
+            onDismissRequest = { isMenuExpanded = false },
+            downloadState = Download.State.NOT_DOWNLOADED,
+            deviceCopyState = deviceCopyStateProvider(),
+            serverActionsEnabled = serverActionsEnabled,
+            deviceSaveEnabled = deviceSaveEnabled,
+            showDeviceCopyActions = showDeviceCopyActions,
+            onClick = onClick,
         )
     }
 }
@@ -112,6 +152,10 @@ private fun DownloadingIndicator(
     enabled: Boolean,
     downloadState: Download.State,
     downloadProgressProvider: () -> Int,
+    deviceCopyStateProvider: () -> eu.kanade.tachiyomi.ui.manga.DeviceCopyState,
+    serverActionsEnabled: Boolean,
+    deviceSaveEnabled: Boolean,
+    showDeviceCopyActions: Boolean,
     onClick: (ChapterDownloadAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -164,7 +208,8 @@ private fun DownloadingIndicator(
         }
         DropdownMenu(expanded = isMenuExpanded, onDismissRequest = { isMenuExpanded = false }) {
             DropdownMenuItem(
-                text = { Text(text = stringResource(MR.strings.action_start_downloading_now)) },
+                text = { Text(text = stringResource(MR.strings.action_download_to_server_now)) },
+                enabled = serverActionsEnabled,
                 onClick = {
                     onClick(ChapterDownloadAction.START_NOW)
                     isMenuExpanded = false
@@ -177,6 +222,14 @@ private fun DownloadingIndicator(
                     isMenuExpanded = false
                 },
             )
+            if (showDeviceCopyActions) {
+                DeviceCopyDropdownItems(
+                    deviceCopyState = deviceCopyStateProvider(),
+                    deviceSaveEnabled = deviceSaveEnabled,
+                    onClick = onClick,
+                    onDismissRequest = { isMenuExpanded = false },
+                )
+            }
         }
         Icon(
             imageVector = Icons.Outlined.ArrowDownward,
@@ -191,6 +244,10 @@ private fun DownloadingIndicator(
 private fun DownloadedIndicator(
     enabled: Boolean,
     modifier: Modifier = Modifier,
+    deviceCopyStateProvider: () -> eu.kanade.tachiyomi.ui.manga.DeviceCopyState,
+    serverActionsEnabled: Boolean,
+    deviceSaveEnabled: Boolean,
+    showDeviceCopyActions: Boolean,
     onClick: (ChapterDownloadAction) -> Unit,
 ) {
     var isMenuExpanded by remember { mutableStateOf(false) }
@@ -212,13 +269,19 @@ private fun DownloadedIndicator(
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         DropdownMenu(expanded = isMenuExpanded, onDismissRequest = { isMenuExpanded = false }) {
-            DropdownMenuItem(
-                text = { Text(text = stringResource(MR.strings.action_delete)) },
-                onClick = {
-                    onClick(ChapterDownloadAction.DELETE)
-                    isMenuExpanded = false
-                },
+            ServerDownloadedDropdownItems(
+                serverActionsEnabled = serverActionsEnabled,
+                onClick = onClick,
+                onDismissRequest = { isMenuExpanded = false },
             )
+            if (showDeviceCopyActions) {
+                DeviceCopyDropdownItems(
+                    deviceCopyState = deviceCopyStateProvider(),
+                    deviceSaveEnabled = deviceSaveEnabled,
+                    onClick = onClick,
+                    onDismissRequest = { isMenuExpanded = false },
+                )
+            }
         }
     }
 }
@@ -227,8 +290,13 @@ private fun DownloadedIndicator(
 private fun ErrorIndicator(
     enabled: Boolean,
     modifier: Modifier = Modifier,
+    deviceCopyStateProvider: () -> eu.kanade.tachiyomi.ui.manga.DeviceCopyState,
+    serverActionsEnabled: Boolean,
+    deviceSaveEnabled: Boolean,
+    showDeviceCopyActions: Boolean,
     onClick: (ChapterDownloadAction) -> Unit,
 ) {
+    var isMenuExpanded by remember { mutableStateOf(false) }
     Box(
         modifier = modifier
             .size(IconButtonTokens.StateLayerSize)
@@ -236,7 +304,7 @@ private fun ErrorIndicator(
                 enabled = enabled,
                 hapticFeedback = LocalHapticFeedback.current,
                 onLongClick = { onClick(ChapterDownloadAction.START) },
-                onClick = { onClick(ChapterDownloadAction.START) },
+                onClick = { isMenuExpanded = true },
             ),
         contentAlignment = Alignment.Center,
     ) {
@@ -245,6 +313,126 @@ private fun ErrorIndicator(
             contentDescription = stringResource(MR.strings.chapter_error),
             modifier = Modifier.size(IndicatorSize),
             tint = MaterialTheme.colorScheme.error,
+        )
+        ChapterDownloadDropdownMenu(
+            expanded = isMenuExpanded,
+            onDismissRequest = { isMenuExpanded = false },
+            downloadState = Download.State.ERROR,
+            deviceCopyState = deviceCopyStateProvider(),
+            serverActionsEnabled = serverActionsEnabled,
+            deviceSaveEnabled = deviceSaveEnabled,
+            showDeviceCopyActions = showDeviceCopyActions,
+            onClick = onClick,
+        )
+    }
+}
+
+@Composable
+private fun ChapterDownloadDropdownMenu(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    downloadState: Download.State,
+    deviceCopyState: eu.kanade.tachiyomi.ui.manga.DeviceCopyState,
+    serverActionsEnabled: Boolean,
+    deviceSaveEnabled: Boolean,
+    showDeviceCopyActions: Boolean,
+    onClick: (ChapterDownloadAction) -> Unit,
+) {
+    DropdownMenu(expanded = expanded, onDismissRequest = onDismissRequest) {
+        DropdownMenuItem(
+            text = { Text(text = stringResource(MR.strings.action_download_to_server)) },
+            enabled = serverActionsEnabled,
+            onClick = {
+                onClick(ChapterDownloadAction.START)
+                onDismissRequest()
+            },
+        )
+        if (!serverActionsEnabled) {
+            DropdownMenuItem(
+                text = { Text(text = stringResource(MR.strings.server_offline_actions_disabled)) },
+                enabled = false,
+                onClick = {},
+            )
+        }
+        if (downloadState == Download.State.QUEUE || downloadState == Download.State.DOWNLOADING) {
+            DropdownMenuItem(
+                text = { Text(text = stringResource(MR.strings.action_cancel)) },
+                onClick = {
+                    onClick(ChapterDownloadAction.CANCEL)
+                    onDismissRequest()
+                },
+            )
+        }
+        if (showDeviceCopyActions) {
+            DeviceCopyDropdownItems(
+                deviceCopyState = deviceCopyState,
+                deviceSaveEnabled = deviceSaveEnabled,
+                onClick = onClick,
+                onDismissRequest = onDismissRequest,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ServerDownloadedDropdownItems(
+    serverActionsEnabled: Boolean,
+    onClick: (ChapterDownloadAction) -> Unit,
+    onDismissRequest: () -> Unit,
+) {
+    DropdownMenuItem(
+        text = { Text(text = stringResource(MR.strings.action_remove_server_download)) },
+        enabled = serverActionsEnabled,
+        onClick = {
+            onClick(ChapterDownloadAction.DELETE)
+            onDismissRequest()
+        },
+    )
+    if (!serverActionsEnabled) {
+        DropdownMenuItem(
+            text = { Text(text = stringResource(MR.strings.server_offline_actions_disabled)) },
+            enabled = false,
+            onClick = {},
+        )
+    }
+}
+
+@Composable
+private fun DeviceCopyDropdownItems(
+    deviceCopyState: eu.kanade.tachiyomi.ui.manga.DeviceCopyState,
+    deviceSaveEnabled: Boolean,
+    onClick: (ChapterDownloadAction) -> Unit,
+    onDismissRequest: () -> Unit,
+) {
+    val hasDeviceCopy = deviceCopyState != eu.kanade.tachiyomi.ui.manga.DeviceCopyState.NONE
+    DropdownMenuItem(
+        text = {
+            Text(
+                text = stringResource(
+                    if (hasDeviceCopy) MR.strings.action_refresh_device_copy else MR.strings.action_save_to_device,
+                ),
+            )
+        },
+        enabled = deviceSaveEnabled,
+        onClick = {
+            onClick(if (hasDeviceCopy) ChapterDownloadAction.REFRESH_DEVICE else ChapterDownloadAction.SAVE_DEVICE)
+            onDismissRequest()
+        },
+    )
+    if (!deviceSaveEnabled) {
+        DropdownMenuItem(
+            text = { Text(text = stringResource(MR.strings.save_device_copy_offline_disabled)) },
+            enabled = false,
+            onClick = {},
+        )
+    }
+    if (hasDeviceCopy) {
+        DropdownMenuItem(
+            text = { Text(text = stringResource(MR.strings.action_remove_device_copy)) },
+            onClick = {
+                onClick(ChapterDownloadAction.REMOVE_DEVICE)
+                onDismissRequest()
+            },
         )
     }
 }

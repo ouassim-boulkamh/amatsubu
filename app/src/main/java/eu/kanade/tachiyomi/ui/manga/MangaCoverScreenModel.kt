@@ -33,18 +33,21 @@ import uy.kohesive.injekt.api.get
 
 class MangaCoverScreenModel(
     private val mangaId: Long,
+    initialManga: Manga? = null,
     private val getManga: GetManga = Injekt.get(),
     private val imageSaver: ImageSaver = Injekt.get(),
     private val coverCache: CoverCache = Injekt.get(),
     private val updateManga: UpdateManga = Injekt.get(),
 
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
-) : StateScreenModel<Manga?>(null) {
+) : StateScreenModel<Manga?>(initialManga) {
 
     init {
-        screenModelScope.launchIO {
-            getManga.subscribe(mangaId)
-                .collect { newManga -> mutableState.update { newManga } }
+        if (initialManga == null) {
+            screenModelScope.launchIO {
+                getManga.subscribe(mangaId)
+                    .collect { newManga -> mutableState.update { newManga } }
+            }
         }
     }
 
@@ -122,7 +125,7 @@ class MangaCoverScreenModel(
         screenModelScope.launchIO {
             context.contentResolver.openInputStream(data)?.use {
                 try {
-                    manga.editCover(Injekt.get(), it, updateManga, coverCache)
+                    manga.editCover(it, updateManga, coverCache)
                     notifyCoverUpdated(context)
                 } catch (e: Exception) {
                     notifyFailedCoverUpdate(context, e)

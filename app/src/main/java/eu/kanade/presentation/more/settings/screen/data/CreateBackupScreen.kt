@@ -18,20 +18,17 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.WarningBanner
 import eu.kanade.presentation.util.Screen
-import eu.kanade.tachiyomi.data.backup.create.BackupCreateJob
-import eu.kanade.tachiyomi.data.backup.create.BackupCreator
+import eu.kanade.tachiyomi.data.backup.create.ServerBackupCreateJob
+import eu.kanade.tachiyomi.data.backup.create.ServerBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.BackupOptions
 import eu.kanade.tachiyomi.util.system.DeviceUtil
 import eu.kanade.tachiyomi.util.system.toast
-import kotlinx.coroutines.flow.update
 import tachiyomi.i18n.MR
-import tachiyomi.presentation.core.components.LabeledCheckbox
 import tachiyomi.presentation.core.components.LazyColumnWithAction
-import tachiyomi.presentation.core.components.SectionCard
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 
-class CreateBackupScreen : Screen() {
+class ServerCreateBackupScreen : Screen() {
 
     @Composable
     override fun Content() {
@@ -57,7 +54,7 @@ class CreateBackupScreen : Screen() {
         Scaffold(
             topBar = {
                 AppBar(
-                    title = stringResource(MR.strings.pref_create_backup),
+                    title = "Create server backup",
                     navigateUp = navigator::pop,
                     scrollBehavior = it,
                 )
@@ -66,11 +63,11 @@ class CreateBackupScreen : Screen() {
             LazyColumnWithAction(
                 contentPadding = contentPadding,
                 actionLabel = stringResource(MR.strings.action_create),
-                actionEnabled = state.options.canCreate(),
+                actionEnabled = true,
                 onClickAction = {
-                    if (!BackupCreateJob.isManualJobRunning(context)) {
+                    if (!ServerBackupCreateJob.isManualJobRunning(context)) {
                         try {
-                            chooseBackupDir.launch(BackupCreator.getFilename())
+                            chooseBackupDir.launch(ServerBackupCreator.getFilename())
                         } catch (e: ActivityNotFoundException) {
                             context.toast(MR.strings.file_picker_error)
                         }
@@ -85,52 +82,15 @@ class CreateBackupScreen : Screen() {
                     }
                 }
 
-                item {
-                    SectionCard(MR.strings.label_library) {
-                        Options(BackupOptions.libraryOptions, state, model)
-                    }
-                }
-
-                item {
-                    SectionCard(MR.strings.label_settings) {
-                        Options(BackupOptions.settingsOptions, state, model)
-                    }
-                }
             }
-        }
-    }
-
-    @Composable
-    private fun Options(
-        options: List<BackupOptions.Entry>,
-        state: CreateBackupScreenModel.State,
-        model: CreateBackupScreenModel,
-    ) {
-        options.forEach { option ->
-            LabeledCheckbox(
-                label = stringResource(option.label),
-                checked = option.getter(state.options),
-                onCheckedChange = {
-                    model.toggle(option.setter, it)
-                },
-                enabled = option.enabled(state.options),
-            )
         }
     }
 }
 
 private class CreateBackupScreenModel : StateScreenModel<CreateBackupScreenModel.State>(State()) {
 
-    fun toggle(setter: (BackupOptions, Boolean) -> BackupOptions, enabled: Boolean) {
-        mutableState.update {
-            it.copy(
-                options = setter(it.options, enabled),
-            )
-        }
-    }
-
     fun createBackup(context: Context, uri: Uri) {
-        BackupCreateJob.startNow(context, uri, state.value.options)
+        ServerBackupCreateJob.startNow(context, uri, state.value.options)
     }
 
     @Immutable

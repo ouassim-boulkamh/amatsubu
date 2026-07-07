@@ -3,8 +3,9 @@ package eu.kanade.tachiyomi.ui.library
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.domain.base.BasePreferences
-import eu.kanade.tachiyomi.data.track.TrackerManager
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.TriState
@@ -25,14 +26,21 @@ class LibrarySettingsScreenModel(
     val libraryPreferences: LibraryPreferences = Injekt.get(),
     private val setDisplayMode: SetDisplayMode = Injekt.get(),
     private val setSortModeForCategory: SetSortModeForCategory = Injekt.get(),
-    trackerManager: TrackerManager = Injekt.get(),
 ) : ScreenModel {
 
-    val trackersFlow = trackerManager.loggedInTrackersFlow()
+    private val suwayomiClient = SuwayomiClientProvider().graphQlClient
+
+    val trackersFlow = flow {
+        emit(
+            runCatching {
+                suwayomiClient.trackerList().filter { it.isLoggedIn }
+            }.getOrDefault(emptyList()),
+        )
+    }
         .stateIn(
             scope = screenModelScope,
             started = SharingStarted.WhileSubscribed(5.seconds.inWholeMilliseconds),
-            initialValue = trackerManager.loggedInTrackers(),
+            initialValue = emptyList(),
         )
 
     fun toggleFilter(preference: (LibraryPreferences) -> Preference<TriState>) {
