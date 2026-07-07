@@ -71,7 +71,7 @@ class BackupRestoreJob(private val context: Context, workerParams: WorkerParamet
 
     companion object {
         fun isRunning(context: Context): Boolean {
-            return context.workManager.isRunning(TAG)
+            return context.workManager.isRunning(TAG_CLIENT)
         }
 
         fun start(
@@ -86,19 +86,95 @@ class BackupRestoreJob(private val context: Context, workerParams: WorkerParamet
                 OPTIONS_KEY to options.asBooleanArray(),
             )
             val request = OneTimeWorkRequestBuilder<BackupRestoreJob>()
-                .addTag(TAG)
+                .addTag(TAG_CLIENT)
                 .setInputData(inputData)
                 .build()
-            context.workManager.enqueueUniqueWork(TAG, ExistingWorkPolicy.KEEP, request)
+            context.workManager.enqueueUniqueWork(TAG_CLIENT, ExistingWorkPolicy.KEEP, request)
         }
 
         fun stop(context: Context) {
-            context.workManager.cancelUniqueWork(TAG)
+            context.workManager.cancelUniqueWork(TAG_CLIENT)
         }
     }
 }
 
-private const val TAG = "BackupRestore"
+class ServerBackupRestoreJob(private val context: Context, workerParams: WorkerParameters) :
+    CoroutineWorker(context, workerParams) {
+
+    private val notifier = BackupNotifier(context)
+
+    override suspend fun doWork(): Result {
+        val uri = inputData.getString(LOCATION_URI_KEY)?.toUri()
+        val options = inputData.getBooleanArray(OPTIONS_KEY)?.let { RestoreOptions.fromBooleanArray(it) }
+
+        if (uri == null || options == null) {
+            return Result.failure()
+        }
+
+        val isSync = inputData.getBoolean(SYNC_KEY, false)
+
+        setForegroundSafely()
+
+        return try {
+            ServerBackupRestorer(context, notifier, isSync).restore(uri, options)
+            Result.success()
+        } catch (e: Exception) {
+            if (e is CancellationException) {
+                notifier.showRestoreError(context.stringResource(MR.strings.restoring_backup_canceled))
+                Result.success()
+            } else {
+                logcat(LogPriority.ERROR, e)
+                notifier.showRestoreError(e.message)
+                Result.failure()
+            }
+        } finally {
+            context.cancelNotification(Notifications.ID_RESTORE_PROGRESS)
+        }
+    }
+
+    override suspend fun getForegroundInfo(): ForegroundInfo {
+        return ForegroundInfo(
+            Notifications.ID_RESTORE_PROGRESS,
+            notifier.showRestoreProgress().build(),
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            } else {
+                0
+            },
+        )
+    }
+
+    companion object {
+        fun isRunning(context: Context): Boolean {
+            return context.workManager.isRunning(TAG_SERVER)
+        }
+
+        fun start(
+            context: Context,
+            uri: Uri,
+            options: RestoreOptions,
+            sync: Boolean = false,
+        ) {
+            val inputData = workDataOf(
+                LOCATION_URI_KEY to uri.toString(),
+                SYNC_KEY to sync,
+                OPTIONS_KEY to options.asBooleanArray(),
+            )
+            val request = OneTimeWorkRequestBuilder<ServerBackupRestoreJob>()
+                .addTag(TAG_SERVER)
+                .setInputData(inputData)
+                .build()
+            context.workManager.enqueueUniqueWork(TAG_SERVER, ExistingWorkPolicy.KEEP, request)
+        }
+
+        fun stop(context: Context) {
+            context.workManager.cancelUniqueWork(TAG_SERVER)
+        }
+    }
+}
+
+private const val TAG_CLIENT = "BackupRestore"
+private const val TAG_SERVER = "ServerBackupRestore"
 
 private const val LOCATION_URI_KEY = "location_uri" // String
 private const val SYNC_KEY = "sync" // Boolean

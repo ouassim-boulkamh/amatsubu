@@ -1,0 +1,117 @@
+CREATE TABLE suwayomi_snapshot_mangas(
+    server_key TEXT NOT NULL,
+    manga_id INTEGER NOT NULL,
+    payload TEXT NOT NULL,
+    synced_at INTEGER NOT NULL,
+    PRIMARY KEY(server_key, manga_id)
+);
+
+CREATE TABLE suwayomi_snapshot_library_mangas(
+    server_key TEXT NOT NULL,
+    manga_id INTEGER NOT NULL,
+    synced_at INTEGER NOT NULL,
+    PRIMARY KEY(server_key, manga_id)
+);
+
+CREATE TABLE suwayomi_snapshot_category_mangas(
+    server_key TEXT NOT NULL,
+    category_id INTEGER NOT NULL,
+    manga_id INTEGER NOT NULL,
+    synced_at INTEGER NOT NULL,
+    PRIMARY KEY(server_key, category_id, manga_id)
+);
+
+CREATE TABLE suwayomi_snapshot_chapters(
+    server_key TEXT NOT NULL,
+    manga_id INTEGER NOT NULL,
+    chapter_id INTEGER NOT NULL,
+    payload TEXT NOT NULL,
+    synced_at INTEGER NOT NULL,
+    PRIMARY KEY(server_key, manga_id, chapter_id)
+);
+
+CREATE TABLE suwayomi_snapshot_download_status(
+    server_key TEXT NOT NULL PRIMARY KEY,
+    payload TEXT NOT NULL,
+    synced_at INTEGER NOT NULL
+);
+
+CREATE INDEX suwayomi_snapshot_library_mangas_server_index
+ON suwayomi_snapshot_library_mangas(server_key);
+
+CREATE INDEX suwayomi_snapshot_category_mangas_server_category_index
+ON suwayomi_snapshot_category_mangas(server_key, category_id);
+
+CREATE INDEX suwayomi_snapshot_chapters_server_manga_index
+ON suwayomi_snapshot_chapters(server_key, manga_id);
+
+upsertManga:
+INSERT OR REPLACE INTO suwayomi_snapshot_mangas(server_key, manga_id, payload, synced_at)
+VALUES (:serverKey, :mangaId, :payload, :syncedAt);
+
+clearLibraryMangas:
+DELETE FROM suwayomi_snapshot_library_mangas
+WHERE server_key = :serverKey;
+
+insertLibraryManga:
+INSERT OR REPLACE INTO suwayomi_snapshot_library_mangas(server_key, manga_id, synced_at)
+VALUES (:serverKey, :mangaId, :syncedAt);
+
+clearCategoryMangas:
+DELETE FROM suwayomi_snapshot_category_mangas
+WHERE server_key = :serverKey
+AND category_id = :categoryId;
+
+insertCategoryManga:
+INSERT OR REPLACE INTO suwayomi_snapshot_category_mangas(server_key, category_id, manga_id, synced_at)
+VALUES (:serverKey, :categoryId, :mangaId, :syncedAt);
+
+clearChapters:
+DELETE FROM suwayomi_snapshot_chapters
+WHERE server_key = :serverKey
+AND manga_id = :mangaId;
+
+insertChapter:
+INSERT OR REPLACE INTO suwayomi_snapshot_chapters(server_key, manga_id, chapter_id, payload, synced_at)
+VALUES (:serverKey, :mangaId, :chapterId, :payload, :syncedAt);
+
+upsertDownloadStatus:
+INSERT OR REPLACE INTO suwayomi_snapshot_download_status(server_key, payload, synced_at)
+VALUES (:serverKey, :payload, :syncedAt);
+
+getLibraryMangaSnapshots:
+SELECT M.payload, L.synced_at
+FROM suwayomi_snapshot_library_mangas L
+JOIN suwayomi_snapshot_mangas M
+ON M.server_key = L.server_key
+AND M.manga_id = L.manga_id
+WHERE L.server_key = :serverKey
+ORDER BY L.manga_id;
+
+getCategoryMangaSnapshots:
+SELECT M.payload, C.synced_at
+FROM suwayomi_snapshot_category_mangas C
+JOIN suwayomi_snapshot_mangas M
+ON M.server_key = C.server_key
+AND M.manga_id = C.manga_id
+WHERE C.server_key = :serverKey
+AND C.category_id = :categoryId
+ORDER BY C.manga_id;
+
+getMangaSnapshot:
+SELECT payload, synced_at
+FROM suwayomi_snapshot_mangas
+WHERE server_key = :serverKey
+AND manga_id = :mangaId;
+
+getChapterSnapshots:
+SELECT payload, synced_at
+FROM suwayomi_snapshot_chapters
+WHERE server_key = :serverKey
+AND manga_id = :mangaId
+ORDER BY chapter_id;
+
+getDownloadStatusSnapshot:
+SELECT payload, synced_at
+FROM suwayomi_snapshot_download_status
+WHERE server_key = :serverKey;

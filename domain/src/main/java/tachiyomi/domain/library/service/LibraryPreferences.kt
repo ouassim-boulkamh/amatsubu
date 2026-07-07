@@ -106,6 +106,8 @@ class LibraryPreferences(
 
     val downloadBadge: Preference<Boolean> = preferenceStore.getBoolean("display_download_badge", false)
 
+    val localDownloadBadge: Preference<Boolean> = preferenceStore.getBoolean("display_local_download_badge", false)
+
     val unreadBadge: Preference<Boolean> = preferenceStore.getBoolean("display_unread_badge", true)
 
     val localBadge: Preference<Boolean> = preferenceStore.getBoolean("display_local_badge", true)
@@ -156,6 +158,11 @@ class LibraryPreferences(
         Manga.SHOW_ALL,
     )
 
+    val filterChapterByLocalDownloaded: Preference<Long> = preferenceStore.getLong(
+        "default_chapter_filter_by_local_downloaded",
+        Manga.SHOW_ALL,
+    )
+
     val filterChapterByBookmarked: Preference<Long> = preferenceStore.getLong(
         "default_chapter_filter_by_bookmarked",
         Manga.SHOW_ALL,
@@ -180,6 +187,7 @@ class LibraryPreferences(
     fun setChapterSettingsDefault(manga: Manga) {
         filterChapterByRead.set(manga.unreadFilterRaw)
         filterChapterByDownloaded.set(manga.downloadedFilterRaw)
+        filterChapterByLocalDownloaded.set(manga.localDownloadedFilterRaw)
         filterChapterByBookmarked.set(manga.bookmarkedFilterRaw)
         sortChapterBySourceOrNumber.set(manga.sorting)
         displayChapterByNameOrNumber.set(manga.displayMode)

@@ -1,0 +1,65 @@
+CREATE TABLE server_read_state_pending(
+    server_key TEXT NOT NULL,
+    manga_id INTEGER NOT NULL,
+    chapter_id INTEGER NOT NULL,
+    is_read INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY(server_key, manga_id, chapter_id)
+);
+
+CREATE INDEX server_read_state_pending_server_manga_index
+ON server_read_state_pending(server_key, manga_id);
+
+CREATE INDEX server_read_state_pending_server_updated_index
+ON server_read_state_pending(server_key, updated_at);
+
+upsertPendingReadState:
+INSERT INTO server_read_state_pending(
+    server_key,
+    manga_id,
+    chapter_id,
+    is_read,
+    created_at,
+    updated_at
+)
+VALUES (
+    :serverKey,
+    :mangaId,
+    :chapterId,
+    :isRead,
+    :createdAt,
+    :updatedAt
+)
+ON CONFLICT(server_key, manga_id, chapter_id) DO UPDATE SET
+    is_read = excluded.is_read,
+    updated_at = excluded.updated_at;
+
+getPendingReadStatesForServer:
+SELECT *
+FROM server_read_state_pending
+WHERE server_key = :serverKey
+ORDER BY updated_at;
+
+getPendingReadStatesForManga:
+SELECT *
+FROM server_read_state_pending
+WHERE server_key = :serverKey
+AND manga_id = :mangaId
+ORDER BY updated_at;
+
+countPendingReadStates:
+SELECT count(*)
+FROM server_read_state_pending
+WHERE server_key = :serverKey;
+
+deletePendingReadState:
+DELETE FROM server_read_state_pending
+WHERE server_key = :serverKey
+AND manga_id = :mangaId
+AND chapter_id = :chapterId;
+
+deletePendingReadStates:
+DELETE FROM server_read_state_pending
+WHERE server_key = :serverKey
+AND chapter_id IN :chapterIds;

@@ -7,6 +7,7 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.metadata.comicinfo.ComicInfo
+import tachiyomi.core.metadata.comicinfo.ComicInfo.SourceMihon as ComicInfoSource
 import tachiyomi.core.metadata.comicinfo.ComicInfoPublishingStatus
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
@@ -29,9 +30,20 @@ val Manga.downloadedFilter: TriState
             else -> TriState.DISABLED
         }
     }
+
+val Manga.localDownloadedFilter: TriState
+    get() {
+        return when (localDownloadedFilterRaw) {
+            Manga.CHAPTER_SHOW_LOCAL_DOWNLOADED -> TriState.ENABLED_IS
+            Manga.CHAPTER_SHOW_NOT_LOCAL_DOWNLOADED -> TriState.ENABLED_NOT
+            else -> TriState.DISABLED
+        }
+    }
+
 fun Manga.chaptersFiltered(): Boolean {
     return unreadFilter != TriState.DISABLED ||
         downloadedFilter != TriState.DISABLED ||
+        localDownloadedFilter != TriState.DISABLED ||
         bookmarkedFilter != TriState.DISABLED
 }
 
@@ -104,7 +116,7 @@ fun getComicInfo(
         ComicInfoPublishingStatus.toComicInfoValue(manga.status),
     ),
     categories = categories?.let { ComicInfo.CategoriesTachiyomi(it.joinToString()) },
-    source = ComicInfo.SourceMihon(sourceName),
+    source = ComicInfoSource(sourceName),
     inker = null,
     colorist = null,
     letterer = null,

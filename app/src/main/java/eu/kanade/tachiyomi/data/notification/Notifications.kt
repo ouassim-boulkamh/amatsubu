@@ -20,6 +20,25 @@ object Notifications {
      */
     const val CHANNEL_COMMON = "common_channel"
     const val ID_DOWNLOAD_IMAGE = 2
+    const val CHANNEL_DOWNLOAD_PROGRESS = "server_download_progress_channel"
+    const val CHANNEL_DOWNLOAD_ERROR = "server_download_error_channel"
+    const val ID_DOWNLOAD_PROGRESS = -201
+    const val ID_DOWNLOAD_ERROR = -202
+
+    /**
+     * Notification channel and ids used by server-owned SyncYomi work.
+     */
+    private const val GROUP_SYNCYOMI = "group_syncyomi"
+    const val CHANNEL_SYNCYOMI_PROGRESS = "syncyomi_progress_channel"
+    const val CHANNEL_SYNCYOMI_COMPLETE = "syncyomi_complete_channel"
+    const val ID_SYNCYOMI_PROGRESS = -401
+    const val ID_SYNCYOMI_COMPLETE = -402
+
+    /**
+     * Notification channel and ids used by server extension update availability.
+     */
+    const val CHANNEL_EXTENSION_UPDATES = "extension_updates_channel"
+    const val ID_EXTENSION_UPDATES = -601
 
     /**
      * Notification channel and ids used by the library updater.
@@ -30,15 +49,6 @@ object Notifications {
     const val ID_LIBRARY_SIZE_WARNING = -103
     const val CHANNEL_LIBRARY_ERROR = "library_errors_channel"
     const val ID_LIBRARY_ERROR = -102
-
-    /**
-     * Notification channel and ids used by the downloader.
-     */
-    private const val GROUP_DOWNLOADER = "group_downloader"
-    const val CHANNEL_DOWNLOADER_PROGRESS = "downloader_progress_channel"
-    const val ID_DOWNLOAD_CHAPTER_PROGRESS = -201
-    const val CHANNEL_DOWNLOADER_ERROR = "downloader_error_channel"
-    const val ID_DOWNLOAD_CHAPTER_ERROR = -202
 
     /**
      * Notification channel and ids used by the library updater.
@@ -64,18 +74,6 @@ object Notifications {
     const val CHANNEL_INCOGNITO_MODE = "incognito_mode_channel"
     const val ID_INCOGNITO_MODE = -701
 
-    /**
-     * Notification channel and ids used for app and extension updates.
-     */
-    private const val GROUP_APK_UPDATES = "group_apk_updates"
-    const val CHANNEL_APP_UPDATE = "app_apk_update_channel"
-    const val ID_APP_UPDATER = 1
-    const val ID_APP_UPDATE_PROMPT = 2
-    const val ID_APP_UPDATE_ERROR = 3
-    const val CHANNEL_EXTENSIONS_UPDATE = "ext_apk_update_channel"
-    const val ID_UPDATES_TO_EXTS = -401
-    const val ID_EXTENSION_INSTALLER = -402
-
     private val deprecatedChannels = listOf(
         "downloader_channel",
         "downloader_complete_channel",
@@ -84,6 +82,8 @@ object Notifications {
         "library_progress_channel",
         "updates_ext_channel",
         "downloader_cache_renewal",
+        "downloader_progress_channel",
+        "downloader_error_channel",
         "crash_logs_channel",
         "library_skipped_channel",
     )
@@ -105,14 +105,11 @@ object Notifications {
                 buildNotificationChannelGroup(GROUP_BACKUP_RESTORE) {
                     setName(context.stringResource(MR.strings.label_backup))
                 },
-                buildNotificationChannelGroup(GROUP_DOWNLOADER) {
-                    setName(context.stringResource(MR.strings.download_notifier_downloader_title))
-                },
                 buildNotificationChannelGroup(GROUP_LIBRARY) {
                     setName(context.stringResource(MR.strings.label_library))
                 },
-                buildNotificationChannelGroup(GROUP_APK_UPDATES) {
-                    setName(context.stringResource(MR.strings.label_recent_updates))
+                buildNotificationChannelGroup(GROUP_SYNCYOMI) {
+                    setName(context.stringResource(MR.strings.action_syncyomi))
                 },
             ),
         )
@@ -121,6 +118,27 @@ object Notifications {
             listOf(
                 buildNotificationChannel(CHANNEL_COMMON, IMPORTANCE_LOW) {
                     setName(context.stringResource(MR.strings.channel_common))
+                },
+                buildNotificationChannel(CHANNEL_DOWNLOAD_PROGRESS, IMPORTANCE_LOW) {
+                    setName(context.stringResource(MR.strings.channel_progress))
+                    setShowBadge(false)
+                },
+                buildNotificationChannel(CHANNEL_DOWNLOAD_ERROR, IMPORTANCE_LOW) {
+                    setName(context.stringResource(MR.strings.channel_errors))
+                    setShowBadge(false)
+                },
+                buildNotificationChannel(CHANNEL_SYNCYOMI_PROGRESS, IMPORTANCE_LOW) {
+                    setName(context.stringResource(MR.strings.channel_progress))
+                    setGroup(GROUP_SYNCYOMI)
+                    setShowBadge(false)
+                },
+                buildNotificationChannel(CHANNEL_SYNCYOMI_COMPLETE, IMPORTANCE_DEFAULT) {
+                    setName(context.stringResource(MR.strings.channel_complete))
+                    setGroup(GROUP_SYNCYOMI)
+                    setShowBadge(false)
+                },
+                buildNotificationChannel(CHANNEL_EXTENSION_UPDATES, IMPORTANCE_DEFAULT) {
+                    setName(context.stringResource(MR.strings.label_extensions))
                 },
                 buildNotificationChannel(CHANNEL_LIBRARY_PROGRESS, IMPORTANCE_LOW) {
                     setName(context.stringResource(MR.strings.channel_progress))
@@ -135,16 +153,6 @@ object Notifications {
                 buildNotificationChannel(CHANNEL_NEW_CHAPTERS, IMPORTANCE_DEFAULT) {
                     setName(context.stringResource(MR.strings.channel_new_chapters))
                 },
-                buildNotificationChannel(CHANNEL_DOWNLOADER_PROGRESS, IMPORTANCE_LOW) {
-                    setName(context.stringResource(MR.strings.channel_progress))
-                    setGroup(GROUP_DOWNLOADER)
-                    setShowBadge(false)
-                },
-                buildNotificationChannel(CHANNEL_DOWNLOADER_ERROR, IMPORTANCE_LOW) {
-                    setName(context.stringResource(MR.strings.channel_errors))
-                    setGroup(GROUP_DOWNLOADER)
-                    setShowBadge(false)
-                },
                 buildNotificationChannel(CHANNEL_BACKUP_RESTORE_PROGRESS, IMPORTANCE_LOW) {
                     setName(context.stringResource(MR.strings.channel_progress))
                     setGroup(GROUP_BACKUP_RESTORE)
@@ -158,14 +166,6 @@ object Notifications {
                 },
                 buildNotificationChannel(CHANNEL_INCOGNITO_MODE, IMPORTANCE_LOW) {
                     setName(context.stringResource(MR.strings.pref_incognito_mode))
-                },
-                buildNotificationChannel(CHANNEL_APP_UPDATE, IMPORTANCE_DEFAULT) {
-                    setGroup(GROUP_APK_UPDATES)
-                    setName(context.stringResource(MR.strings.channel_app_updates))
-                },
-                buildNotificationChannel(CHANNEL_EXTENSIONS_UPDATE, IMPORTANCE_DEFAULT) {
-                    setGroup(GROUP_APK_UPDATES)
-                    setName(context.stringResource(MR.strings.channel_ext_updates))
                 },
             ),
         )

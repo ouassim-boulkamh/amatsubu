@@ -20,20 +20,25 @@ import uy.kohesive.injekt.api.get
 class PreferenceBackupCreator(
     private val sourceManager: SourceManager = Injekt.get(),
     private val preferenceStore: PreferenceStore = Injekt.get(),
+    private val sourcePreferenceReader: (ConfigurableSource) -> Map<String, *> = { source ->
+        source.sourcePreferences().all ?: emptyMap<String, Any>()
+    },
 ) {
 
     fun createApp(includePrivatePreferences: Boolean): List<BackupPreference> {
-        return preferenceStore.getAll().toBackupPreferences()
+        return preferenceStore.getAll()
+            .toBackupPreferences()
             .withPrivatePreferences(includePrivatePreferences)
     }
 
     fun createSource(includePrivatePreferences: Boolean): List<BackupSourcePreferences> {
         return sourceManager.getAll()
             .filterIsInstance<ConfigurableSource>()
-            .map {
+            .map { source ->
                 BackupSourcePreferences(
-                    it.preferenceKey(),
-                    it.sourcePreferences().all.toBackupPreferences()
+                    sourceKey = source.preferenceKey(),
+                    prefs = sourcePreferenceReader(source)
+                        .toBackupPreferences()
                         .withPrivatePreferences(includePrivatePreferences),
                 )
             }
@@ -42,8 +47,7 @@ class PreferenceBackupCreator(
 
     @Suppress("UNCHECKED_CAST")
     private fun Map<String, *>.toBackupPreferences(): List<BackupPreference> {
-        return this
-            .filterKeys { !Preference.isAppState(it) }
+        return filterKeys { !Preference.isAppState(it) }
             .mapNotNull { (key, value) ->
                 when (value) {
                     is Int -> BackupPreference(key, IntPreferenceValue(value))
@@ -59,10 +63,11 @@ class PreferenceBackupCreator(
             }
     }
 
-    private fun List<BackupPreference>.withPrivatePreferences(include: Boolean) =
-        if (include) {
+    private fun List<BackupPreference>.withPrivatePreferences(include: Boolean): List<BackupPreference> {
+        return if (include) {
             this
         } else {
-            this.filter { !Preference.isPrivate(it.key) }
+            filter { !Preference.isPrivate(it.key) }
         }
+    }
 }

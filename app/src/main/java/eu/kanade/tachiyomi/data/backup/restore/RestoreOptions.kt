@@ -6,47 +6,38 @@ import tachiyomi.i18n.MR
 data class RestoreOptions(
     val libraryEntries: Boolean = true,
     val categories: Boolean = true,
-    val appSettings: Boolean = true,
-    val extensionStores: Boolean = true,
-    val sourceSettings: Boolean = true,
+    val appSettings: Boolean = false,
+    val sourceSettings: Boolean = false,
+    val privateSettings: Boolean = false,
 ) {
 
     fun asBooleanArray() = booleanArrayOf(
         libraryEntries,
         categories,
         appSettings,
-        extensionStores,
         sourceSettings,
+        privateSettings,
     )
 
-    fun canRestore() = libraryEntries || categories || appSettings || extensionStores || sourceSettings
+    fun canRestore() = appSettings || sourceSettings
 
     companion object {
         val options = listOf(
             Entry(
-                label = MR.strings.label_library,
-                getter = RestoreOptions::libraryEntries,
-                setter = { options, enabled -> options.copy(libraryEntries = enabled) },
-            ),
-            Entry(
-                label = MR.strings.categories,
-                getter = RestoreOptions::categories,
-                setter = { options, enabled -> options.copy(categories = enabled) },
-            ),
-            Entry(
                 label = MR.strings.app_settings,
-                getter = RestoreOptions::appSettings,
+                getter = { it.appSettings },
                 setter = { options, enabled -> options.copy(appSettings = enabled) },
             ),
             Entry(
-                label = MR.strings.extensionStores,
-                getter = RestoreOptions::extensionStores,
-                setter = { options, enabled -> options.copy(extensionStores = enabled) },
+                label = MR.strings.source_settings,
+                getter = { it.sourceSettings },
+                setter = { options, enabled -> options.copy(sourceSettings = enabled) },
             ),
             Entry(
-                label = MR.strings.source_settings,
-                getter = RestoreOptions::sourceSettings,
-                setter = { options, enabled -> options.copy(sourceSettings = enabled) },
+                label = MR.strings.private_settings,
+                getter = { it.privateSettings },
+                setter = { options, enabled -> options.copy(privateSettings = enabled) },
+                enabled = { it.appSettings || it.sourceSettings },
             ),
         )
 
@@ -54,8 +45,8 @@ data class RestoreOptions(
             libraryEntries = array[0],
             categories = array[1],
             appSettings = array[2],
-            extensionStores = array[3],
-            sourceSettings = array[4],
+            sourceSettings = array[3],
+            privateSettings = array.getOrElse(4) { false },
         )
     }
 
@@ -63,5 +54,6 @@ data class RestoreOptions(
         val label: StringResource,
         val getter: (RestoreOptions) -> Boolean,
         val setter: (RestoreOptions, Boolean) -> RestoreOptions,
+        val enabled: (RestoreOptions) -> Boolean = { true },
     )
 }

@@ -1,0 +1,46 @@
+CREATE TABLE IF NOT EXISTS suwayomi_snapshot_mangas(
+    server_key TEXT NOT NULL,
+    manga_id INTEGER NOT NULL,
+    payload TEXT NOT NULL,
+    synced_at INTEGER NOT NULL,
+    PRIMARY KEY(server_key, manga_id)
+);
+
+CREATE TABLE IF NOT EXISTS suwayomi_snapshot_library_mangas(
+    server_key TEXT NOT NULL,
+    manga_id INTEGER NOT NULL,
+    synced_at INTEGER NOT NULL,
+    PRIMARY KEY(server_key, manga_id)
+);
+
+CREATE TABLE IF NOT EXISTS suwayomi_snapshot_category_mangas(
+    server_key TEXT NOT NULL,
+    category_id INTEGER NOT NULL,
+    manga_id INTEGER NOT NULL,
+    synced_at INTEGER NOT NULL,
+    PRIMARY KEY(server_key, category_id, manga_id)
+);
+
+CREATE TABLE IF NOT EXISTS suwayomi_snapshot_chapters(
+    server_key TEXT NOT NULL,
+    manga_id INTEGER NOT NULL,
+    chapter_id INTEGER NOT NULL,
+    payload TEXT NOT NULL,
+    synced_at INTEGER NOT NULL,
+    PRIMARY KEY(server_key, manga_id, chapter_id)
+);
+
+CREATE TABLE IF NOT EXISTS suwayomi_snapshot_download_status(
+    server_key TEXT NOT NULL PRIMARY KEY,
+    payload TEXT NOT NULL,
+    synced_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS suwayomi_snapshot_library_mangas_server_index
+ON suwayomi_snapshot_library_mangas(server_key);
+
+CREATE INDEX IF NOT EXISTS suwayomi_snapshot_category_mangas_server_category_index
+ON suwayomi_snapshot_category_mangas(server_key, category_id);
+
+CREATE INDEX IF NOT EXISTS suwayomi_snapshot_chapters_server_manga_index
+ON suwayomi_snapshot_chapters(server_key, manga_id);

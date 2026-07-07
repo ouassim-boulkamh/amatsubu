@@ -1,0 +1,230 @@
+CREATE TABLE client_chapter_copies(
+    server_key TEXT NOT NULL,
+    manga_id INTEGER NOT NULL,
+    chapter_id INTEGER NOT NULL,
+    manga_title TEXT,
+    chapter_title TEXT NOT NULL,
+    chapter_url TEXT NOT NULL,
+    chapter_real_url TEXT,
+    source_order INTEGER NOT NULL,
+    chapter_number REAL NOT NULL,
+    upload_date INTEGER NOT NULL,
+    fetched_at TEXT NOT NULL,
+    scanlator TEXT,
+    storage_path TEXT,
+    manifest_hash TEXT NOT NULL,
+    status TEXT NOT NULL,
+    freshness TEXT NOT NULL,
+    expected_page_count INTEGER NOT NULL,
+    downloaded_page_count INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    verified_at INTEGER,
+    orphaned_at INTEGER,
+    PRIMARY KEY(server_key, manga_id, chapter_id)
+);
+
+CREATE TABLE client_chapter_copy_pages(
+    server_key TEXT NOT NULL,
+    manga_id INTEGER NOT NULL,
+    chapter_id INTEGER NOT NULL,
+    page_index INTEGER NOT NULL,
+    source_url TEXT NOT NULL,
+    local_uri TEXT,
+    file_name TEXT,
+    mime_type TEXT,
+    byte_size INTEGER,
+    sha256 TEXT,
+    is_present INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY(server_key, manga_id, chapter_id, page_index),
+    FOREIGN KEY(server_key, manga_id, chapter_id)
+    REFERENCES client_chapter_copies(server_key, manga_id, chapter_id)
+    ON DELETE CASCADE
+);
+
+CREATE INDEX client_chapter_copies_server_manga_index
+ON client_chapter_copies(server_key, manga_id);
+
+CREATE INDEX client_chapter_copies_server_status_index
+ON client_chapter_copies(server_key, status);
+
+CREATE INDEX client_chapter_copies_server_freshness_index
+ON client_chapter_copies(server_key, freshness);
+
+CREATE INDEX client_chapter_copy_pages_copy_index
+ON client_chapter_copy_pages(server_key, manga_id, chapter_id);
+
+upsertCopy:
+INSERT INTO client_chapter_copies(
+    server_key,
+    manga_id,
+    chapter_id,
+    manga_title,
+    chapter_title,
+    chapter_url,
+    chapter_real_url,
+    source_order,
+    chapter_number,
+    upload_date,
+    fetched_at,
+    scanlator,
+    storage_path,
+    manifest_hash,
+    status,
+    freshness,
+    expected_page_count,
+    downloaded_page_count,
+    created_at,
+    updated_at,
+    verified_at,
+    orphaned_at
+)
+VALUES (
+    :serverKey,
+    :mangaId,
+    :chapterId,
+    :mangaTitle,
+    :chapterTitle,
+    :chapterUrl,
+    :chapterRealUrl,
+    :sourceOrder,
+    :chapterNumber,
+    :uploadDate,
+    :fetchedAt,
+    :scanlator,
+    :storagePath,
+    :manifestHash,
+    :status,
+    :freshness,
+    :expectedPageCount,
+    :downloadedPageCount,
+    :createdAt,
+    :updatedAt,
+    :verifiedAt,
+    :orphanedAt
+)
+ON CONFLICT(server_key, manga_id, chapter_id) DO UPDATE SET
+    manga_title = excluded.manga_title,
+    chapter_title = excluded.chapter_title,
+    chapter_url = excluded.chapter_url,
+    chapter_real_url = excluded.chapter_real_url,
+    source_order = excluded.source_order,
+    chapter_number = excluded.chapter_number,
+    upload_date = excluded.upload_date,
+    fetched_at = excluded.fetched_at,
+    scanlator = excluded.scanlator,
+    storage_path = excluded.storage_path,
+    manifest_hash = excluded.manifest_hash,
+    status = excluded.status,
+    freshness = excluded.freshness,
+    expected_page_count = excluded.expected_page_count,
+    downloaded_page_count = excluded.downloaded_page_count,
+    updated_at = excluded.updated_at,
+    verified_at = excluded.verified_at,
+    orphaned_at = excluded.orphaned_at;
+
+clearPages:
+DELETE FROM client_chapter_copy_pages
+WHERE server_key = :serverKey
+AND manga_id = :mangaId
+AND chapter_id = :chapterId;
+
+insertPage:
+INSERT OR REPLACE INTO client_chapter_copy_pages(
+    server_key,
+    manga_id,
+    chapter_id,
+    page_index,
+    source_url,
+    local_uri,
+    file_name,
+    mime_type,
+    byte_size,
+    sha256,
+    is_present
+)
+VALUES (
+    :serverKey,
+    :mangaId,
+    :chapterId,
+    :pageIndex,
+    :sourceUrl,
+    :localUri,
+    :fileName,
+    :mimeType,
+    :byteSize,
+    :sha256,
+    :isPresent
+);
+
+getCopy:
+SELECT *
+FROM client_chapter_copies
+WHERE server_key = :serverKey
+AND manga_id = :mangaId
+AND chapter_id = :chapterId;
+
+getPages:
+SELECT *
+FROM client_chapter_copy_pages
+WHERE server_key = :serverKey
+AND manga_id = :mangaId
+AND chapter_id = :chapterId
+ORDER BY page_index;
+
+getCopiesForManga:
+SELECT *
+FROM client_chapter_copies
+WHERE server_key = :serverKey
+AND manga_id = :mangaId
+ORDER BY source_order DESC, chapter_id DESC;
+
+getCopiesForServer:
+SELECT *
+FROM client_chapter_copies
+WHERE server_key = :serverKey
+ORDER BY manga_id, source_order DESC, chapter_id DESC;
+
+getCopiesByFreshness:
+SELECT *
+FROM client_chapter_copies
+WHERE server_key = :serverKey
+AND freshness = :freshness
+ORDER BY updated_at DESC;
+
+getCompleteFreshCopy:
+SELECT *
+FROM client_chapter_copies
+WHERE server_key = :serverKey
+AND manga_id = :mangaId
+AND chapter_id = :chapterId
+AND status = 'COMPLETE'
+AND freshness = 'FRESH';
+
+updateCopyState:
+UPDATE client_chapter_copies
+SET status = :status,
+    freshness = :freshness,
+    downloaded_page_count = :downloadedPageCount,
+    updated_at = :updatedAt,
+    verified_at = :verifiedAt,
+    orphaned_at = :orphanedAt
+WHERE server_key = :serverKey
+AND manga_id = :mangaId
+AND chapter_id = :chapterId;
+
+updateCopyDownloadProgress:
+UPDATE client_chapter_copies
+SET status = :status,
+    freshness = :freshness,
+    downloaded_page_count = :downloadedPageCount,
+    updated_at = :updatedAt
+WHERE server_key = :serverKey
+AND manga_id = :mangaId
+AND chapter_id = :chapterId;
+
+deleteCopy:
+DELETE FROM client_chapter_copies
+WHERE server_key = :serverKey
+AND manga_id = :mangaId
+AND chapter_id = :chapterId;

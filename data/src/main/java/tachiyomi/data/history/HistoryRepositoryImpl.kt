@@ -1,7 +1,6 @@
 package tachiyomi.data.history
 
 import app.cash.sqldelight.async.coroutines.awaitAsList
-import app.cash.sqldelight.async.coroutines.awaitAsOne
 import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
 import kotlinx.coroutines.flow.Flow
 import logcat.LogPriority
@@ -29,42 +28,10 @@ class HistoryRepositoryImpl(
             .awaitAsOneOrNull()
     }
 
-    override suspend fun getTotalReadDuration(): Long {
-        return database.historyQueries
-            .getReadDuration()
-            .awaitAsOne()
-    }
-
     override suspend fun getHistoryByMangaId(mangaId: Long): List<History> {
         return database.historyQueries
             .getHistoryByMangaId(mangaId, HistoryMapper::mapHistory)
             .awaitAsList()
-    }
-
-    override suspend fun resetHistory(historyId: Long) {
-        try {
-            database.historyQueries.resetHistoryById(historyId)
-        } catch (e: Exception) {
-            logcat(LogPriority.ERROR, throwable = e)
-        }
-    }
-
-    override suspend fun resetHistoryByMangaId(mangaId: Long) {
-        try {
-            database.historyQueries.resetHistoryByMangaId(mangaId)
-        } catch (e: Exception) {
-            logcat(LogPriority.ERROR, throwable = e)
-        }
-    }
-
-    override suspend fun deleteAllHistory(): Boolean {
-        return try {
-            database.historyQueries.removeAllHistory()
-            true
-        } catch (e: Exception) {
-            logcat(LogPriority.ERROR, throwable = e)
-            false
-        }
     }
 
     override suspend fun upsertHistory(historyUpdate: HistoryUpdate) {

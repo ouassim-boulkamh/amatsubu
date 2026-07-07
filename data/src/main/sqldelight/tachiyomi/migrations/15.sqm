@@ -1,0 +1,55 @@
+CREATE TABLE IF NOT EXISTS client_chapter_copies(
+    server_key TEXT NOT NULL,
+    manga_id INTEGER NOT NULL,
+    chapter_id INTEGER NOT NULL,
+    manga_title TEXT,
+    chapter_title TEXT NOT NULL,
+    chapter_url TEXT NOT NULL,
+    chapter_real_url TEXT,
+    source_order INTEGER NOT NULL,
+    chapter_number REAL NOT NULL,
+    upload_date INTEGER NOT NULL,
+    fetched_at TEXT NOT NULL,
+    scanlator TEXT,
+    storage_path TEXT,
+    manifest_hash TEXT NOT NULL,
+    status TEXT NOT NULL,
+    freshness TEXT NOT NULL,
+    expected_page_count INTEGER NOT NULL,
+    downloaded_page_count INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    verified_at INTEGER,
+    orphaned_at INTEGER,
+    PRIMARY KEY(server_key, manga_id, chapter_id)
+);
+
+CREATE TABLE IF NOT EXISTS client_chapter_copy_pages(
+    server_key TEXT NOT NULL,
+    manga_id INTEGER NOT NULL,
+    chapter_id INTEGER NOT NULL,
+    page_index INTEGER NOT NULL,
+    source_url TEXT NOT NULL,
+    local_uri TEXT,
+    file_name TEXT,
+    mime_type TEXT,
+    byte_size INTEGER,
+    sha256 TEXT,
+    is_present INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY(server_key, manga_id, chapter_id, page_index),
+    FOREIGN KEY(server_key, manga_id, chapter_id)
+    REFERENCES client_chapter_copies(server_key, manga_id, chapter_id)
+    ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS client_chapter_copies_server_manga_index
+ON client_chapter_copies(server_key, manga_id);
+
+CREATE INDEX IF NOT EXISTS client_chapter_copies_server_status_index
+ON client_chapter_copies(server_key, status);
+
+CREATE INDEX IF NOT EXISTS client_chapter_copies_server_freshness_index
+ON client_chapter_copies(server_key, freshness);
+
+CREATE INDEX IF NOT EXISTS client_chapter_copy_pages_copy_index
+ON client_chapter_copy_pages(server_key, manga_id, chapter_id);

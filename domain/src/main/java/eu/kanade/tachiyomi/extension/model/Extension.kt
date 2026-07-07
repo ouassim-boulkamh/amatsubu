@@ -61,15 +61,4 @@ sealed class Extension {
             }
         }
     }
-
-    data class Untrusted(
-        override val name: String,
-        override val pkgName: String,
-        override val versionName: String,
-        override val versionCode: Long,
-        override val libVersion: Double,
-        val signatureHash: String,
-        override val lang: String? = null,
-        override val isNsfw: Boolean = false,
-    ) : Extension()
 }
