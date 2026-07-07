@@ -103,13 +103,12 @@ sealed class Preference {
          * A [PreferenceItem] that displays a list of entries as a dialog.
          * Multiple entries can be selected at the same time.
          */
-        @Suppress("UNCHECKED_CAST")
-        data class MultiSelectListPreference<T>(
-            val preference: PreferenceData<Set<T>>,
-            val entries: Map<T, String>,
+        data class MultiSelectListPreference(
+            val preference: PreferenceData<Set<String>>,
+            val entries: Map<String, String>,
             override val title: String,
             override val subtitle: String? = "%s",
-            val subtitleProvider: @Composable (value: Set<T>, entries: Map<T, String>) -> String? =
+            val subtitleProvider: @Composable (value: Set<String>, entries: Map<String, String>) -> String? =
                 { v, e ->
                     val combined = remember(v, e) {
                         v.mapNotNull { e[it] }
@@ -121,15 +120,8 @@ sealed class Preference {
                 },
             override val icon: ImageVector? = null,
             override val enabled: Boolean = true,
-            override val onValueChanged: suspend (value: Set<T>) -> Boolean = { true },
-        ) : PreferenceItem<Set<T>, Boolean>() {
-            internal fun internalSet(value: Set<Any?>) = preference.set(value as Set<T>)
-            internal suspend fun internalOnValueChanged(value: Set<Any?>) = onValueChanged(value as Set<T>)
-
-            @Composable
-            internal fun internalSubtitleProvider(value: Set<Any?>, entries: Map<out Any?, String>) =
-                subtitleProvider(value as Set<T>, entries as Map<T, String>)
-        }
+            override val onValueChanged: suspend (value: Set<String>) -> Boolean = { true },
+        ) : PreferenceItem<Set<String>, Boolean>()
 
         /**
          * A [PreferenceItem] that shows a EditText in the dialog.

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="app_logo_blue">#0058A0</color>
+    <color name="app_logo_contour">#FAFAFA</color>
+    <color name="app_logo_splash">#031019</color>
+    <color name="splash">@color/app_logo_splash</color>
+    <color name="accent_blue">@color/app_logo_blue</color>
+    <color name="icon_background">@color/app_logo_contour</color>
+</resources>

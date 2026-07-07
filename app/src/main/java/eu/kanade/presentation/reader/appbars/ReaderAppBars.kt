@@ -12,7 +12,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,7 +26,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntOffset
@@ -57,7 +55,6 @@ fun ReaderAppBars(
     onShare: (() -> Unit)?,
 
     chapterNavigatorType: ChapterNavigatorType,
-    verticalNavigatorHeight: Float,
     onNextChapter: () -> Unit,
     enabledNext: Boolean,
     onPreviousChapter: () -> Unit,
@@ -65,7 +62,6 @@ fun ReaderAppBars(
     currentPage: Int,
     totalPages: Int,
     onPageIndexChange: (Int) -> Unit,
-    onPageIndexChangeFinished: () -> Unit,
 
     readingMode: ReadingMode,
     onClickReadingMode: () -> Unit,
@@ -115,23 +111,16 @@ fun ReaderAppBars(
                     ) {
                         Row {
                             Spacer(modifier = Modifier.width(MaterialTheme.padding.small))
-                            Box(
-                                modifier = Modifier.fillMaxHeight(),
-                                contentAlignment = Alignment.BottomCenter,
-                            ) {
-                                ChapterNavigator(
-                                    modifier = Modifier.fillMaxHeight(verticalNavigatorHeight),
-                                    type = chapterNavigatorType,
-                                    onNextChapter = onNextChapter,
-                                    enabledNext = enabledNext,
-                                    onPreviousChapter = onPreviousChapter,
-                                    enabledPrevious = enabledPrevious,
-                                    currentPage = currentPage,
-                                    totalPages = totalPages,
-                                    onPageIndexChange = onPageIndexChange,
-                                    onPageIndexChangeFinished = onPageIndexChangeFinished,
-                                )
-                            }
+                            ChapterNavigator(
+                                type = chapterNavigatorType,
+                                onNextChapter = onNextChapter,
+                                enabledNext = enabledNext,
+                                onPreviousChapter = onPreviousChapter,
+                                enabledPrevious = enabledPrevious,
+                                currentPage = currentPage,
+                                totalPages = totalPages,
+                                onPageIndexChange = onPageIndexChange,
+                            )
                         }
                     }
                     Spacer(modifier = Modifier.weight(1f))
@@ -157,7 +146,6 @@ fun ReaderAppBars(
                         currentPage = currentPage,
                         totalPages = totalPages,
                         onPageIndexChange = onPageIndexChange,
-                        onPageIndexChangeFinished = onPageIndexChangeFinished,
                     )
                 }
                 ReaderBottomBar(
