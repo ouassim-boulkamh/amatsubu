@@ -28,9 +28,8 @@ dependencyResolutionManagement {
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
-rootProject.name = "Mihon"
+rootProject.name = "Amatsubu"
 include(":app")
-include(":baseline-profile")
 include(":core-metadata")
 include(":core:archive")
 include(":core:common")
@@ -40,5 +39,3 @@ include(":i18n")
 include(":presentation-core")
 include(":presentation-widget")
 include(":source-api")
-include(":source-local")
-include(":telemetry")
