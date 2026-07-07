@@ -1,7 +1,6 @@
 package eu.kanade.tachiyomi.data.backup
 
 import android.content.Context
-import android.graphics.BitmapFactory
 import androidx.core.app.NotificationCompat
 import com.hippo.unifile.UniFile
 import eu.kanade.tachiyomi.R
@@ -10,6 +9,7 @@ import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.util.storage.getUriCompat
 import eu.kanade.tachiyomi.util.system.cancelNotification
+import eu.kanade.tachiyomi.util.system.getAppIconBitmap
 import eu.kanade.tachiyomi.util.system.notificationBuilder
 import eu.kanade.tachiyomi.util.system.notify
 import tachiyomi.core.common.i18n.pluralStringResource
@@ -23,12 +23,13 @@ import java.util.concurrent.TimeUnit
 class BackupNotifier(private val context: Context) {
 
     private val preferences: SecurityPreferences by injectLazy()
+    private val notificationIcon by lazy { context.getAppIconBitmap() }
 
     private val progressNotificationBuilder = context.notificationBuilder(
         Notifications.CHANNEL_BACKUP_RESTORE_PROGRESS,
     ) {
-        setLargeIcon(BitmapFactory.decodeResource(context.resources, R.mipmap.ic_launcher))
-        setSmallIcon(R.drawable.ic_mihon)
+        setLargeIcon(notificationIcon)
+        setSmallIcon(R.drawable.ic_folder_24dp)
         setAutoCancel(false)
         setOngoing(true)
         setOnlyAlertOnce(true)
@@ -37,8 +38,8 @@ class BackupNotifier(private val context: Context) {
     private val completeNotificationBuilder = context.notificationBuilder(
         Notifications.CHANNEL_BACKUP_RESTORE_COMPLETE,
     ) {
-        setLargeIcon(BitmapFactory.decodeResource(context.resources, R.mipmap.ic_launcher))
-        setSmallIcon(R.drawable.ic_mihon)
+        setLargeIcon(notificationIcon)
+        setSmallIcon(R.drawable.ic_folder_24dp)
         setAutoCancel(false)
     }
 

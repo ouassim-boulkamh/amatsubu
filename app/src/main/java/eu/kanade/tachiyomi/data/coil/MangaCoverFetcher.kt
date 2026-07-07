@@ -51,6 +51,7 @@ class MangaCoverFetcher(
     private val options: Options,
     private val coverFileLazy: Lazy<File?>,
     private val customCoverFileLazy: Lazy<File>,
+    private val coverLastModified: Long,
     private val diskCacheKeyLazy: Lazy<String>,
     private val sourceLazy: Lazy<HttpSource?>,
     private val callFactoryLazy: Lazy<Call.Factory>,
@@ -111,7 +112,11 @@ class MangaCoverFetcher(
         } else {
             null
         }
-        if (libraryCoverCacheFile?.exists() == true && options.diskCachePolicy.readEnabled) {
+        if (
+            libraryCoverCacheFile?.exists() == true &&
+            options.diskCachePolicy.readEnabled &&
+            !libraryCoverCacheFile.isStale()
+        ) {
             return fileLoader(libraryCoverCacheFile)
         }
 
@@ -239,10 +244,17 @@ class MangaCoverFetcher(
             cacheFile.sink().buffer().use { output ->
                 output.writeAll(input)
             }
+            if (coverLastModified > 0L) {
+                cacheFile.setLastModified(coverLastModified)
+            }
         } catch (e: Exception) {
             cacheFile.delete()
             throw e
         }
+    }
+
+    private fun File.isStale(): Boolean {
+        return coverLastModified > 0L && lastModified() < coverLastModified
     }
 
     private fun readFromDiskCache(): DiskCache.Snapshot? {
@@ -311,6 +323,7 @@ class MangaCoverFetcher(
                 options = options,
                 coverFileLazy = lazy { coverCache.getCoverFile(data.thumbnailUrl) },
                 customCoverFileLazy = lazy { coverCache.getCustomCoverFile(data.id) },
+                coverLastModified = data.coverLastModified,
                 diskCacheKeyLazy = lazy { imageLoader.components.key(data, options)!! },
                 sourceLazy = lazy { sourceManager.get(data.source) as? HttpSource },
                 callFactoryLazy = callFactoryLazy,
@@ -333,6 +346,7 @@ class MangaCoverFetcher(
                 options = options,
                 coverFileLazy = lazy { coverCache.getCoverFile(data.url) },
                 customCoverFileLazy = lazy { coverCache.getCustomCoverFile(data.mangaId) },
+                coverLastModified = data.lastModified,
                 diskCacheKeyLazy = lazy { imageLoader.components.key(data, options)!! },
                 sourceLazy = lazy { sourceManager.get(data.sourceId) as? HttpSource },
                 callFactoryLazy = callFactoryLazy,

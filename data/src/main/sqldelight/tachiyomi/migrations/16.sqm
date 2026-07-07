@@ -1,0 +1,15 @@
+CREATE TABLE server_read_state_pending(
+    server_key TEXT NOT NULL,
+    manga_id INTEGER NOT NULL,
+    chapter_id INTEGER NOT NULL,
+    is_read INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY(server_key, manga_id, chapter_id)
+);
+
+CREATE INDEX server_read_state_pending_server_manga_index
+ON server_read_state_pending(server_key, manga_id);
+
+CREATE INDEX server_read_state_pending_server_updated_index
+ON server_read_state_pending(server_key, updated_at);

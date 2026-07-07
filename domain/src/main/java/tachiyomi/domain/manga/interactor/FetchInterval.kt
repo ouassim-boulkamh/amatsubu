@@ -34,13 +34,39 @@ class FetchInterval(
     }
 
     fun getWindow(dateTime: ZonedDateTime): Pair<Long, Long> {
-        val today = dateTime.toLocalDate().atStartOfDay(dateTime.zone)
-        val lowerBound = today.minusDays(GRACE_PERIOD)
-        val upperBound = today.plusDays(GRACE_PERIOD)
-        return Pair(lowerBound.toEpochSecond() * 1000, upperBound.toEpochSecond() * 1000 - 1)
+        return FetchIntervalCalculator.getWindow(dateTime)
     }
 
     internal fun calculateInterval(chapters: List<Chapter>, zone: ZoneId): Int {
+        return FetchIntervalCalculator.calculateInterval(chapters, zone)
+    }
+
+    private fun calculateNextUpdate(
+        manga: Manga,
+        interval: Int,
+        dateTime: ZonedDateTime,
+        window: Pair<Long, Long>,
+    ): Long {
+        return FetchIntervalCalculator.calculateNextUpdate(manga, interval, dateTime, window)
+    }
+
+    companion object {
+        const val MAX_INTERVAL = 28
+
+        internal const val GRACE_PERIOD = 1L
+    }
+}
+
+object FetchIntervalCalculator {
+
+    fun getWindow(dateTime: ZonedDateTime): Pair<Long, Long> {
+        val today = dateTime.toLocalDate().atStartOfDay(dateTime.zone)
+        val lowerBound = today.minusDays(FetchInterval.GRACE_PERIOD)
+        val upperBound = today.plusDays(FetchInterval.GRACE_PERIOD)
+        return Pair(lowerBound.toEpochSecond() * 1000, upperBound.toEpochSecond() * 1000 - 1)
+    }
+
+    fun calculateInterval(chapters: List<Chapter>, zone: ZoneId): Int {
         val chapterWindow = if (chapters.size <= 8) 3 else 10
 
         val uploadDates = chapters.asSequence()
@@ -81,10 +107,10 @@ class FetchInterval(
             else -> 7
         }
 
-        return interval.coerceIn(1, MAX_INTERVAL)
+        return interval.coerceIn(1, FetchInterval.MAX_INTERVAL)
     }
 
-    private fun calculateNextUpdate(
+    fun calculateNextUpdate(
         manga: Manga,
         interval: Int,
         dateTime: ZonedDateTime,
@@ -109,7 +135,7 @@ class FetchInterval(
     }
 
     private fun increaseInterval(delta: Int, timeSinceLatest: Int, increaseWhenOver: Int): Int {
-        if (delta >= MAX_INTERVAL) return MAX_INTERVAL
+        if (delta >= FetchInterval.MAX_INTERVAL) return FetchInterval.MAX_INTERVAL
 
         // double delta again if missed more than 9 check in new delta
         val cycle = timeSinceLatest.floorDiv(delta) + 1
@@ -118,11 +144,5 @@ class FetchInterval(
         } else {
             delta
         }
-    }
-
-    companion object {
-        const val MAX_INTERVAL = 28
-
-        private const val GRACE_PERIOD = 1L
     }
 }

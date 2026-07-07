@@ -4,244 +4,141 @@ import android.content.Context
 import android.net.Uri
 import eu.kanade.tachiyomi.data.backup.BackupDecoder
 import eu.kanade.tachiyomi.data.backup.BackupNotifier
-import eu.kanade.tachiyomi.data.backup.models.BackupCategory
-import eu.kanade.tachiyomi.data.backup.models.BackupExtensionStore
-import eu.kanade.tachiyomi.data.backup.models.BackupManga
-import eu.kanade.tachiyomi.data.backup.models.BackupPreference
-import eu.kanade.tachiyomi.data.backup.models.BackupSourcePreferences
-import eu.kanade.tachiyomi.data.backup.restore.restorers.CategoriesRestorer
-import eu.kanade.tachiyomi.data.backup.restore.restorers.ExtensionStoreRestorer
-import eu.kanade.tachiyomi.data.backup.restore.restorers.MangaRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.PreferenceRestorer
-import eu.kanade.tachiyomi.data.download.DownloadCache
-import eu.kanade.tachiyomi.util.system.createFileInCacheDir
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.launch
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
+import eu.kanade.tachiyomi.network.POST
+import eu.kanade.tachiyomi.network.awaitSuccess
+import eu.kanade.tachiyomi.source.ConfigurableSource
+import eu.kanade.tachiyomi.source.preferenceKey
+import eu.kanade.tachiyomi.source.sourcePreferences
 import logcat.LogPriority
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import tachiyomi.core.common.preference.AndroidPreferenceStore
+import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.data.Database
+import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.concurrent.CopyOnWriteArrayList
-import kotlin.concurrent.atomics.AtomicInt
-import kotlin.concurrent.atomics.ExperimentalAtomicApi
-import kotlin.concurrent.atomics.incrementAndFetch
 
-@OptIn(ExperimentalAtomicApi::class)
-class BackupRestorer(
+class ServerBackupRestorer(
     private val context: Context,
     private val notifier: BackupNotifier,
     private val isSync: Boolean,
-
-    private val database: Database = Injekt.get(),
-    private val categoriesRestorer: CategoriesRestorer = CategoriesRestorer(),
-    private val preferenceRestorer: PreferenceRestorer = PreferenceRestorer(context),
-    private val extensionStoreRestorer: ExtensionStoreRestorer = ExtensionStoreRestorer(),
-    private val mangaRestorer: MangaRestorer = MangaRestorer(),
 ) {
-
-    private var restoreAmount = 0
-    private val restoreProgress = AtomicInt(0)
-    private val errors = CopyOnWriteArrayList<Pair<Date, String>>()
-
-    /**
-     * Mapping of source ID to source name from backup data
-     */
-    private var sourceMapping: Map<Long, String> = emptyMap()
+    private val suwayomiProvider = SuwayomiClientProvider()
 
     suspend fun restore(uri: Uri, options: RestoreOptions) {
         val startTime = System.currentTimeMillis()
 
-        restoreFromFile(uri, options)
+        notifier.showRestoreProgress(
+            context.stringResource(MR.strings.restoring_backup),
+            0,
+            1,
+            isSync,
+        )
 
-        // Invalidate download cache to ensure UI reflects any restored downloads
-        if (options.libraryEntries) {
-            try {
-                Injekt.get<DownloadCache>().invalidateCache()
-            } catch (e: Exception) {
-                logcat(LogPriority.ERROR, e) { "Failed to invalidate download cache after restore" }
-            }
-        }
-
-        val time = System.currentTimeMillis() - startTime
-
-        val logFile = writeErrorLog()
+        restoreOnServer(uri)
+        ServerStateSync.requestRefresh()
 
         notifier.showRestoreComplete(
-            time,
-            errors.size,
-            logFile.parent,
-            logFile.name,
-            isSync,
+            time = System.currentTimeMillis() - startTime,
+            errorCount = 0,
+            path = null,
+            file = null,
+            sync = isSync,
         )
     }
 
-    private suspend fun restoreFromFile(uri: Uri, options: RestoreOptions) {
-        val backup = BackupDecoder(context).decode(uri)
-
-        // Store source mapping for error messages
-        val backupMaps = backup.backupSources
-        sourceMapping = backupMaps.associate { it.sourceId to it.name }
-
-        if (options.libraryEntries) {
-            restoreAmount += backup.backupManga.size
-        }
-        if (options.categories) {
-            restoreAmount += 1
-        }
-        if (options.appSettings) {
-            restoreAmount += 1
-        }
-        if (options.extensionStores) {
-            restoreAmount += backup.backupExtensionStores.size
-        }
-        if (options.sourceSettings) {
-            restoreAmount += 1
-        }
-
-        coroutineScope {
-            if (options.categories) {
-                restoreCategories(backup.backupCategories)
-            }
-            if (options.appSettings) {
-                restoreAppPreferences(backup.backupPreferences, backup.backupCategories.takeIf { options.categories })
-            }
-            if (options.sourceSettings) {
-                restoreSourcePreferences(backup.backupSourcePreferences)
-            }
-            if (options.libraryEntries) {
-                restoreManga(backup.backupManga, if (options.categories) backup.backupCategories else emptyList())
-            }
-            if (options.extensionStores) {
-                restoreExtensionStores(backup.backupExtensionStores)
-            }
-
-            // TODO: optionally trigger online library + tracker update
-        }
-    }
-
-    private fun CoroutineScope.restoreCategories(backupCategories: List<BackupCategory>) = launch {
-        ensureActive()
-        categoriesRestorer(backupCategories)
-
-        val progress = restoreProgress.incrementAndFetch()
-        notifier.showRestoreProgress(
-            context.stringResource(MR.strings.categories),
-            progress,
-            restoreAmount,
-            isSync,
-        )
-    }
-
-    private fun CoroutineScope.restoreManga(
-        backupMangas: List<BackupManga>,
-        backupCategories: List<BackupCategory>,
-    ) = launch {
-        mangaRestorer.sortByNew(backupMangas)
-            .chunked(100)
-            .forEach { chunk ->
-                database.transaction {
-                    chunk.forEach {
-                        ensureActive()
-
-                        try {
-                            mangaRestorer.restore(it, backupCategories)
-                        } catch (e: Exception) {
-                            val sourceName = sourceMapping[it.source] ?: it.source.toString()
-                            errors.add(Date() to "${it.title} [$sourceName]: ${e.message}")
-                        }
-
-                        restoreProgress.incrementAndFetch()
-                    }
-                }
-                notifier.showRestoreProgress(chunk.last().title, restoreProgress.load(), restoreAmount, isSync)
-            }
-    }
-
-    private fun CoroutineScope.restoreAppPreferences(
-        preferences: List<BackupPreference>,
-        categories: List<BackupCategory>?,
-    ) = launch {
-        ensureActive()
-        preferenceRestorer.restoreApp(
-            preferences,
-            categories,
+    private suspend fun restoreOnServer(uri: Uri) {
+        val request = POST(
+            url = suwayomiProvider.restUrl("/api/v1/backup/import"),
+            body = readBackupBytes(uri).toRequestBody(PROTOBUF_BACKUP_MEDIA_TYPE),
         )
 
-        val progress = restoreProgress.incrementAndFetch()
-        notifier.showRestoreProgress(
-            context.stringResource(MR.strings.app_settings),
-            progress,
-            restoreAmount,
-            isSync,
-        )
+        suwayomiProvider.httpClient.newCall(request).awaitSuccess().close()
     }
 
-    private fun CoroutineScope.restoreSourcePreferences(preferences: List<BackupSourcePreferences>) = launch {
-        ensureActive()
-        preferenceRestorer.restoreSource(preferences)
-
-        val progress = restoreProgress.incrementAndFetch()
-        notifier.showRestoreProgress(
-            context.stringResource(MR.strings.source_settings),
-            progress,
-            restoreAmount,
-            isSync,
-        )
-    }
-
-    private fun CoroutineScope.restoreExtensionStores(
-        backupExtensionStores: List<BackupExtensionStore>,
-    ) = launch {
-        backupExtensionStores
-            .chunked(100)
-            .forEach { chunk ->
-                database.transaction {
-                    chunk.forEach {
-                        ensureActive()
-
-                        try {
-                            extensionStoreRestorer(it)
-                        } catch (e: Exception) {
-                            errors.add(Date() to "Error Adding Repo: ${it.name} : ${e.message}")
-                        }
-
-                        restoreProgress.incrementAndFetch()
-                    }
-                }
-                notifier.showRestoreProgress(
-                    context.stringResource(MR.strings.extensionStores),
-                    restoreProgress.load(),
-                    restoreAmount,
-                    isSync,
-                )
-            }
-    }
-
-    private fun writeErrorLog(): File {
-        try {
-            if (errors.isNotEmpty()) {
-                val file = context.createFileInCacheDir("mihon_restore_error.txt")
-                val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
-
-                file.bufferedWriter().use { out ->
-                    errors.forEach { (date, message) ->
-                        out.write("[${sdf.format(date)}] $message\n")
-                    }
-                }
-                return file
-            }
-        } catch (_: Exception) {
-            // Empty
-        }
-        return File("")
+    private fun readBackupBytes(uri: Uri): ByteArray {
+        return context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            ?: throw IllegalStateException("Could not read backup file")
     }
 }
+
+class BackupRestorer(
+    private val context: Context,
+    private val notifier: BackupNotifier,
+    private val isSync: Boolean,
+    private val decoder: BackupDecoder = BackupDecoder(context),
+    private val preferenceStore: PreferenceStore = Injekt.get(),
+    private val sourceManager: SourceManager = Injekt.get(),
+    private val preferenceRestorer: PreferenceRestorer = PreferenceRestorer(context, preferenceStore),
+) {
+
+    suspend fun restore(uri: Uri, options: RestoreOptions) {
+        val startTime = System.currentTimeMillis()
+
+        notifier.showRestoreProgress(
+            context.stringResource(MR.strings.restoring_backup),
+            0,
+            1,
+            isSync,
+        )
+
+        val backup = decoder.decode(uri)
+        val appPreferenceDefaults = ClientPreferenceRestoreSchema.defaultsWith(
+            backup.backupPreferences.map { it.key },
+        )
+        val compatibility = BackupCompatibilityPolicy(
+            appPreferences = appPreferenceDefaults + preferenceStore.getAll(),
+            sourcePreferences = sourceManager.getLocalConfigurableSourcePreferences(),
+        ).evaluate(backup, options)
+
+        compatibility.summary.log()
+        val appRestoreResult = preferenceRestorer.restoreApp(
+            compatibility.restorable.appPreferences,
+            defaultValues = appPreferenceDefaults,
+        )
+        val sourceRestoreResult = preferenceRestorer.restoreSource(compatibility.restorable.sourcePreferences)
+        val restoreResult = appRestoreResult + sourceRestoreResult
+
+        logcat(LogPriority.INFO) {
+            "Client backup preference restore complete: " +
+                "restored=${restoreResult.restored} failed=${restoreResult.failed}"
+        }
+
+        notifier.showRestoreComplete(
+            time = System.currentTimeMillis() - startTime,
+            errorCount = restoreResult.failed + compatibility.summary.unsupportedCount,
+            path = null,
+            file = null,
+            sync = isSync,
+        )
+    }
+
+    private fun SourceManager.getLocalConfigurableSourcePreferences(): Map<String, Map<String, *>> {
+        return getAll()
+            .filterIsInstance<ConfigurableSource>()
+            .associate { source ->
+                source.preferenceKey() to AndroidPreferenceStore(
+                    context = context,
+                    sharedPreferences = source.sourcePreferences(),
+                ).getAll()
+            }
+    }
+
+    private fun BackupCompatibilitySummary.log() {
+        decisions.forEach { decision ->
+            logcat(LogPriority.INFO) {
+                "Client backup restore compatibility: " +
+                    "${decision.decision} ${decision.section} " +
+                    "count=${decision.count} reason=${decision.reason}"
+            }
+        }
+    }
+}
+
+private val PROTOBUF_BACKUP_MEDIA_TYPE = "application/octet-stream".toMediaType()

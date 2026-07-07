@@ -27,7 +27,6 @@ import eu.kanade.domain.DomainModule
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.domain.ui.model.setAppCompatDelegateThemeMode
-import eu.kanade.tachiyomi.core.security.PrivacyPreferences
 import eu.kanade.tachiyomi.crash.CrashActivity
 import eu.kanade.tachiyomi.crash.GlobalExceptionHandler
 import eu.kanade.tachiyomi.data.coil.BufferedSourceFetcher
@@ -35,7 +34,10 @@ import eu.kanade.tachiyomi.data.coil.MangaCoverFetcher
 import eu.kanade.tachiyomi.data.coil.MangaCoverKeyer
 import eu.kanade.tachiyomi.data.coil.MangaKeyer
 import eu.kanade.tachiyomi.data.coil.TachiyomiImageDecoder
+import eu.kanade.tachiyomi.data.library.ServerLibraryUpdateNotifier
 import eu.kanade.tachiyomi.data.notification.Notifications
+import eu.kanade.tachiyomi.data.notification.ServerNotificationSyncJob
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiPreferences
 import eu.kanade.tachiyomi.di.AppModule
 import eu.kanade.tachiyomi.di.PreferenceModule
 import eu.kanade.tachiyomi.network.NetworkHelper
@@ -55,7 +57,6 @@ import logcat.LogPriority
 import logcat.LogcatLogger
 import mihon.core.migration.Migrator
 import mihon.core.migration.migrations.migrations
-import mihon.telemetry.TelemetryConfig
 import org.conscrypt.Conscrypt
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.Preference
@@ -72,16 +73,16 @@ import java.security.Security
 class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factory {
 
     private val basePreferences: BasePreferences by injectLazy()
-    private val privacyPreferences: PrivacyPreferences by injectLazy()
     private val networkPreferences: NetworkPreferences by injectLazy()
 
     private val disableIncognitoReceiver = DisableIncognitoReceiver()
+    private val isMainProcess: Boolean
+        get() = Build.VERSION.SDK_INT < Build.VERSION_CODES.P || packageName == getProcessName()
 
     @SuppressLint("LaunchActivityFromNotification")
     override fun onCreate() {
         super<Application>.onCreate()
         patchInjekt()
-        TelemetryConfig.init(applicationContext)
 
         GlobalExceptionHandler.initialize(applicationContext, CrashActivity::class.java)
 
@@ -135,16 +136,6 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             }
             .launchIn(scope)
 
-        privacyPreferences.analytics
-            .changes()
-            .onEach(TelemetryConfig::setAnalyticsEnabled)
-            .launchIn(scope)
-
-        privacyPreferences.crashlytics
-            .changes()
-            .onEach(TelemetryConfig::setCrashlyticsEnabled)
-            .launchIn(scope)
-
         basePreferences.hardwareBitmapThreshold.let { preference ->
             if (!preference.isSet()) preference.set(GLUtil.DEVICE_TEXTURE_LIMIT)
         }
@@ -157,6 +148,10 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
         // Updates widget update
         WidgetManager(Injekt.get(), Injekt.get()).apply { init(scope) }
+        ServerLibraryUpdateNotifier(this).init(scope)
+        if (isMainProcess) {
+            ServerNotificationSyncJob.schedule(this)
+        }
 
         if (!LogcatLogger.isInstalled) {
             val minLogPriority = when {
@@ -188,7 +183,10 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
     override fun newImageLoader(context: Context): ImageLoader {
         return ImageLoader.Builder(this).apply {
-            val callFactoryLazy = lazy { Injekt.get<NetworkHelper>().client }
+            val callFactoryLazy = lazy {
+                SuwayomiPreferences(Injekt.get<PreferenceStore>())
+                    .httpClient(Injekt.get<NetworkHelper>().client)
+            }
             components {
                 // NetworkFetcher.Factory
                 add(OkHttpNetworkFetcherFactory(callFactoryLazy::value))

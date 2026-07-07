@@ -1,4 +1,1 @@
--- MangaUpdates score fixing --
-UPDATE manga_sync
-SET score = max(score, 0)
-WHERE sync_id = 7;
+-- No-op: local tracking schema was removed before first Amatsubu release.

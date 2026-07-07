@@ -5,18 +5,12 @@ import android.net.Uri
 import com.hippo.unifile.UniFile
 import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.data.backup.BackupFileValidator
-import eu.kanade.tachiyomi.data.backup.create.creators.CategoriesBackupCreator
-import eu.kanade.tachiyomi.data.backup.create.creators.ExtensionStoresBackupCreator
-import eu.kanade.tachiyomi.data.backup.create.creators.MangaBackupCreator
+import eu.kanade.tachiyomi.data.backup.ServerBackupFileValidator
 import eu.kanade.tachiyomi.data.backup.create.creators.PreferenceBackupCreator
-import eu.kanade.tachiyomi.data.backup.create.creators.SourcesBackupCreator
 import eu.kanade.tachiyomi.data.backup.models.Backup
-import eu.kanade.tachiyomi.data.backup.models.BackupCategory
-import eu.kanade.tachiyomi.data.backup.models.BackupExtensionStore
-import eu.kanade.tachiyomi.data.backup.models.BackupManga
-import eu.kanade.tachiyomi.data.backup.models.BackupPreference
-import eu.kanade.tachiyomi.data.backup.models.BackupSource
-import eu.kanade.tachiyomi.data.backup.models.BackupSourcePreferences
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
+import eu.kanade.tachiyomi.network.GET
+import eu.kanade.tachiyomi.network.awaitSuccess
 import kotlinx.serialization.protobuf.ProtoBuf
 import logcat.LogPriority
 import okio.buffer
@@ -24,92 +18,43 @@ import okio.gzip
 import okio.sink
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.backup.service.BackupPreferences
-import tachiyomi.domain.manga.interactor.GetFavorites
-import tachiyomi.domain.manga.model.Manga
-import tachiyomi.domain.manga.repository.MangaRepository
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
-import java.time.Instant
 import java.util.Date
 import java.util.Locale
 
 class BackupCreator(
     private val context: Context,
-    private val isAutoBackup: Boolean,
-
     private val parser: ProtoBuf = Injekt.get(),
-    private val getFavorites: GetFavorites = Injekt.get(),
-    private val backupPreferences: BackupPreferences = Injekt.get(),
-    private val mangaRepository: MangaRepository = Injekt.get(),
-
-    private val categoriesBackupCreator: CategoriesBackupCreator = CategoriesBackupCreator(),
-    private val mangaBackupCreator: MangaBackupCreator = MangaBackupCreator(),
     private val preferenceBackupCreator: PreferenceBackupCreator = PreferenceBackupCreator(),
-    private val extensionStoresBackupCreator: ExtensionStoresBackupCreator = ExtensionStoresBackupCreator(),
-    private val sourcesBackupCreator: SourcesBackupCreator = SourcesBackupCreator(),
 ) {
 
-    suspend fun backup(uri: Uri, options: BackupOptions): String {
+    fun backup(uri: Uri, options: BackupOptions): String {
         var file: UniFile? = null
         try {
-            file = if (isAutoBackup) {
-                // Get dir of file and create
-                val dir = UniFile.fromUri(context, uri)
-
-                // Delete older backups
-                dir?.listFiles { _, filename -> FILENAME_REGEX.matches(filename) }
-                    .orEmpty()
-                    .sortedByDescending { it.name }
-                    .drop(MAX_AUTO_BACKUPS - 1)
-                    .forEach { it.delete() }
-
-                // Create new file to place backup
-                dir?.createFile(getFilename())
-            } else {
-                UniFile.fromUri(context, uri)
-            }
+            file = UniFile.fromUri(context, uri)
 
             if (file == null || !file.isFile) {
                 throw IllegalStateException(context.stringResource(MR.strings.create_backup_file_error))
             }
 
-            val nonFavoriteManga = if (options.readEntries) mangaRepository.getReadMangaNotInLibrary() else emptyList()
-            val backupManga = backupMangas(getFavorites.await() + nonFavoriteManga, options)
-
-            val backup = Backup(
-                backupManga = backupManga,
-                backupCategories = backupCategories(options),
-                backupSources = backupSources(backupManga),
-                backupPreferences = backupAppPreferences(options),
-                backupExtensionStores = backupExtensionStores(options),
-                backupSourcePreferences = backupSourcePreferences(options),
-            )
-
-            val byteArray = parser.encodeToByteArray(Backup.serializer(), backup)
-            if (byteArray.isEmpty()) {
-                throw IllegalStateException(context.stringResource(MR.strings.empty_backup_error))
-            }
+            val backup = createBackup(options)
+            val backupBytes = encodeBackup(backup, parser)
 
             file.openOutputStream()
                 .also {
-                    // Force overwrite old file
                     (it as? FileOutputStream)?.channel?.truncate(0)
                 }
-                .sink().gzip().buffer().use {
-                    it.write(byteArray)
+                .sink().gzip().buffer().use { output ->
+                    output.write(backupBytes)
                 }
+
             val fileUri = file.uri
 
-            // Make sure it's a valid backup file
             BackupFileValidator(context).validate(fileUri)
-
-            if (isAutoBackup) {
-                backupPreferences.lastAutoBackupTimestamp.set(Instant.now().toEpochMilli())
-            }
 
             return fileUri.toString()
         } catch (e: Exception) {
@@ -119,44 +64,80 @@ class BackupCreator(
         }
     }
 
-    private suspend fun backupCategories(options: BackupOptions): List<BackupCategory> {
-        if (!options.categories) return emptyList()
-
-        return categoriesBackupCreator()
-    }
-
-    private suspend fun backupMangas(mangas: List<Manga>, options: BackupOptions): List<BackupManga> {
-        if (!options.libraryEntries) return emptyList()
-
-        return mangaBackupCreator(mangas, options)
-    }
-
-    private fun backupSources(mangas: List<BackupManga>): List<BackupSource> {
-        return sourcesBackupCreator(mangas)
-    }
-
-    private fun backupAppPreferences(options: BackupOptions): List<BackupPreference> {
-        if (!options.appSettings) return emptyList()
-
-        return preferenceBackupCreator.createApp(includePrivatePreferences = options.privateSettings)
-    }
-
-    private suspend fun backupExtensionStores(options: BackupOptions): List<BackupExtensionStore> {
-        if (!options.extensionStores) return emptyList()
-
-        return extensionStoresBackupCreator()
-    }
-
-    private fun backupSourcePreferences(options: BackupOptions): List<BackupSourcePreferences> {
-        if (!options.sourceSettings) return emptyList()
-
-        return preferenceBackupCreator.createSource(includePrivatePreferences = options.privateSettings)
+    private fun createBackup(options: BackupOptions): Backup {
+        return Backup(
+            backupManga = emptyList(),
+            backupPreferences = if (options.appSettings) {
+                preferenceBackupCreator.createApp(options.privateSettings)
+            } else {
+                emptyList()
+            },
+            backupSourcePreferences = if (options.sourceSettings) {
+                preferenceBackupCreator.createSource(options.privateSettings)
+            } else {
+                emptyList()
+            },
+        )
     }
 
     companion object {
-        private const val MAX_AUTO_BACKUPS: Int = 4
-        private val FILENAME_REGEX = """${BuildConfig.APPLICATION_ID}_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}.tachibk""".toRegex()
+        fun encodeBackup(backup: Backup, parser: ProtoBuf = ProtoBuf): ByteArray {
+            return parser.encodeToByteArray(Backup.serializer(), backup)
+        }
 
+        fun getFilename(): String {
+            val date = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.ENGLISH).format(Date())
+            return "${BuildConfig.APPLICATION_ID}_$date.tachibk"
+        }
+    }
+}
+
+class ServerBackupCreator(
+    private val context: Context,
+) {
+    private val suwayomiProvider = SuwayomiClientProvider()
+
+    suspend fun backup(uri: Uri, options: BackupOptions): String {
+        var file: UniFile? = null
+        try {
+            file = UniFile.fromUri(context, uri)
+
+            if (file == null || !file.isFile) {
+                throw IllegalStateException(context.stringResource(MR.strings.create_backup_file_error))
+            }
+
+            val backupBytes = suwayomiProvider.httpClient
+                .newCall(GET(suwayomiProvider.restUrl("/api/v1/backup/export/file")))
+                .awaitSuccess()
+                .use { response ->
+                    response.body.bytes()
+                }
+
+            if (backupBytes.isEmpty()) {
+                throw IllegalStateException(context.stringResource(MR.strings.invalid_backup_file_unknown))
+            }
+
+            ServerBackupFileValidator(context).validateBytes(backupBytes)
+
+            file.openOutputStream()
+                .also {
+                    (it as? FileOutputStream)?.channel?.truncate(0)
+                }
+                .use { output ->
+                    output.write(backupBytes)
+                }
+
+            val fileUri = file.uri
+
+            return fileUri.toString()
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e)
+            file?.delete()
+            throw e
+        }
+    }
+
+    companion object {
         fun getFilename(): String {
             val date = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.ENGLISH).format(Date())
             return "${BuildConfig.APPLICATION_ID}_$date.tachibk"

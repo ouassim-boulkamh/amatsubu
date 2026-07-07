@@ -18,36 +18,49 @@ class BackupDecoder(
     private val context: Context,
     private val parser: ProtoBuf = Injekt.get(),
 ) {
-    /**
-     * Decode a potentially-gzipped backup.
-     */
+
     fun decode(uri: Uri): Backup {
-        return context.contentResolver.openInputStream(uri)!!.use { inputStream ->
-            val source = inputStream.source().buffer()
+        return context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            decode(inputStream.readBytes())
+        } ?: throw IOException(context.stringResource(MR.strings.invalid_backup_file_unknown))
+    }
 
-            val peeked = source.peek().apply {
-                require(2)
-            }
-            val id1id2 = peeked.readShort()
-            val backupString = when (id1id2.toInt()) {
-                0x1f8b -> source.gzip().buffer() // 0x1f8b is gzip magic bytes
-                MAGIC_JSON_SIGNATURE1, MAGIC_JSON_SIGNATURE2, MAGIC_JSON_SIGNATURE3 -> {
-                    throw IOException(context.stringResource(MR.strings.invalid_backup_file_json))
-                }
-                else -> source
-            }.use { it.readByteArray() }
-
-            try {
-                parser.decodeFromByteArray(Backup.serializer(), backupString)
-            } catch (_: SerializationException) {
-                throw IOException(context.stringResource(MR.strings.invalid_backup_file_unknown))
-            }
+    fun decode(bytes: ByteArray): Backup {
+        return try {
+            decodeBackupBytes(bytes, parser)
+        } catch (_: JsonBackupException) {
+            throw IOException(context.stringResource(MR.strings.invalid_backup_file_json))
+        } catch (_: SerializationException) {
+            throw IOException(context.stringResource(MR.strings.invalid_backup_file_unknown))
         }
     }
 
     companion object {
+        fun decodeBackupBytes(bytes: ByteArray, parser: ProtoBuf = ProtoBuf): Backup {
+            val source = bytes.inputStream().source().buffer()
+
+            val backupBytes = source.use {
+                val peeked = it.peek()
+                if (bytes.size >= 2) {
+                    peeked.require(2)
+                    when (peeked.readShort().toInt()) {
+                        GZIP_MAGIC -> it.gzip().buffer().use { gzipSource -> gzipSource.readByteArray() }
+                        MAGIC_JSON_SIGNATURE1, MAGIC_JSON_SIGNATURE2, MAGIC_JSON_SIGNATURE3 -> throw JsonBackupException()
+                        else -> it.readByteArray()
+                    }
+                } else {
+                    it.readByteArray()
+                }
+            }
+
+            return parser.decodeFromByteArray(Backup.serializer(), backupBytes)
+        }
+
+        private const val GZIP_MAGIC = 0x1f8b
         private const val MAGIC_JSON_SIGNATURE1 = 0x7b7d // `{}`
         private const val MAGIC_JSON_SIGNATURE2 = 0x7b22 // `{"`
         private const val MAGIC_JSON_SIGNATURE3 = 0x7b0a // `{\n`
     }
 }
+
+private class JsonBackupException : IllegalArgumentException()

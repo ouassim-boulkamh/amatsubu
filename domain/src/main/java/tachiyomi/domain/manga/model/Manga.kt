@@ -46,7 +46,7 @@ data class Manga(
 
     val expectedNextUpdate: Instant?
         get() = nextUpdate
-            .takeIf { status != SManga.COMPLETED.toLong() }
+            .takeIf { it > 0L && status != SManga.COMPLETED.toLong() }
             ?.let { Instant.ofEpochMilli(it) }
 
     val sorting: Long
@@ -63,6 +63,9 @@ data class Manga(
 
     val bookmarkedFilterRaw: Long
         get() = chapterFlags and CHAPTER_BOOKMARKED_MASK
+
+    val localDownloadedFilterRaw: Long
+        get() = chapterFlags and CHAPTER_LOCAL_DOWNLOADED_MASK
 
     val unreadFilter: TriState
         get() = when (unreadFilterRaw) {
@@ -101,6 +104,10 @@ data class Manga(
         const val CHAPTER_SHOW_BOOKMARKED = 0x00000020L
         const val CHAPTER_SHOW_NOT_BOOKMARKED = 0x00000040L
         const val CHAPTER_BOOKMARKED_MASK = 0x00000060L
+
+        const val CHAPTER_SHOW_LOCAL_DOWNLOADED = 0x00000400L
+        const val CHAPTER_SHOW_NOT_LOCAL_DOWNLOADED = 0x00000800L
+        const val CHAPTER_LOCAL_DOWNLOADED_MASK = 0x00000C00L
 
         const val CHAPTER_SORTING_SOURCE = 0x00000000L
         const val CHAPTER_SORTING_NUMBER = 0x00000100L
