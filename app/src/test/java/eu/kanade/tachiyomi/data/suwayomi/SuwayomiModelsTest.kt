@@ -464,6 +464,73 @@ class SuwayomiModelsTest {
     }
 
     @Test
+    fun `Batch F source details tolerate sparse and unknown filter preference schema`() {
+        val response = json.decodeFromString(
+            GraphQlResponse.serializer(SourceDetailsData.serializer()),
+            """
+                {
+                  "data": {
+                    "source": {
+                      "displayName": "Schema Drift Source",
+                      "id": "123",
+                      "lang": "en",
+                      "name": "Schema Drift",
+                      "filters": [
+                        {
+                          "__typename": "HeaderFilter",
+                          "name": "Stable filters"
+                        },
+                        {
+                          "__typename": "UnknownServerFilter",
+                          "name": "Future filter",
+                          "futureServerField": "ignored"
+                        },
+                        {
+                          "__typename": "GroupFilter",
+                          "name": "Grouped",
+                          "filters": [
+                            {
+                              "__typename": "TriStateFilter",
+                              "name": "Downloaded",
+                              "defaultTriState": "IGNORE"
+                            }
+                          ]
+                        }
+                      ],
+                      "preferences": [
+                        {
+                          "__typename": "SwitchPreference",
+                          "key": "enabled",
+                          "title": "Enabled",
+                          "currentBoolean": true,
+                          "defaultBoolean": false
+                        },
+                        {
+                          "__typename": "FuturePreference",
+                          "key": "future",
+                          "title": "Future preference",
+                          "summary": "Should not crash",
+                          "futureServerField": ["ignored"]
+                        }
+                      ]
+                    }
+                  }
+                }
+            """.trimIndent(),
+        )
+
+        val source = response.data?.source
+        assertEquals("Schema Drift Source", source?.displayName)
+        assertEquals("UnknownServerFilter", source?.filters?.get(1)?.type)
+        assertEquals("Future filter", source?.filters?.get(1)?.name)
+        assertEquals(SuwayomiTriState.IGNORE, source?.filters?.get(2)?.filters?.single()?.defaultTriState)
+        assertEquals("SwitchPreference", source?.preferences?.first()?.type)
+        assertEquals(true, source?.preferences?.first()?.currentBoolean)
+        assertEquals("FuturePreference", source?.preferences?.last()?.type)
+        assertEquals("Future preference", source?.preferences?.last()?.title)
+    }
+
+    @Test
     fun `current content warning semantics fall back for older servers`() {
         val safeCurrentSource = SuwayomiSourceDto(
             contentWarning = "SAFE",
@@ -584,6 +651,42 @@ class SuwayomiModelsTest {
     }
 
     @Test
+    fun `Tsumiru issue 27 stale inLibrary rows are excluded before library mapping`() {
+        val mangas = listOf(
+            suwayomiManga(id = 1, title = "Kept", inLibrary = true),
+            suwayomiManga(id = 2, title = "Removed", inLibrary = false),
+        )
+
+        val filtered = mangas.filterInLibraryMangas()
+
+        assertEquals(listOf(1), filtered.map { it.id })
+    }
+
+    @Test
+    fun `Tsumiru issue 27 stale inLibrary rows are excluded before snapshot storage`() {
+        val mangas = listOf(
+            suwayomiManga(id = 1, title = "Named Category Kept", inLibrary = true),
+            suwayomiManga(id = 2, title = "Named Category Removed", inLibrary = false),
+        )
+
+        val filteredForSnapshot = mangas.filterInLibraryMangas()
+
+        assertEquals(listOf("Named Category Kept"), filteredForSnapshot.map { it.title })
+    }
+
+    @Test
+    fun `Tsumiru issue 27 stale inLibrary rows are excluded before snapshot reads`() {
+        val snapshotRows = listOf(
+            suwayomiManga(id = 1, title = "Offline Kept", inLibrary = true),
+            suwayomiManga(id = 2, title = "Offline Removed", inLibrary = false),
+        )
+
+        val filteredForOfflineLibrary = snapshotRows.filterInLibraryMangas()
+
+        assertEquals(listOf("Offline Kept"), filteredForOfflineLibrary.map { it.title })
+    }
+
+    @Test
     fun `start sync payload decodes result enum`() {
         val response = json.decodeFromString(
             GraphQlResponse.serializer(StartSyncData.serializer()),
@@ -689,13 +792,30 @@ class SuwayomiModelsTest {
 
     private fun suwayomiManga(
         genre: List<String>,
+        id: Int = 1,
+        title: String = "Title",
+        inLibrary: Boolean = false,
     ): SuwayomiMangaDto {
         return SuwayomiMangaDto(
             genre = genre,
-            id = 1,
+            id = id,
+            inLibrary = inLibrary,
             sourceId = "1",
-            title = "Title",
-            url = "/manga/1",
+            title = title,
+            url = "/manga/$id",
+        )
+    }
+
+    private fun suwayomiManga(
+        id: Int,
+        title: String,
+        inLibrary: Boolean,
+    ): SuwayomiMangaDto {
+        return suwayomiManga(
+            genre = emptyList(),
+            id = id,
+            title = title,
+            inLibrary = inLibrary,
         )
     }
 }

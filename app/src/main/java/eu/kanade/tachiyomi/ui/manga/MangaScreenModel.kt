@@ -1115,7 +1115,12 @@ class MangaScreenModel(
      */
     fun getNextUnreadChapter(): Chapter? {
         val successState = successState ?: return null
-        return successState.chapters.getNextUnread(successState.manga)
+        val chapterItems = if (skipFiltered) {
+            successState.processedChapters
+        } else {
+            successState.chapters
+        }
+        return chapterItems.getNextUnread(successState.manga)
     }
 
     private fun getUnreadChapters(): List<Chapter> {

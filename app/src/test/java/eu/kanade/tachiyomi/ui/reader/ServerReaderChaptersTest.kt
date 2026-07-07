@@ -183,6 +183,45 @@ class ServerReaderChaptersTest {
     }
 
     @Test
+    fun `skip filtered excludes server scanlator exclusions from reader navigation`() {
+        val chapters = listOf(
+            chapter(id = 1, number = 1.0, scanlator = "wanted"),
+            chapter(id = 2, number = 2.0, scanlator = "hidden"),
+            chapter(id = 3, number = 3.0, scanlator = "wanted"),
+        )
+
+        val result = build(
+            chapters = chapters,
+            selectedChapter = chapters[0],
+            skipFiltered = true,
+            excludedScanlators = setOf("hidden"),
+        )
+
+        assertEquals(listOf(1L, 3L), result.chapterIds())
+        assertEquals(1L, result.selectedChapter.chapter.id)
+    }
+
+    @Test
+    fun `skip filtered keeps explicitly selected excluded scanlator chapter once`() {
+        val chapters = listOf(
+            chapter(id = 1, number = 1.0, scanlator = "wanted"),
+            chapter(id = 2, number = 2.0, scanlator = "hidden"),
+            chapter(id = 3, number = 3.0, scanlator = "wanted"),
+        )
+
+        val result = build(
+            chapters = chapters,
+            selectedChapter = chapters[1],
+            skipFiltered = true,
+            excludedScanlators = setOf("hidden"),
+        )
+
+        assertEquals(listOf(1L, 2L, 3L), result.chapterIds())
+        assertEquals(1, result.chapterIds().count { it == 2L })
+        assertEquals(2L, result.selectedChapter.chapter.id)
+    }
+
+    @Test
     fun `adjacent windows around selected chapter use distinct ids`() {
         val chapters = listOf(
             chapter(id = 347, number = 347.0),
@@ -230,6 +269,7 @@ class ServerReaderChaptersTest {
         downloadedOnly: Boolean = false,
         downloadedChapterIds: Set<Long> = emptySet(),
         localDownloadedChapterIds: Set<Long> = emptySet(),
+        excludedScanlators: Set<String> = emptySet(),
         manga: Manga = manga(),
     ): ServerReaderChapterList {
         return buildServerReaderChapters(
@@ -242,6 +282,7 @@ class ServerReaderChaptersTest {
             downloadedOnly = downloadedOnly,
             downloadedChapterIds = downloadedChapterIds,
             localDownloadedChapterIds = localDownloadedChapterIds,
+            excludedScanlators = excludedScanlators,
         )
     }
 

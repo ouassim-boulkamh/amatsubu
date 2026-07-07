@@ -10,6 +10,9 @@ import eu.kanade.tachiyomi.data.suwayomi.UpdateStrategy
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import tachiyomi.domain.category.model.Category
+import tachiyomi.domain.library.model.LibraryManga
+import tachiyomi.domain.manga.model.Manga
 
 class ServerLibraryDerivedStateTest {
 
@@ -133,6 +136,64 @@ class ServerLibraryDerivedStateTest {
         assertEquals(12_000L, aggregate.chapterFetchedAt)
     }
 
+    @Test
+    fun `Sorayomi issue 323 grouping uses server category ids instead of tab positions`() {
+        val categories = listOf(
+            category(id = 0, name = "Default", order = 0),
+            category(id = 20, name = "Second", order = 1),
+            category(id = 10, name = "First", order = 2),
+        )
+        val favorites = listOf(
+            libraryManga(id = 1, categories = listOf(10)),
+            libraryManga(id = 2, categories = listOf(20)),
+            libraryManga(id = 3, categories = listOf(10, 20)),
+        )
+
+        val grouped = groupServerLibraryMangaByCategory(
+            favorites = favorites,
+            categories = categories,
+            showSystemCategory = false,
+        )
+
+        assertEquals(listOf(2L, 3L), grouped.getValue(categories[1]))
+        assertEquals(listOf(1L, 3L), grouped.getValue(categories[2]))
+        assertEquals(listOf("Second", "First"), grouped.keys.map { it.name })
+    }
+
+    @Test
+    fun `Sorayomi issue 323 default category stays hidden unless visible library rows use id zero`() {
+        val categories = listOf(
+            category(id = 0, name = "Default", order = 0),
+            category(id = 5, name = "Reading", order = 1),
+        )
+        val favorites = listOf(
+            libraryManga(id = 1, categories = listOf(5)),
+        )
+
+        val grouped = groupServerLibraryMangaByCategory(
+            favorites = favorites,
+            categories = categories,
+            showSystemCategory = favorites.any { 0L in it.categories },
+        )
+
+        assertEquals(listOf("Reading"), grouped.keys.map { it.name })
+        assertEquals(listOf(1L), grouped.getValue(categories[1]))
+    }
+
+    @Test
+    fun `category counts derive from visible in-library rows only`() {
+        val categories = listOf(category(id = 7, name = "Kept", order = 0))
+        val favorites = listOf(libraryManga(id = 1, categories = listOf(7)))
+
+        val grouped = groupServerLibraryMangaByCategory(
+            favorites = favorites,
+            categories = categories,
+            showSystemCategory = false,
+        )
+
+        assertEquals(1, grouped.getValue(categories.single()).size)
+    }
+
     private fun chapter(
         id: Int,
         read: Boolean,
@@ -174,6 +235,41 @@ class ServerLibraryDerivedStateTest {
             latestFetchedChapter = SuwayomiLatestFetchedChapterDto(fetchedAt = latestFetchedAt),
             latestUploadedChapter = SuwayomiLatestUploadedChapterDto(uploadDate = latestUploadedAt),
             meta = meta,
+        )
+    }
+
+    private fun category(
+        id: Long,
+        name: String,
+        order: Long,
+    ): Category {
+        return Category(
+            id = id,
+            name = name,
+            order = order,
+            flags = 0,
+        )
+    }
+
+    private fun libraryManga(
+        id: Long,
+        categories: List<Long>,
+    ): LibraryManga {
+        return LibraryManga(
+            manga = Manga.create().copy(
+                id = id,
+                title = "Manga $id",
+                favorite = true,
+                source = 1,
+            ),
+            categories = categories,
+            totalChapters = 0,
+            readCount = 0,
+            bookmarkCount = 0,
+            latestUpload = 0,
+            chapterFetchedAt = 0,
+            lastRead = 0,
+            unreadCount = 0,
         )
     }
 }
