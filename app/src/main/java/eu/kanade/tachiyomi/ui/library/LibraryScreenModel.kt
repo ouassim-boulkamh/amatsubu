@@ -271,14 +271,11 @@ class LibraryScreenModel(
         categories: List<Category>,
         showSystemCategory: Boolean,
     ): Map<Category, List</* LibraryItem */ Long>> {
-        val groupCache = mutableMapOf</* Category */ Long, MutableList</* LibraryItem */ Long>>()
-        forEach { item ->
-            item.libraryManga.categories.forEach { categoryId ->
-                groupCache.getOrPut(categoryId) { mutableListOf() }.add(item.id)
-            }
-        }
-        return categories.filter { showSystemCategory || !it.isSystemCategory }
-            .associateWith { groupCache[it.id]?.toList().orEmpty() }
+        return groupServerLibraryMangaByCategory(
+            favorites = map { it.libraryManga },
+            categories = categories,
+            showSystemCategory = showSystemCategory,
+        )
     }
 
     private fun Map<Category, List</* LibraryItem */ Long>>.applySort(

@@ -94,6 +94,30 @@ class SuwayomiPreferencesTest {
     }
 
     @Test
+    fun `Batch E auth policy applies Basic credentials to GraphQL websocket backup and page requests`() {
+        val preferences = SuwayomiPreferences(InMemoryPreferenceStore())
+        preferences.serverUrl.set("https://example.org/suwayomi")
+        preferences.authType.set(SuwayomiPreferences.AUTH_BASIC)
+        preferences.username.set("user")
+        preferences.password.set("pass")
+        val expected = Credentials.basic("user", "pass")
+
+        listOf(
+            "https://example.org/suwayomi/api/graphql",
+            "wss://example.org/suwayomi/api/graphql",
+            "https://example.org/suwayomi/api/v1/backup/export/file",
+            "https://example.org/suwayomi/api/v1/chapter/2/page/1",
+        ).forEach { requestUrl ->
+            val header = captureAuthorizationHeader(
+                preferences = preferences,
+                requestUrl = requestUrl,
+            )
+
+            assertEquals(expected, header, requestUrl)
+        }
+    }
+
+    @Test
     fun `basic auth is not applied outside configured suwayomi base path`() {
         val preferences = SuwayomiPreferences(InMemoryPreferenceStore())
         preferences.serverUrl.set("https://example.org/suwayomi")

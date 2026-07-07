@@ -596,6 +596,45 @@ internal class SuwayomiGraphQlClient(
     }
 
     suspend fun getCategoryMangas(categoryId: Int): List<SuwayomiMangaDto> {
+        val mangas = if (categoryId == 0) {
+            getDefaultCategoryMangas()
+        } else {
+            getNamedCategoryMangas(categoryId)
+        }.filterInLibraryMangas()
+        snapshotCache?.storeCategoryMangas(
+            serverKey = serverKey(),
+            categoryId = categoryId,
+            mangas = mangas,
+            mirrorToLibrary = categoryId == 0,
+        )
+        return mangas
+    }
+
+    private suspend fun getNamedCategoryMangas(categoryId: Int): List<SuwayomiMangaDto> {
+        val query = """
+            query GetNamedCategoryMangas(${'$'}categoryIds: [Int!]!, ${'$'}inLibrary: Boolean!) {
+              mangas(condition: { inLibrary: ${'$'}inLibrary, categoryIds: ${'$'}categoryIds }) {
+                nodes {
+                  ...AmatsubuManga
+                }
+              }
+            }
+
+            $MANGA_FRAGMENT
+        """.trimIndent()
+        return execute(
+            query = query,
+            variables = buildJsonObject {
+                putJsonArray("categoryIds") {
+                    add(categoryId)
+                }
+                put("inLibrary", true)
+            },
+            deserializer = GraphQlResponse.serializer(LibraryMangaListData.serializer()),
+        ).mangas.nodes
+    }
+
+    private suspend fun getDefaultCategoryMangas(): List<SuwayomiMangaDto> {
         val query = """
             query GetCategoryMangas(${'$'}id: Int!) {
               category(id: ${'$'}id) {
@@ -610,20 +649,13 @@ internal class SuwayomiGraphQlClient(
 
             $MANGA_FRAGMENT
         """.trimIndent()
-        val mangas = execute(
+        return execute(
             query = query,
             variables = buildJsonObject {
-                put("id", categoryId)
+                put("id", 0)
             },
             deserializer = GraphQlResponse.serializer(GetCategoryMangasData.serializer()),
         ).category.mangas.nodes
-        snapshotCache?.storeCategoryMangas(
-            serverKey = serverKey(),
-            categoryId = categoryId,
-            mangas = mangas,
-            mirrorToLibrary = categoryId == 0,
-        )
-        return mangas
     }
 
     suspend fun getCategoryMangasSnapshot(categoryId: Int): SuwayomiSnapshot<List<SuwayomiMangaDto>>? {
@@ -670,7 +702,7 @@ internal class SuwayomiGraphQlClient(
         val mangas = execute(
             query = query,
             deserializer = GraphQlResponse.serializer(LibraryMangaListData.serializer()),
-        ).mangas.nodes
+        ).mangas.nodes.filterInLibraryMangas()
         snapshotCache?.storeLibraryMangas(serverKey(), mangas)
         return mangas
     }

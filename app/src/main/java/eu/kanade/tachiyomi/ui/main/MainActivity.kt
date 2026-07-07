@@ -67,6 +67,7 @@ import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.more.OnboardingScreen
 import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import eu.kanade.tachiyomi.util.system.dpToPx
+import eu.kanade.tachiyomi.util.system.isDebugBuildType
 import eu.kanade.tachiyomi.util.system.isNavigationBarNeedsScrim
 import eu.kanade.tachiyomi.util.view.setComposeContent
 import kotlinx.coroutines.channels.awaitClose
@@ -219,7 +220,7 @@ class MainActivity : BaseActivity() {
         val navigator = LocalNavigator.currentOrThrow
 
         LaunchedEffect(Unit) {
-            if (!preferences.shownOnboardingFlow.get() && navigator.lastItem !is OnboardingScreen) {
+            if (!isDebugBuildType && !preferences.shownOnboardingFlow.get() && navigator.lastItem !is OnboardingScreen) {
                 navigator.push(OnboardingScreen())
             }
         }

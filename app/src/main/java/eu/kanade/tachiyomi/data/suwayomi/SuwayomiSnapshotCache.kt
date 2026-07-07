@@ -17,9 +17,10 @@ internal class SuwayomiSnapshotCache(
 ) {
     suspend fun storeLibraryMangas(serverKey: String, mangas: List<SuwayomiMangaDto>) {
         val syncedAt = now()
+        val libraryMangas = mangas.filterInLibraryMangas()
         database.transaction {
             database.suwayomi_snapshotsQueries.clearLibraryMangas(serverKey)
-            mangas.forEach { manga ->
+            libraryMangas.forEach { manga ->
                 upsertManga(serverKey, manga, syncedAt)
                 database.suwayomi_snapshotsQueries.insertLibraryManga(
                     serverKey = serverKey,
@@ -36,7 +37,9 @@ internal class SuwayomiSnapshotCache(
             .awaitAsList()
         if (rows.isEmpty()) return null
         return SuwayomiSnapshot(
-            value = rows.map { row -> json.decodeFromString<SuwayomiMangaDto>(row.payload) },
+            value = rows
+                .map { row -> json.decodeFromString<SuwayomiMangaDto>(row.payload) }
+                .filterInLibraryMangas(),
             syncedAt = rows.minOf { it.synced_at },
         )
     }
@@ -48,12 +51,13 @@ internal class SuwayomiSnapshotCache(
         mirrorToLibrary: Boolean = false,
     ) {
         val syncedAt = now()
+        val libraryMangas = mangas.filterInLibraryMangas()
         database.transaction {
             database.suwayomi_snapshotsQueries.clearCategoryMangas(serverKey, categoryId.toLong())
             if (mirrorToLibrary) {
                 database.suwayomi_snapshotsQueries.clearLibraryMangas(serverKey)
             }
-            mangas.forEach { manga ->
+            libraryMangas.forEach { manga ->
                 upsertManga(serverKey, manga, syncedAt)
                 database.suwayomi_snapshotsQueries.insertCategoryManga(
                     serverKey = serverKey,
@@ -78,7 +82,9 @@ internal class SuwayomiSnapshotCache(
             .awaitAsList()
         if (rows.isEmpty()) return null
         return SuwayomiSnapshot(
-            value = rows.map { row -> json.decodeFromString<SuwayomiMangaDto>(row.payload) },
+            value = rows
+                .map { row -> json.decodeFromString<SuwayomiMangaDto>(row.payload) }
+                .filterInLibraryMangas(),
             syncedAt = rows.minOf { it.synced_at },
         )
     }

@@ -7,19 +7,32 @@ import tachiyomi.domain.manga.model.Manga
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
-internal class ServerMigrateMangaUseCase(
-    private val sourcePreferences: SourcePreferences = Injekt.get(),
-    private val provider: SuwayomiClientProvider = SuwayomiClientProvider(),
+internal class ServerMigrateMangaUseCase private constructor(
+    private val migrationFlags: () -> Set<MigrationFlag>,
+    private val client: ServerMigrateMangaClient,
 ) {
+    constructor(
+        sourcePreferences: SourcePreferences = Injekt.get(),
+        provider: SuwayomiClientProvider = SuwayomiClientProvider(),
+    ) : this(
+        migrationFlags = sourcePreferences.migrationFlags::get,
+        client = DefaultServerMigrateMangaClient(provider),
+    )
+
+    internal constructor(
+        migrationFlags: () -> Set<MigrationFlag>,
+        client: ServerMigrateMangaClient,
+        @Suppress("UNUSED_PARAMETER") testConstructor: Unit = Unit,
+    ) : this(migrationFlags, client)
+
     suspend fun isServerManga(mangaId: Long): Boolean {
-        return runCatching { provider.graphQlClient.getManga(mangaId.toInt()) }.isSuccess
+        return runCatching { client.getManga(mangaId.toInt()) }.isSuccess
     }
 
     suspend operator fun invoke(current: Manga, target: Manga, replace: Boolean) {
-        val client = provider.graphQlClient
         val currentId = current.id.toInt()
         val targetId = target.id.toInt()
-        val flags = sourcePreferences.migrationFlags.get()
+        val flags = migrationFlags()
         val currentServerManga = client.getManga(currentId)
 
         if (currentServerManga.inLibrary) {
@@ -45,7 +58,6 @@ internal class ServerMigrateMangaUseCase(
     }
 
     private suspend fun migrateChapterState(currentId: Int, targetId: Int) {
-        val client = provider.graphQlClient
         val currentChapters = client.getChapters(currentId)
         val targetChapters = client.getChapters(targetId)
         val targetByNumber = targetChapters
@@ -67,6 +79,65 @@ internal class ServerMigrateMangaUseCase(
                     lastPageRead = maxOf(currentChapter.lastPageRead, targetChapter.lastPageRead),
                 )
             }
+    }
+}
+
+internal interface ServerMigrateMangaClient {
+    suspend fun getManga(mangaId: Int): SuwayomiMangaDto
+    suspend fun updateMangaLibrary(mangaId: Int, inLibrary: Boolean)
+    suspend fun getMangaCategories(mangaId: Int): List<SuwayomiCategoryDto>
+    suspend fun updateMangaCategories(mangaId: Int, categoryIds: List<Int>)
+    suspend fun getChapters(mangaId: Int): List<SuwayomiChapterDto>
+    suspend fun updateChapterMigrationState(
+        chapterId: Int,
+        isRead: Boolean,
+        isBookmarked: Boolean,
+        lastPageRead: Int,
+    )
+    suspend fun setMangaMeta(mangaId: Int, key: String, value: String)
+}
+
+private class DefaultServerMigrateMangaClient(
+    provider: SuwayomiClientProvider,
+) : ServerMigrateMangaClient {
+    private val client = provider.graphQlClient
+
+    override suspend fun getManga(mangaId: Int): SuwayomiMangaDto {
+        return client.getManga(mangaId)
+    }
+
+    override suspend fun updateMangaLibrary(mangaId: Int, inLibrary: Boolean) {
+        client.updateMangaLibrary(mangaId, inLibrary)
+    }
+
+    override suspend fun getMangaCategories(mangaId: Int): List<SuwayomiCategoryDto> {
+        return client.getMangaCategories(mangaId)
+    }
+
+    override suspend fun updateMangaCategories(mangaId: Int, categoryIds: List<Int>) {
+        client.updateMangaCategories(mangaId, categoryIds)
+    }
+
+    override suspend fun getChapters(mangaId: Int): List<SuwayomiChapterDto> {
+        return client.getChapters(mangaId)
+    }
+
+    override suspend fun updateChapterMigrationState(
+        chapterId: Int,
+        isRead: Boolean,
+        isBookmarked: Boolean,
+        lastPageRead: Int,
+    ) {
+        client.updateChapterMigrationState(
+            chapterId = chapterId,
+            isRead = isRead,
+            isBookmarked = isBookmarked,
+            lastPageRead = lastPageRead,
+        )
+    }
+
+    override suspend fun setMangaMeta(mangaId: Int, key: String, value: String) {
+        client.setMangaMeta(mangaId, key, value)
     }
 }
 

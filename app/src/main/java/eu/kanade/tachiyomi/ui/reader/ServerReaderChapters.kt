@@ -41,6 +41,7 @@ fun buildServerReaderChapters(
     downloadedOnly: Boolean,
     downloadedChapterIds: Set<Long>,
     localDownloadedChapterIds: Set<Long> = emptySet(),
+    excludedScanlators: Set<String> = emptySet(),
 ): ServerReaderChapterList {
     val normalizedChapters = chapters.uniqueById(selectedChapter)
     val normalizedSelectedChapter = normalizedChapters.firstOrNull { it.id == selectedChapter.id }
@@ -55,6 +56,7 @@ fun buildServerReaderChapters(
                         manga = manga,
                         downloadedChapterIds = downloadedChapterIds,
                         localDownloadedChapterIds = localDownloadedChapterIds,
+                        excludedScanlators = excludedScanlators,
                     )
                     else -> false
                 }
@@ -135,8 +137,10 @@ private fun Chapter.isFilteredByMangaFlags(
     manga: Manga,
     downloadedChapterIds: Set<Long>,
     localDownloadedChapterIds: Set<Long>,
+    excludedScanlators: Set<String>,
 ): Boolean {
-    return (manga.unreadFilterRaw == Manga.CHAPTER_SHOW_READ && !read) ||
+    return scanlator in excludedScanlators ||
+        (manga.unreadFilterRaw == Manga.CHAPTER_SHOW_READ && !read) ||
         (manga.unreadFilterRaw == Manga.CHAPTER_SHOW_UNREAD && read) ||
         (
             manga.downloadedFilterRaw == Manga.CHAPTER_SHOW_DOWNLOADED &&

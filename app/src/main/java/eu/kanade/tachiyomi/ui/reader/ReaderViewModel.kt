@@ -57,6 +57,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import logcat.LogPriority
@@ -216,7 +218,8 @@ class ReaderViewModel @JvmOverloads constructor(
     }
 
     private suspend fun initServerReader(mangaId: Long, initialChapterId: Long): Result<Boolean> {
-        val manga = suwayomiClient.getManga(mangaId.toInt()).toDomainManga()
+        val serverManga = suwayomiClient.getManga(mangaId.toInt())
+        val manga = serverManga.toDomainManga()
         val serverChapters = suwayomiClient.getChapters(mangaId.toInt())
         serverDownloadedChapterIds = serverChapters
             .filter { it.isDownloaded }
@@ -241,6 +244,7 @@ class ReaderViewModel @JvmOverloads constructor(
             downloadedOnly = basePreferences.downloadedOnly.get(),
             downloadedChapterIds = serverDownloadedChapterIds,
             localDownloadedChapterIds = localDownloadedChapterIds,
+            excludedScanlators = serverManga.excludedScanlators(),
         )
 
         serverChapterList = serverReaderChapters.chapters
@@ -388,6 +392,13 @@ class ReaderViewModel @JvmOverloads constructor(
             notes = "",
             memo = JsonObject.EMPTY,
         )
+    }
+
+    private fun SuwayomiMangaDto.excludedScanlators(): Set<String> {
+        val value = meta.firstOrNull { it.key == SERVER_EXCLUDED_SCANLATORS_META_KEY }?.value ?: return emptySet()
+        return runCatching {
+            Json.decodeFromString(ListSerializer(String.serializer()), value).toSet()
+        }.getOrDefault(emptySet())
     }
 
     private fun SuwayomiChapterDto.toDomainChapter(): tachiyomi.domain.chapter.model.Chapter {
@@ -1052,6 +1063,7 @@ class ReaderViewModel @JvmOverloads constructor(
     private companion object {
         const val SUWAYOMI_READER_MODE_META_KEY = "flutter_readerMode"
         const val SUWAYOMI_READER_ORIENTATION_META_KEY = "amatsubu_readerOrientation"
+        const val SERVER_EXCLUDED_SCANLATORS_META_KEY = "amatsubu.excludedScanlators"
         val LEGACY_SUWAYOMI_READER_ORIENTATION_META_KEY = "sorami" + "hon_readerOrientation"
     }
 }

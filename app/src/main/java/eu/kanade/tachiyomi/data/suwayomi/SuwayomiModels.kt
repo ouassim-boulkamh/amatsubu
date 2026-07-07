@@ -1148,6 +1148,10 @@ data class SuwayomiMangaDto(
     val url: String,
 )
 
+internal fun List<SuwayomiMangaDto>.filterInLibraryMangas(): List<SuwayomiMangaDto> {
+    return filter { it.inLibrary }
+}
+
 @Serializable
 data class SuwayomiLatestFetchedChapterDto(
     val fetchedAt: Long = 0L,
