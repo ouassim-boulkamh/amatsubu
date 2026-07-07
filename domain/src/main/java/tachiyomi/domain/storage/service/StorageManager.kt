@@ -42,5 +42,4 @@ class StorageManager(
         return UniFile.fromUri(context, uri.toUri())
             .takeIf { it?.exists() == true }
     }
-
 }

@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.domain.source.service.SourcePreferences
+import eu.kanade.presentation.browse.components.SourceFilter
 import eu.kanade.presentation.components.SearchToolbar
 import eu.kanade.presentation.manga.components.MangaCover
 import eu.kanade.presentation.util.Screen
@@ -60,7 +61,6 @@ import eu.kanade.tachiyomi.data.suwayomi.SuwayomiSourceDto
 import eu.kanade.tachiyomi.data.suwayomi.hasNsfwContent
 import eu.kanade.tachiyomi.data.suwayomi.isLocalFolderSource
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
-import eu.kanade.presentation.browse.components.SourceFilter
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -246,7 +246,10 @@ data class ServerGlobalSearchScreen(
         ) { contentPadding ->
             val visibleResults = sources
                 .mapNotNull { source -> results[source.id]?.let { source to it } }
-                .filter { (_, result) -> !onlyShowHasResults || (result is ServerSearchItemResult.Success && result.mangas.isNotEmpty()) }
+                .filter { (_, result) ->
+                    !onlyShowHasResults ||
+                        (result is ServerSearchItemResult.Success && result.mangas.isNotEmpty())
+                }
 
             when {
                 listError != null -> EmptyScreen(

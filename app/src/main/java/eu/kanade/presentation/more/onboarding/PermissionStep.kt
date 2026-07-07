@@ -107,7 +107,6 @@ internal class PermissionStep : OnboardingStep {
                     }
                 },
             )
-
         }
     }
 

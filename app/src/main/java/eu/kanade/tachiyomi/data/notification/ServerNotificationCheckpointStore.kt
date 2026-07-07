@@ -69,7 +69,9 @@ internal class ServerNotificationCheckpointStore(
 
     fun markChaptersNotified(chapterIds: Collection<Int>) {
         if (chapterIds.isEmpty()) return
-        notifiedChapterIds.set((notifiedChapterIds.get().decodeIdSet() + chapterIds.map(Int::toString)).trimmed().encodeIdSet())
+        notifiedChapterIds.set(
+            (notifiedChapterIds.get().decodeIdSet() + chapterIds.map(Int::toString)).trimmed().encodeIdSet(),
+        )
     }
 
     fun recordDownloadQueue(

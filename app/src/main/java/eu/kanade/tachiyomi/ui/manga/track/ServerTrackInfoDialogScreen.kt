@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.text.input.rememberTextFieldState
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ButtonDefaults
@@ -21,6 +20,7 @@ import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -79,7 +79,6 @@ import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.track.model.Track as DomainTrack
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.LabeledCheckbox
 import tachiyomi.presentation.core.components.material.AlertDialogContent
@@ -92,6 +91,7 @@ import uy.kohesive.injekt.api.get
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import tachiyomi.domain.track.model.Track as DomainTrack
 
 data class ServerTrackInfoDialogScreen(
     private val mangaId: Int,
@@ -402,7 +402,12 @@ private data class ServerTrackStatusSelectorScreen(
             TrackStatusSelector(
                 selection = selection,
                 onSelectionChange = { selection = it },
-                selections = remember { tracker.dto.statuses.associate { it.value.toLong() to it.name.toStatusStringResource() } },
+                selections = remember {
+                    tracker.dto.statuses.associate {
+                        it.value.toLong() to
+                            it.name.toStatusStringResource()
+                    }
+                },
                 onConfirm = { pending = true },
                 onDismissRequest = navigator::pop,
             )
@@ -483,8 +488,11 @@ private data class ServerTrackDateSelectorScreen(
             val targetDate = Instant.ofEpochMilli(utcTimeMillis).toLocalDate(ZoneOffset.UTC)
             if (targetDate > LocalDate.now(ZoneOffset.UTC)) return false
             return when {
-                start && track.finishDate > 0 -> targetDate <= Instant.ofEpochMilli(track.finishDate).toLocalDate(ZoneOffset.UTC)
-                !start && track.startDate > 0 -> Instant.ofEpochMilli(track.startDate).toLocalDate(ZoneOffset.UTC) <= targetDate
+                start && track.finishDate > 0 ->
+                    targetDate <=
+                        Instant.ofEpochMilli(track.finishDate).toLocalDate(ZoneOffset.UTC)
+                !start && track.startDate > 0 -> Instant.ofEpochMilli(track.startDate).toLocalDate(ZoneOffset.UTC) <=
+                    targetDate
                 else -> true
             }
         }
@@ -534,7 +542,8 @@ private data class ServerTrackDateSelectorScreen(
                 initialSelectedDateMillis = initialSelection,
                 selectableDates = selectableDates,
                 onConfirm = { utcMillis ->
-                    pendingAction = DateAction.Set(utcMillis.convertEpochMillisZone(ZoneOffset.UTC, ZoneOffset.systemDefault()))
+                    pendingAction =
+                        DateAction.Set(utcMillis.convertEpochMillisZone(ZoneOffset.UTC, ZoneOffset.systemDefault()))
                 },
                 onRemove = {
                     pendingAction = DateAction.Remove
@@ -668,14 +677,21 @@ private data class ServerTracker(
     }
 
     override fun getStatusList(): List<Long> = dto.statuses.map { it.value.toLong() }
-    override fun getStatus(status: Long): StringResource? = dto.statuses.firstOrNull { it.value.toLong() == status }?.name.toStatusStringResource()
+    override fun getStatus(
+        status: Long,
+    ): StringResource? = dto.statuses.firstOrNull { it.value.toLong() == status }?.name.toStatusStringResource()
     override fun getReadingStatus(): Long = dto.statuses.firstOrNull()?.value?.toLong() ?: 0
-    override fun getRereadingStatus(): Long = dto.statuses.firstOrNull { it.name.equals("Rereading", ignoreCase = true) }?.value?.toLong() ?: getReadingStatus()
-    override fun getCompletionStatus(): Long = dto.statuses.firstOrNull { it.name.equals("Completed", ignoreCase = true) }?.value?.toLong() ?: getReadingStatus()
+    override fun getRereadingStatus(): Long =
+        dto.statuses.firstOrNull { it.name.equals("Rereading", ignoreCase = true) }?.value?.toLong()
+            ?: getReadingStatus()
+    override fun getCompletionStatus(): Long =
+        dto.statuses.firstOrNull { it.name.equals("Completed", ignoreCase = true) }?.value?.toLong()
+            ?: getReadingStatus()
     override fun getScoreList(): List<String> = dto.scores
     override fun get10PointScore(track: DomainTrack): Double = track.score
     override fun indexToScore(index: Int): Double = dto.scores.getOrNull(index)?.toDoubleOrNull() ?: 0.0
-    override fun displayScore(track: DomainTrack): String = displayScores[track.id]?.takeIf { it.isNotBlank() } ?: track.score.toString()
+    override fun displayScore(track: DomainTrack): String =
+        displayScores[track.id]?.takeIf { it.isNotBlank() } ?: track.score.toString()
 
     override suspend fun update(track: Track, didReadChapter: Boolean): Track = unsupported()
     override suspend fun bind(track: Track, hasReadChapters: Boolean): Track = unsupported()
@@ -685,6 +701,8 @@ private data class ServerTracker(
     override fun logout() = Unit
     override fun getUsername(): String = ""
     override fun getPassword(): String = ""
+    override fun getDisplayUsername(): String = ""
+    override fun saveDisplayUsername(displayName: String) = Unit
     override fun saveCredentials(username: String, password: String) = Unit
     override suspend fun register(item: Track, mangaId: Long) = unsupported<Unit>()
     override suspend fun setRemoteStatus(track: Track, status: Long) = unsupported<Unit>()
@@ -753,4 +771,6 @@ private fun suwayomiClient(): SuwayomiGraphQlClient {
     return SuwayomiClientProvider().graphQlClient
 }
 
-private fun <T> unsupported(): T = throw UnsupportedOperationException("Use Suwayomi GraphQL operations for server-backed tracking")
+private fun <T> unsupported(): T = throw UnsupportedOperationException(
+    "Use Suwayomi GraphQL operations for server-backed tracking",
+)

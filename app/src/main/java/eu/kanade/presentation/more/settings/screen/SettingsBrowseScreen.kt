@@ -199,7 +199,9 @@ private class ServerExtensionReposScreen : Screen() {
                                             widget = {
                                                 Row {
                                                     IconButton(
-                                                        onClick = { context.copyToClipboard(store.indexUrl, store.indexUrl) },
+                                                        onClick = {
+                                                            context.copyToClipboard(store.indexUrl, store.indexUrl)
+                                                        },
                                                     ) {
                                                         Icon(
                                                             imageVector = Icons.Outlined.ContentCopy,
@@ -213,7 +215,9 @@ private class ServerExtensionReposScreen : Screen() {
                                                     ) {
                                                         Icon(
                                                             imageVector = Icons.Outlined.Delete,
-                                                            contentDescription = stringResource(MR.strings.action_delete),
+                                                            contentDescription = stringResource(
+                                                                MR.strings.action_delete,
+                                                            ),
                                                         )
                                                     }
                                                 }

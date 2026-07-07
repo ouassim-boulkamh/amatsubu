@@ -22,18 +22,17 @@ import eu.kanade.tachiyomi.data.suwayomi.SuwayomiFetchEstimate
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiLibraryUpdateStatusDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiSnapshot
-import eu.kanade.tachiyomi.data.suwayomi.SuwayomiStatsTrackRecordDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiStaleSnapshotState
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiStatsTrackRecordDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiTrackerDto
 import eu.kanade.tachiyomi.data.suwayomi.estimateFetchInterval
-import eu.kanade.tachiyomi.data.suwayomi.isSuwayomiServerUnavailable
 import eu.kanade.tachiyomi.data.suwayomi.isLocalFolderSource
+import eu.kanade.tachiyomi.data.suwayomi.isSuwayomiServerUnavailable
 import eu.kanade.tachiyomi.data.suwayomi.normalizedGenre
 import eu.kanade.tachiyomi.data.suwayomi.oldestPositive
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
 import eu.kanade.tachiyomi.data.suwayomi.serverCoverLastModified
 import eu.kanade.tachiyomi.data.suwayomi.syncTrackerProgressAfterReadStateChange
-import eu.kanade.tachiyomi.data.suwayomi.UpdateStrategy as SuwayomiUpdateStrategy
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.util.removeCovers
@@ -53,8 +52,9 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.serialization.json.Json
-import mihon.core.common.utils.mutate
 import logcat.LogPriority
+import mihon.core.common.extensions.EMPTY
+import mihon.core.common.utils.mutate
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.util.lang.compareToWithCollator
@@ -75,10 +75,10 @@ import tachiyomi.domain.manga.model.applyFilter
 import tachiyomi.domain.source.service.SourceManager
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import mihon.core.common.extensions.EMPTY
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
+import eu.kanade.tachiyomi.data.suwayomi.UpdateStrategy as SuwayomiUpdateStrategy
 
 class LibraryScreenModel(
     private val getCategories: GetCategories = Injekt.get(),
@@ -627,7 +627,8 @@ class LibraryScreenModel(
                     )
                     ?: deviceCopyChapterIds.size
                 snapshotSyncedAt?.let { syncedAt ->
-                    serverStaleSnapshotSyncedAt[mangaId] = serverStaleSnapshotSyncedAt[mangaId].oldestPositive(syncedAt)!!
+                    serverStaleSnapshotSyncedAt[mangaId] =
+                        serverStaleSnapshotSyncedAt[mangaId].oldestPositive(syncedAt)!!
                 }
                 mangaById[mangaId] = manga.toLibraryManga(
                     categories = categoriesForManga.distinct(),
@@ -662,7 +663,8 @@ class LibraryScreenModel(
                     deviceCopyChapterIds = deviceCopyChapterIds,
                 )
                 ?: deviceCopyChapterIds.size
-            serverStaleSnapshotSyncedAt[manga.id.toLong()] = snapshot.syncedAt.oldestPositive(chaptersSnapshot?.syncedAt)!!
+            serverStaleSnapshotSyncedAt[manga.id.toLong()] =
+                snapshot.syncedAt.oldestPositive(chaptersSnapshot?.syncedAt)!!
             manga.toLibraryManga(
                 categories = listOf(Category.UNCATEGORIZED_ID),
                 chapterAggregate = chapterAggregate,

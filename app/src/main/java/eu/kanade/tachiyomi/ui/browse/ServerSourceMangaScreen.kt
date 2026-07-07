@@ -1,7 +1,7 @@
 package eu.kanade.tachiyomi.ui.browse
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,10 +17,10 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.Favorite
+import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.NewReleases
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
@@ -67,8 +67,8 @@ import eu.kanade.tachiyomi.data.suwayomi.SuwayomiTriState
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
 import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.model.FilterList
-import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.browse.source.browse.SourceFilterDialog
+import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import kotlinx.coroutines.launch
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.i18n.MR
@@ -315,7 +315,9 @@ data class ServerSourceMangaScreen(
                                     Text(
                                         when {
                                             filtersLoading -> stringResource(MR.strings.loading)
-                                            filtersError != null && filters.isEmpty() -> stringResource(MR.strings.action_retry)
+                                            filtersError != null && filters.isEmpty() -> stringResource(
+                                                MR.strings.action_retry,
+                                            )
                                             else -> stringResource(MR.strings.action_filter)
                                         },
                                     )

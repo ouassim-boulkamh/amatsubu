@@ -43,10 +43,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastAll
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastMap
-import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.ServerOfflineBanner
 import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
@@ -323,7 +323,9 @@ private fun MangaScreenSmallImpl(
                 isServerBacked = state.isServerBacked,
                 onSaveDeviceCopiesClicked = if (
                     onDownloadChapter != null &&
-                    selectedChapters.fastAny { it.deviceCopyState != eu.kanade.tachiyomi.ui.manga.DeviceCopyState.FRESH }
+                    selectedChapters.fastAny {
+                        it.deviceCopyState != eu.kanade.tachiyomi.ui.manga.DeviceCopyState.FRESH
+                    }
                 ) {
                     { onDownloadChapter(selectedChapters, ChapterDownloadAction.SAVE_DEVICE) }
                 } else {
@@ -404,7 +406,8 @@ private fun MangaScreenSmallImpl(
                             contentType = MangaScreenItem.OFFLINE_BANNER,
                         ) {
                             Text(
-                                text = "${state.pendingReadStateCount} read-state changes will sync when Suwayomi is reachable.",
+                                text = "${state.pendingReadStateCount} read-state changes will sync " +
+                                    "when Suwayomi is reachable.",
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                             )
                         }
@@ -685,7 +688,8 @@ fun MangaScreenLargeImpl(
                         }
                         if (state.pendingReadStateCount > 0) {
                             Text(
-                                text = "${state.pendingReadStateCount} read-state changes will sync when Suwayomi is reachable.",
+                                text = "${state.pendingReadStateCount} read-state changes will sync " +
+                                    "when Suwayomi is reachable.",
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                             )
                         }

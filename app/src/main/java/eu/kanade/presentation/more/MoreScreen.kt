@@ -9,9 +9,9 @@ import androidx.compose.material.icons.outlined.GetApp
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.QueryStats
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Sync
-import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -110,10 +110,15 @@ fun MoreScreen(
                             }
                         }
                         is ServerSyncState.Success -> stringResource(MR.strings.sync_server_state_synced_just_now)
-                        is ServerSyncState.Error -> serverSyncState.message
-                            ?: stringResource(MR.strings.sync_server_state_failed)
+                        is ServerSyncState.Error ->
+                            serverSyncState.message
+                                ?: stringResource(MR.strings.sync_server_state_failed)
                     },
-                    icon = if (serverSyncState is ServerSyncState.LibraryUpdating) Icons.Outlined.Stop else Icons.Outlined.Sync,
+                    icon = if (serverSyncState is ServerSyncState.LibraryUpdating) {
+                        Icons.Outlined.Stop
+                    } else {
+                        Icons.Outlined.Sync
+                    },
                     onPreferenceClick = if (serverSyncState is ServerSyncState.Syncing) {
                         null
                     } else if (serverSyncState is ServerSyncState.LibraryUpdating) {

@@ -4,9 +4,6 @@ import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -22,22 +19,25 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.screen.data.ServerCreateBackupScreen
 import eu.kanade.presentation.more.settings.screen.data.ServerRestoreBackupScreen
-import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.widget.EditTextPreferenceWidget
 import eu.kanade.presentation.more.settings.widget.ListPreferenceWidget
 import eu.kanade.presentation.more.settings.widget.SwitchPreferenceWidget
 import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
 import eu.kanade.tachiyomi.data.backup.restore.ServerBackupRestoreJob
-import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
-import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SUWAYOMI_PORT_MAX
 import eu.kanade.tachiyomi.data.suwayomi.SUWAYOMI_PORT_MIN
 import eu.kanade.tachiyomi.data.suwayomi.SUWAYOMI_TIMEOUT_MAX_SECONDS
 import eu.kanade.tachiyomi.data.suwayomi.SUWAYOMI_TIMEOUT_MIN_SECONDS
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiPreferences
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiPreferences.Companion.AUTH_BASIC
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiPreferences.Companion.AUTH_NONE
@@ -353,7 +353,8 @@ object SettingsServerScreen : SearchableSettings {
                             },
                         ),
                         Preference.PreferenceItem.InfoPreference(
-                            "Server backups restore Suwayomi-owned library, chapter, category, history, and tracking data. " +
+                            "Server backups restore Suwayomi-owned library, chapter, category, " +
+                                "history, and tracking data. " +
                                 "They do not restore Android client settings.",
                         ),
                     ),
@@ -369,16 +370,16 @@ object SettingsServerScreen : SearchableSettings {
             remoteSettings
                 ?.takeIf { remoteSettingsConnectionKey == connectionKey }
                 ?.let { settings ->
-                addServerBindingGroup(settings, ::updateServerSettings)
-                addServerAuthenticationGroup(settings, ::updateServerSettings)
-                addLibraryUpdatesGroup(settings, ::updateServerSettings)
-                addDownloadBehaviorGroup(settings, ::updateServerSettings)
-                addBackupGroup(settings, ::updateServerSettings)
-                addSocksProxyGroup(settings, ::updateServerSettings)
-                addFlareSolverrGroup(settings, ::updateServerSettings)
-                addWebUiGroup(settings, ::updateServerSettings)
-                addMiscGroup(settings, ::updateServerSettings)
-            }
+                    addServerBindingGroup(settings, ::updateServerSettings)
+                    addServerAuthenticationGroup(settings, ::updateServerSettings)
+                    addLibraryUpdatesGroup(settings, ::updateServerSettings)
+                    addDownloadBehaviorGroup(settings, ::updateServerSettings)
+                    addBackupGroup(settings, ::updateServerSettings)
+                    addSocksProxyGroup(settings, ::updateServerSettings)
+                    addFlareSolverrGroup(settings, ::updateServerSettings)
+                    addWebUiGroup(settings, ::updateServerSettings)
+                    addMiscGroup(settings, ::updateServerSettings)
+                }
         }
     }
 
@@ -404,12 +405,22 @@ object SettingsServerScreen : SearchableSettings {
                         if (it.buildType.isNotBlank()) {
                             add(Preference.PreferenceItem.TextPreference("Server build type", it.buildType))
                         }
-                        add(Preference.PreferenceItem.TextPreference("Server build time", formatTimestamp(it.buildTime)))
+                        add(
+                            Preference.PreferenceItem.TextPreference(
+                                "Server build time",
+                                formatTimestamp(it.buildTime),
+                            ),
+                        )
                     }
                     webUi?.let {
                         add(Preference.PreferenceItem.TextPreference("WebUI version", it.tag))
                         add(Preference.PreferenceItem.TextPreference("WebUI channel", it.channel))
-                        add(Preference.PreferenceItem.TextPreference("WebUI updated", formatTimestamp(it.updateTimestamp)))
+                        add(
+                            Preference.PreferenceItem.TextPreference(
+                                "WebUI updated",
+                                formatTimestamp(it.updateTimestamp),
+                            ),
+                        )
                     }
                 },
             ),
@@ -469,14 +480,18 @@ object SettingsServerScreen : SearchableSettings {
                         ),
                     )
                     if (settings.authMode != "NONE") {
-                        add(textFieldPreference("Server username", settings.authUsername) {
-                            update { put("authUsername", it) }
-                            true
-                        })
-                        add(textFieldPreference("Server password", settings.authPassword) {
-                            update { put("authPassword", it) }
-                            true
-                        })
+                        add(
+                            textFieldPreference("Server username", settings.authUsername) {
+                                update { put("authUsername", it) }
+                                true
+                            },
+                        )
+                        add(
+                            textFieldPreference("Server password", settings.authPassword) {
+                                update { put("authPassword", it) }
+                                true
+                            },
+                        )
                     }
                 },
             ),
@@ -676,34 +691,44 @@ object SettingsServerScreen : SearchableSettings {
                         ),
                     )
                     if (settings.socksProxyEnabled) {
-                        add(textFieldPreference("SOCKS version", settings.socksProxyVersion.toString()) {
-                            val version = it.toIntOrNull() ?: return@textFieldPreference false
-                            if (version !in 4..5) return@textFieldPreference false
-                            update { put("socksProxyVersion", version) }
-                            true
-                        })
-                        add(textFieldPreference("SOCKS host", settings.socksProxyHost) {
-                            update { put("socksProxyHost", it) }
-                            true
-                        })
-                        add(textFieldPreference("SOCKS port", settings.socksProxyPort) {
-                            if (it.isBlank()) {
-                                update { put("socksProxyPort", "") }
-                                return@textFieldPreference true
-                            }
-                            val port = it.toIntOrNull() ?: return@textFieldPreference false
-                            if (port !in SUWAYOMI_PORT_MIN..SUWAYOMI_PORT_MAX) return@textFieldPreference false
-                            update { put("socksProxyPort", it) }
-                            true
-                        })
-                        add(textFieldPreference("SOCKS username", settings.socksProxyUsername) {
-                            update { put("socksProxyUsername", it) }
-                            true
-                        })
-                        add(textFieldPreference("SOCKS password", settings.socksProxyPassword) {
-                            update { put("socksProxyPassword", it) }
-                            true
-                        })
+                        add(
+                            textFieldPreference("SOCKS version", settings.socksProxyVersion.toString()) {
+                                val version = it.toIntOrNull() ?: return@textFieldPreference false
+                                if (version !in 4..5) return@textFieldPreference false
+                                update { put("socksProxyVersion", version) }
+                                true
+                            },
+                        )
+                        add(
+                            textFieldPreference("SOCKS host", settings.socksProxyHost) {
+                                update { put("socksProxyHost", it) }
+                                true
+                            },
+                        )
+                        add(
+                            textFieldPreference("SOCKS port", settings.socksProxyPort) {
+                                if (it.isBlank()) {
+                                    update { put("socksProxyPort", "") }
+                                    return@textFieldPreference true
+                                }
+                                val port = it.toIntOrNull() ?: return@textFieldPreference false
+                                if (port !in SUWAYOMI_PORT_MIN..SUWAYOMI_PORT_MAX) return@textFieldPreference false
+                                update { put("socksProxyPort", it) }
+                                true
+                            },
+                        )
+                        add(
+                            textFieldPreference("SOCKS username", settings.socksProxyUsername) {
+                                update { put("socksProxyUsername", it) }
+                                true
+                            },
+                        )
+                        add(
+                            textFieldPreference("SOCKS password", settings.socksProxyPassword) {
+                                update { put("socksProxyPassword", it) }
+                                true
+                            },
+                        )
                     }
                 },
             ),
@@ -726,10 +751,12 @@ object SettingsServerScreen : SearchableSettings {
                         ),
                     )
                     if (settings.flareSolverrEnabled) {
-                        add(textFieldPreference("FlareSolverr server URL", settings.flareSolverrUrl) {
-                            update { put("flareSolverrUrl", it) }
-                            true
-                        })
+                        add(
+                            textFieldPreference("FlareSolverr server URL", settings.flareSolverrUrl) {
+                                update { put("flareSolverrUrl", it) }
+                                true
+                            },
+                        )
                         add(
                             switchPreference(
                                 title = "Use FlareSolverr as response fallback",
@@ -737,22 +764,28 @@ object SettingsServerScreen : SearchableSettings {
                                 onChanged = { update { put("flareSolverrAsResponseFallback", it) } },
                             ),
                         )
-                        add(textFieldPreference("Request timeout", settings.flareSolverrTimeout.toString()) {
-                            val timeout = it.toIntOrNull() ?: return@textFieldPreference false
-                            if (timeout < 0) return@textFieldPreference false
-                            update { put("flareSolverrTimeout", timeout) }
-                            true
-                        })
-                        add(textFieldPreference("Session name", settings.flareSolverrSessionName) {
-                            update { put("flareSolverrSessionName", it) }
-                            true
-                        })
-                        add(textFieldPreference("Session TTL", settings.flareSolverrSessionTtl.toString()) {
-                            val ttl = it.toIntOrNull() ?: return@textFieldPreference false
-                            if (ttl < 0) return@textFieldPreference false
-                            update { put("flareSolverrSessionTtl", ttl) }
-                            true
-                        })
+                        add(
+                            textFieldPreference("Request timeout", settings.flareSolverrTimeout.toString()) {
+                                val timeout = it.toIntOrNull() ?: return@textFieldPreference false
+                                if (timeout < 0) return@textFieldPreference false
+                                update { put("flareSolverrTimeout", timeout) }
+                                true
+                            },
+                        )
+                        add(
+                            textFieldPreference("Session name", settings.flareSolverrSessionName) {
+                                update { put("flareSolverrSessionName", it) }
+                                true
+                            },
+                        )
+                        add(
+                            textFieldPreference("Session TTL", settings.flareSolverrSessionTtl.toString()) {
+                                val ttl = it.toIntOrNull() ?: return@textFieldPreference false
+                                if (ttl < 0) return@textFieldPreference false
+                                update { put("flareSolverrSessionTtl", ttl) }
+                                true
+                            },
+                        )
                     }
                 },
             ),

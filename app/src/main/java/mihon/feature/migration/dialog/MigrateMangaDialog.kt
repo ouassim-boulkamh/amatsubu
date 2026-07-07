@@ -27,6 +27,7 @@ import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.util.formattedMessage
 import eu.kanade.tachiyomi.data.suwayomi.ServerMigrateMangaUseCase
 import kotlinx.coroutines.flow.update
+import logcat.LogPriority
 import mihon.domain.migration.models.MigrationFlag
 import mihon.feature.common.utils.getLabel
 import tachiyomi.core.common.util.lang.launchIO
@@ -38,7 +39,6 @@ import tachiyomi.presentation.core.components.LabeledCheckbox
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.LoadingScreen
-import logcat.LogPriority
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import kotlin.coroutines.cancellation.CancellationException

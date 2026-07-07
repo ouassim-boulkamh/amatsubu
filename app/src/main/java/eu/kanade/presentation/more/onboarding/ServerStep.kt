@@ -124,7 +124,9 @@ internal class ServerStep : OnboardingStep {
                 valueString = stringResource(MR.strings.onboarding_server_timeout_value, timeoutSeconds),
                 onChange = { preferences.timeoutSeconds.set(it) },
                 modifier = Modifier.padding(horizontal = 16.dp),
-                titleStyle = MaterialTheme.typography.titleLarge.copy(fontSize = eu.kanade.presentation.more.settings.widget.TitleFontSize),
+                titleStyle = MaterialTheme.typography.titleLarge.copy(
+                    fontSize = eu.kanade.presentation.more.settings.widget.TitleFontSize,
+                ),
             )
 
             ListPreferenceWidget(

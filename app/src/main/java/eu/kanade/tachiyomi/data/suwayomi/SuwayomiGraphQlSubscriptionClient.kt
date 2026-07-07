@@ -120,7 +120,12 @@ internal class SuwayomiGraphQlSubscriptionClient(
         var webSocket: WebSocket? = null
         val listener = object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
-                webSocket.send(json.encodeToString(GraphQlWebSocketMessage.serializer(), GraphQlWebSocketMessage("connection_init")))
+                webSocket.send(
+                    json.encodeToString(
+                        GraphQlWebSocketMessage.serializer(),
+                        GraphQlWebSocketMessage("connection_init"),
+                    ),
+                )
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
@@ -150,9 +155,13 @@ internal class SuwayomiGraphQlSubscriptionClient(
                         val data = response.data ?: return
                         trySend(mapper(data))
                     }
-                    "error" -> close(IllegalStateException(message.payload?.toString() ?: "Suwayomi subscription failed"))
+                    "error" -> close(
+                        IllegalStateException(message.payload?.toString() ?: "Suwayomi subscription failed"),
+                    )
                     "complete" -> close()
-                    "ping" -> webSocket.send(json.encodeToString(GraphQlWebSocketMessage.serializer(), GraphQlWebSocketMessage("pong")))
+                    "ping" -> webSocket.send(
+                        json.encodeToString(GraphQlWebSocketMessage.serializer(), GraphQlWebSocketMessage("pong")),
+                    )
                 }
             }
 
@@ -167,7 +176,12 @@ internal class SuwayomiGraphQlSubscriptionClient(
         webSocket = client.newWebSocket(request, listener)
         awaitClose {
             val socket = webSocket
-            socket.send(json.encodeToString(GraphQlWebSocketMessage.serializer(), GraphQlWebSocketMessage("complete", operationId)))
+            socket.send(
+                json.encodeToString(
+                    GraphQlWebSocketMessage.serializer(),
+                    GraphQlWebSocketMessage("complete", operationId),
+                ),
+            )
             socket.close(1000, "Closing Suwayomi subscription")
         }
     }

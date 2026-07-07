@@ -186,7 +186,10 @@ class ServerNotificationCheckpointStoreTest {
         assertEquals(listOf(firstVersion), store.filterUnnotifiedExtensionUpdates(SERVER_A, listOf(firstVersion)))
         store.markExtensionUpdatesNotified(listOf(firstVersion))
 
-        assertEquals(emptyList<SuwayomiExtensionDto>(), store.filterUnnotifiedExtensionUpdates(SERVER_A, listOf(sameVersion)))
+        assertEquals(
+            emptyList<SuwayomiExtensionDto>(),
+            store.filterUnnotifiedExtensionUpdates(SERVER_A, listOf(sameVersion)),
+        )
         assertEquals(listOf(nextVersion), store.filterUnnotifiedExtensionUpdates(SERVER_A, listOf(nextVersion)))
         assertEquals(listOf(sameVersion), store.filterUnnotifiedExtensionUpdates(SERVER_B, listOf(sameVersion)))
     }

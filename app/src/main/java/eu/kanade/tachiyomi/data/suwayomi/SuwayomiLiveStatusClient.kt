@@ -1,9 +1,9 @@
 package eu.kanade.tachiyomi.data.suwayomi
 
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.isActive
@@ -131,7 +131,6 @@ internal class SuwayomiLiveStatusClient(
             delay(interval)
         }
     }
-
 }
 
 internal class SuwayomiDownloadStatusReconciler(

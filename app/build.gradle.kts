@@ -3,6 +3,8 @@ import mihon.gradle.getBuildTime
 import mihon.gradle.getLatestCommitCount
 import mihon.gradle.getLatestCommitSha
 import mihon.gradle.tasks.ReplaceShortcutsPlaceholderTask
+import java.util.Base64
+import java.util.Properties
 
 plugins {
     alias(mihonx.plugins.android.application)
@@ -16,12 +18,68 @@ plugins {
 android {
     namespace = "eu.kanade.tachiyomi"
 
+    val releaseSigningConfig = run {
+        val localSecretsDir = providers.environmentVariable("AMATSUBU_SECRETS_DIR").orNull?.let(::File)
+        val localSecretsFile = localSecretsDir?.resolve("amatsubu-github-actions-secrets.env")
+        val localSecrets = Properties().apply {
+            if (localSecretsFile?.isFile == true) {
+                localSecretsFile.inputStream().use(::load)
+            }
+        }
+
+        fun signingValue(vararg names: String): String? {
+            return names.firstNotNullOfOrNull { name ->
+                providers.environmentVariable(name).orNull
+                    ?: providers.gradleProperty(name).orNull
+                    ?: localSecrets.getProperty(name)
+            }
+        }
+
+        val storeFileValue = signingValue(
+            "storeFile",
+            "STORE_FILE",
+            "AMATSUBU_SIGNING_STORE_FILE",
+        )
+        val storeFileBase64 = signingValue("storeFileBase64", "SIGNING_KEY")
+        val storePasswordValue = signingValue("storePassword", "KEY_STORE_PASSWORD")
+        val keyAliasValue = signingValue("keyAlias", "ALIAS")
+        val keyPasswordValue = signingValue("keyPassword", "KEY_PASSWORD")
+        val localKeystoreFile = localSecretsDir?.resolve("amatsubu-release.keystore")
+
+        if (
+            (storeFileValue != null || storeFileBase64 != null || localKeystoreFile?.isFile == true) &&
+            storePasswordValue != null &&
+            keyAliasValue != null &&
+            keyPasswordValue != null
+        ) {
+            val keystoreFile = when {
+                storeFileValue != null -> File(storeFileValue)
+                localKeystoreFile?.isFile == true -> localKeystoreFile
+                else -> layout.buildDirectory.file("generated/signing/release.keystore").get().asFile.apply {
+                    parentFile.mkdirs()
+                    writeBytes(Base64.getDecoder().decode(storeFileBase64))
+                }
+            }
+
+            signingConfigs.create("release") {
+                storeFile = keystoreFile
+                storePassword = storePasswordValue
+                keyAlias = keyAliasValue
+                keyPassword = keyPasswordValue
+            }
+        } else {
+            null
+        }
+    }
+
     defaultConfig {
         applicationId = "app.amatsubu"
 
-        versionCode = 22
-        versionName = "0.19.9"
+        versionCode = 23
+        versionName = "0.1.0-alpha.1"
 
+        buildConfigField("String", "MIHON_BASE_VERSION", "\"0.20.0\"")
+        buildConfigField("String", "MIHON_BASE_COMMIT", "\"b8e5f22c0\"")
         buildConfigField("String", "COMMIT_COUNT", "\"${getLatestCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getLatestCommitSha()}\"")
         buildConfigField("String", "BUILD_TIME", "\"${getBuildTime(useLatestCommitTime = false)}\"")
@@ -37,6 +95,9 @@ android {
         val release = getByName("release") {
             isMinifyEnabled = Config.enableCodeShrink
             isShrinkResources = Config.enableCodeShrink
+            releaseSigningConfig?.let {
+                signingConfig = it
+            }
 
             isProfileable = true
 

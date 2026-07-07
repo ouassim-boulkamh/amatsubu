@@ -67,7 +67,14 @@ class ServerLibraryDerivedStateTest {
     fun `device copy count excludes hidden scanlators`() {
         val chapters = listOf(
             chapter(id = 1, read = false, downloaded = false, bookmarked = false, scanlator = "kept", uploadDate = 10),
-            chapter(id = 2, read = false, downloaded = false, bookmarked = false, scanlator = "hidden", uploadDate = 20),
+            chapter(
+                id = 2,
+                read = false,
+                downloaded = false,
+                bookmarked = false,
+                scanlator = "hidden",
+                uploadDate = 20,
+            ),
         )
 
         val count = chapters.deviceCopyCount(

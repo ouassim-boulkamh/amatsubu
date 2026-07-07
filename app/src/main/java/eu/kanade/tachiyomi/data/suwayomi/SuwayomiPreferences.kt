@@ -8,8 +8,8 @@ import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import java.io.IOException
 import java.net.ConnectException
-import java.net.URI
 import java.net.SocketTimeoutException
+import java.net.URI
 import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
 

@@ -7,12 +7,12 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.metadata.comicinfo.ComicInfo
-import tachiyomi.core.metadata.comicinfo.ComicInfo.SourceMihon as ComicInfoSource
 import tachiyomi.core.metadata.comicinfo.ComicInfoPublishingStatus
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import tachiyomi.core.metadata.comicinfo.ComicInfo.SourceMihon as ComicInfoSource
 
 // TODO: move these into the domain model
 val Manga.readingMode: Long

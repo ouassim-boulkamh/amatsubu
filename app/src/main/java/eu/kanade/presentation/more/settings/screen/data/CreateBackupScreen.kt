@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:filename")
+
 package eu.kanade.presentation.more.settings.screen.data
 
 import android.content.ActivityNotFoundException
@@ -18,9 +20,9 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.WarningBanner
 import eu.kanade.presentation.util.Screen
+import eu.kanade.tachiyomi.data.backup.create.BackupOptions
 import eu.kanade.tachiyomi.data.backup.create.ServerBackupCreateJob
 import eu.kanade.tachiyomi.data.backup.create.ServerBackupCreator
-import eu.kanade.tachiyomi.data.backup.create.BackupOptions
 import eu.kanade.tachiyomi.util.system.DeviceUtil
 import eu.kanade.tachiyomi.util.system.toast
 import tachiyomi.i18n.MR
@@ -81,7 +83,6 @@ class ServerCreateBackupScreen : Screen() {
                         WarningBanner(MR.strings.restore_miui_warning)
                     }
                 }
-
             }
         }
     }

@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:filename")
+
 package eu.kanade.tachiyomi.ui.reader
 
 import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyFreshness
