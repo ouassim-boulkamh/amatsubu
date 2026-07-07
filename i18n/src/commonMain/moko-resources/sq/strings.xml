@@ -25,7 +25,6 @@
     <string name="action_webview_forward">Përpara</string>
     <string name="action_webview_refresh">Rifresko</string>
     <string name="app_not_available">Aplikacioni i padisponueshem</string>
-    <string name="pref_downloads_summary">Shkarkim automatik, shkarko përpara</string>
     <string name="theme_dark">Errët</string>
     <string name="theme_greenapple">Molle jeshile</string>
     <string name="theme_lavender">Livando</string>
@@ -75,7 +74,7 @@
     <string name="getting_started_guide">Udhëzues për fillimin</string>
     <string name="information_no_entries_found">Nuk u gjet asnjë element në këtë kategori</string>
     <string name="information_empty_category">Nuk ke kategori. Prekni butonin plus për të krijuar një për organizimin e bibliotekës tuaj.</string>
-    <string name="information_webview_required">WebView kërkohet për Mihon</string>
+    <string name="information_webview_required">WebView kërkohet për Amatsubu</string>
     <string name="information_cloudflare_bypass_failure">Dështoi të anashkalojë Cloudflare</string>
     <string name="information_empty_category_dialog">Nuk ke ende asnjë kategori.</string>
     <string name="download_notifier_download_paused">Shkarkimet u ndërprenë</string>
@@ -86,12 +85,9 @@
     <string name="channel_common">I përbashkët</string>
     <string name="spen_next_page">Faqja tjetër</string>
     <string name="spen_previous_page">Faqja e meparshme</string>
-    <string name="channel_ext_updates">Përditësimet shtesë</string>
-    <string name="channel_app_updates">Përditësimet e aplikacioneve</string>
     <string name="channel_new_chapters">Përditësimet e kapitullit</string>
     <string name="download_notifier_cache_renewal">Shkarkimet e indeksimit</string>
     <string name="download_notifier_split_page_not_found">Faqja %d nuk u gjet gjatë ndarjes</string>
-    <string name="download_notifier_downloader_title">Shkarkues</string>
     <string name="information_webview_outdated">Përditësoni aplikacionin WebView për përputhshmëri më të mirë</string>
     <string name="label_default">E paracaktuar</string>
     <string name="action_filter_tracked">I gjurmuar</string>
@@ -144,7 +140,6 @@
     <string name="pref_library_summary">Kategoritë, përditësimi global</string>
     <string name="pref_category_library">Biblioteka</string>
     <string name="pref_category_reader">Lexues</string>
-    <string name="pref_category_downloads">Shkarkimet</string>
     <string name="pref_category_tracking">Gjurmimi</string>
     <string name="pref_browse_summary">Burimet, zgjerimet, kërkimi global</string>
     <string name="pref_backup_summary">Rezervime manuale &amp; automatike</string>
@@ -247,7 +242,6 @@
     <string name="ext_info_age_rating">Vlerësimi i moshës</string>
     <string name="ext_nsfw_short">18+</string>
     <string name="ext_nsfw_warning">Burimet nga kjo shtesë mund të përmbajnë përmbajtje NSFW (18+)</string>
-    <string name="ext_install_service_notif">Po instalon shtesën…</string>
     <string name="ext_installer_pref">Instalues</string>
     <string name="pref_fullscreen">Ekran i plotë</string>
     <string name="pref_show_navigation_mode">Shfaq mbivendosjen e zonave të prekjes</string>
@@ -289,14 +283,12 @@
     <string name="ext_installer_legacy">Trashëgimia</string>
     <string name="untrusted_extension_message">Kjo shtesë u nënshkrua me një certifikatë të pabesueshme dhe nuk u aktivizua.
 \n
-\n Një shtesë me qëllim të keq mund të lexojë çdo kredencial identifikimi të ruajtur në Mihon ose të ekzekutojë kod arbitrar.
+\n Një shtesë me qëllim të keq mund të lexojë çdo kredencial identifikimi të ruajtur në Amatsubu ose të ekzekutojë kod arbitrar.
 \n
 \n Duke i besuar kësaj certifikate ju i pranoni këto rreziqe.</string>
     <string name="obsolete_extension_message">Kjo shtesë nuk është më e disponueshme. Mund të mos funksionojë siç duhet dhe mund të shkaktojë probleme me aplikacionin. Rekomandohet ta çinstaloni.</string>
     <string name="ext_info_language">Gjuha</string>
     <string name="pref_read_with_volume_keys">Çelsat e volumit</string>
-    <string name="ext_installer_shizuku_stopped">Shizuku nuk po kandidon</string>
-    <string name="ext_installer_shizuku_unavailable_dialog">Instaloni dhe filloni Shizuku për të përdorur Shizuku si instalues shtesë.</string>
     <string name="pref_page_transitions">Animoni tranzicionet e faqeve</string>
     <string name="pref_show_reading_mode_summary">Trego shkurtimisht modalitetin aktual kur hapet lexuesi</string>
     <string name="pref_create_folder_per_manga">Ruani faqet në dosje të veçanta</string>
@@ -333,15 +325,9 @@
     <string name="pref_category_reading_mode">Modaliteti i leximit</string>
     <string name="pref_highest">Më e larta</string>
     <string name="pref_low">E ulët</string>
-    <string name="pref_category_delete_chapters">Fshi kapitujt</string>
     <string name="pref_remove_exclude_categories">Kategoritë e përjashtuara</string>
     <string name="invalid_location">Vendndodhja e pavlefshme: %s</string>
-    <string name="last_read_chapter">Kapitulli i fundit i lexuar</string>
-    <string name="fourth_to_last">Kapitulli i katërt deri tek i fundit i lexuar</string>
     <string name="pref_category_auto_download">Shkarkim-automatik</string>
-    <string name="pref_download_new">Shkarkoni kapitujt e rinj</string>
-    <string name="download_ahead">Shkarkoni përpara</string>
-    <string name="auto_download_while_reading">Shkarkim automatik gjatë leximit</string>
     <string name="save_chapter_as_cbz">Ruaje si arkiv CBZ</string>
     <string name="tracking_guide">Udhëzues gjurmimi</string>
     <string name="enhanced_services">Gjurmues të përmirësuara</string>
@@ -373,16 +359,9 @@
     <string name="pref_high">E lartë</string>
     <string name="pref_lowest">Më e ulëta</string>
     <string name="pref_remove_after_marked_as_read">Pasi është shënuar manualisht si e lexuar</string>
-    <string name="pref_remove_after_read">Pas leximit fshi automatikisht</string>
     <string name="pref_remove_bookmarked_chapters">Lejo fshirjen e kapitujve të shënuar</string>
-    <string name="second_to_last">Kapitulli i dytë deri tek i fundit i lexuar</string>
-    <string name="third_to_last">Kapitulli i tretë deri tek i fundit i lexuar</string>
-    <string name="fifth_to_last">Kapitulli i pestë deri tek i fundit i lexuar</string>
-    <string name="pref_download_new_categories_details">Elementet në kategoritë e përjashtuara nuk do të shkarkohen edhe nëse janë gjithashtu në kategoritë e përfshira.</string>
-    <string name="download_ahead_info">Punon vetëm në hyrjet në bibliotekë dhe nëse kapitulli aktual plus kapitulli tjetër janë shkarkuar tashmë</string>
     <string name="services">Gjurmuesët</string>
     <string name="split_tall_images_summary">Përmirëson performancën e lexuesit</string>
-    <string name="pref_auto_update_manga_sync">Përditëso progresin pas leximit</string>
     <string name="tracking_info">Sinkronizimi i njëanshëm për të përditësuar përparimin e kapitullit në shërbimet e gjurmimit. Konfiguro gjurmimin për elementet individuale nga butoni i tyre i gjurmimit.</string>
     <string name="action_filter_bookmarked">Faqeshënuar</string>
     <string name="webtoon_viewer">Webtoon</string>
@@ -422,9 +401,6 @@
     <string name="pref_clear_history">Pastro historinë</string>
     <string name="skipped_reason_completed">U anashkalua sepse seria ka përfunduar</string>
     <string name="file_select_cover">Zgjidhni imazhin e kopertinës</string>
-    <string name="update_check_open">Hapni në GitHub</string>
-    <string name="update_check_confirm">Shkarko</string>
-    <string name="update_check_notification_download_complete">Prekni për të instaluar përditësimin</string>
     <string name="transition_no_previous">Nuk ka kapitull të mëparshëm</string>
     <string name="database_clean">Asgjë për të pastruar</string>
     <string name="notification_incognito_text">Çaktivizo modalitetin e fshehtë</string>
@@ -446,7 +422,6 @@
     <string name="manga_info_expand">Më shumë</string>
     <string name="chapter_settings">Cilësimet e kapitullit</string>
     <string name="crash_screen_title">Ups!</string>
-    <string name="update_check_notification_download_error">Gabim shkarkimi</string>
     <string name="pref_invalidate_download_cache">Anuloni indeksin e shkarkimeve</string>
     <string name="pref_auto_clear_chapter_cache">Pastro memorjen e kapitullit në mbylljen e aplikacionit</string>
     <string name="pref_clear_database">Pastro bazën e të dhënave</string>
@@ -522,7 +497,6 @@
     <string name="pref_dump_crash_logs_summary">Ruan regjistrat e gabimeve në një skedar për t\'i ndarë me zhvilluesit</string>
     <string name="battery_optimization_disabled">Optimizimi i baterisë është tashmë i çaktivizuar</string>
     <string name="battery_optimization_setting_activity_not_found">Cilësimet e pajisjes nuk mund të hapeshin</string>
-    <string name="check_for_updates">Kontrolloni për përditësime</string>
     <string name="pref_enable_acra">Dërgoni raporte përplasjesh</string>
     <string name="pref_acra_summary">Ndihmon në rregullimin e çdo defekti. Nuk do të dërgohen të dhëna sensitive</string>
     <string name="fdroid_warning">Ndërtimet e F-Droid nuk mbështeten zyrtarisht.
@@ -607,7 +581,6 @@
     <string name="migration_help_guide">Udhëzuesi i migrimit të burimit</string>
     <string name="migration_selection_prompt">Zgjidhni një burim për të migruar</string>
     <string name="migrate">Migroni</string>
-    <string name="crash_screen_description">%s hasi në një gabim të papritur. Ne ju sugjerojmë që të fotografoni këtë mesazh, të hidhni regjistrat e aksidenteve dhe më pas ta shpërndani në kanalin tonë të mbështetjes në Discord.</string>
     <string name="crash_screen_restart_application">Rinisni aplikacionin</string>
     <string name="download_insufficient_space">Kapitujt nuk mund të shkarkoheshin për shkak të hapësirës së ulët të ruajtjes</string>
     <string name="download_queue_size_warning">Paralajmërim: shkarkimet e mëdha me shumicë mund të çojnë në ngadalësimin e burimeve dhe/ose bllokimin e %s. Trokit për të mësuar më shumë.</string>
@@ -618,9 +591,6 @@
     <string name="skipped_reason_not_started">U anashkalua sepse nuk lexohet asnjë kapitull</string>
     <string name="skipped_reason_not_always_update">U anashkalua sepse seritë nuk kërkojnë përditësime</string>
     <string name="file_select_backup">Zgjidhni skedarin rezervë</string>
-    <string name="update_check_no_new_updates">Nuk disponohen përditësime të reja</string>
-    <string name="update_check_notification_download_in_progress">Po shkarkohet…</string>
-    <string name="update_check_notification_update_available">Versioni i ri në dispozicion!</string>
     <string name="chapter_settings_updated">Cilësimet e kapitullit të parazgjedhur të përditësuara</string>
     <string name="theme_midnightdusk">Perëndim Mesnate</string>
     <string name="pref_restore_backup_summ">Rivendosni bibliotekën nga skedari rezervë</string>
@@ -641,7 +611,6 @@
     <string name="confirm_set_chapter_settings">Jeni i sigurt që dëshironi t\'i ruani këto cilësime si parazgjedhje?</string>
     <string name="dialog_with_checkbox_remove_description">Kjo do të heqë datën e leximit të këtij kapitulli. A je i sigurt?</string>
     <string name="track_remove_start_date_conf_text">Kjo do të heqë datën e fillimit të zgjedhur më parë nga %s</string>
-    <string name="update_check_eol">Ky version Android nuk mbështetet më</string>
     <string name="website">Faqja e internetit</string>
     <string name="version">Version</string>
     <string name="whats_new">Cfare ka te re</string>

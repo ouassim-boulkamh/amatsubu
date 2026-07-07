@@ -12,22 +12,21 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.updates.interactor.GetUpdates
 
 class WidgetManager(
-    private val getUpdates: GetUpdates,
+    private val updatesWidgetDataSource: UpdatesWidgetDataSource,
     private val securityPreferences: SecurityPreferences,
 ) {
 
     fun Context.init(scope: LifecycleCoroutineScope) {
         combine(
-            getUpdates.subscribe(read = false, after = BaseUpdatesGridGlanceWidget.DateLimit.toEpochMilli()),
+            updatesWidgetDataSource.subscribe(WIDGET_REFRESH_LIMIT),
             securityPreferences.useAuthenticator.changes(),
             transform = { a, b -> a to b },
         )
             .distinctUntilChanged { old, new ->
                 old.second == new.second &&
-                    old.first.map { it.chapterId }.toSet() == new.first.map { it.chapterId }.toSet()
+                    old.first.map { it.mangaId }.toSet() == new.first.map { it.mangaId }.toSet()
             }
             .onEach {
                 try {
@@ -39,5 +38,9 @@ class WidgetManager(
             }
             .flowOn(Dispatchers.Default)
             .launchIn(scope)
+    }
+
+    private companion object {
+        const val WIDGET_REFRESH_LIMIT = 24
     }
 }

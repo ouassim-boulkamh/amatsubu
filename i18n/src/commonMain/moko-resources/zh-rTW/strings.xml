@@ -65,7 +65,6 @@
     <string name="app_not_available">應用程式無法使用</string>
     <string name="pref_category_general">一般</string>
     <string name="pref_category_reader">閱讀</string>
-    <string name="pref_category_downloads">下載</string>
     <string name="pref_category_advanced">進階</string>
     <string name="pref_category_about">關於</string>
     <string name="portrait">直向</string>
@@ -109,7 +108,6 @@
     <string name="color_filter_a_value">阿爾法</string>
     <string name="pref_remove_after_marked_as_read">手動標示為已讀後</string>
     <string name="disabled">已停用</string>
-    <string name="pref_download_new">自動下載新章節</string>
     <string name="services">歷程平臺</string>
     <string name="pref_create_backup">建立備份</string>
     <string name="pref_restore_backup">還原備份</string>
@@ -139,12 +137,6 @@
     <string name="set_as_cover">設為封面</string>
     <string name="cover_updated">已更新封面</string>
     <string name="copy">副本</string>
-    <string name="update_check_confirm">下載</string>
-    <string name="update_check_no_new_updates">沒有可用的更新</string>
-    <string name="update_check_notification_download_in_progress">正在下載更新…</string>
-    <string name="update_check_notification_download_complete">輕觸即可更新</string>
-    <string name="update_check_notification_download_error">更新下載失敗</string>
-    <string name="update_check_notification_update_available">有可用的更新！</string>
     <string name="information_no_downloads">尚無下載作業</string>
     <string name="download_notifier_title_error">錯誤</string>
     <string name="download_notifier_text_only_wifi">沒有可用的 Wi-Fi 連線</string>
@@ -226,7 +218,6 @@
     <string name="notification_first_add_to_library">請先將作品收藏至書櫃</string>
     <string name="file_select_backup">選擇備份檔</string>
     <string name="information_empty_category">尚無任何類別，輕觸新增按鈕即可建立類別以組織你的書櫃</string>
-    <string name="download_notifier_downloader_title">下載管理</string>
     <string name="download_unread">未讀</string>
     <string name="confirm_set_image_as_cover">要將該圖片設為封面嗎？</string>
     <string name="transition_pages_loading">正在載入頁面…</string>
@@ -243,7 +234,6 @@
     <string name="transition_next">接下來：</string>
     <string name="notification_new_chapters">發現新章節</string>
     <string name="pref_skip_read_chapters">略過已讀的章節</string>
-    <string name="pref_remove_after_read">翻閱過後自動刪除</string>
     <string name="transition_no_next">以下空白</string>
     <string name="transition_no_previous">已達盡頭</string>
     <string name="transition_pages_error">頁面載入失敗：%1$s</string>
@@ -252,12 +242,10 @@
     <string name="track">歷程</string>
     <string name="action_open_log">檢視記錄檔</string>
     <string name="pref_category_tracking">歷程</string>
-    <string name="pref_auto_update_manga_sync">閱後自動更新章節進度</string>
     <string name="ext_trust">信任</string>
     <string name="ext_untrusted">未信任</string>
     <string name="untrusted_extension">未受信任的擴充套件</string>
     <string name="untrusted_extension_message">惡意的擴充套件可能會讀取任何已儲存的登入認證或執行任意的程式碼\n\n若選擇信任該擴充套件，即表示你願意承擔上述風險</string>
-    <string name="last_read_chapter">最後閱畢的章節</string>
     <string name="latest">最新</string>
     <string name="manga_tracking_tab">歷程</string>
     <string name="reading">閱讀中</string>
@@ -270,10 +258,6 @@
     <string name="migration_dialog_what_to_include">選擇欲處理的項目</string>
     <string name="download_queue_error">該章節無法下載，請再試一次</string>
     <string name="download_notifier_unknown_error">下載時發生不可預期的錯誤</string>
-    <string name="second_to_last">倒數第二閱畢的章節</string>
-    <string name="third_to_last">倒數第三閱畢的章節</string>
-    <string name="fourth_to_last">倒數第四閱畢的章節</string>
-    <string name="fifth_to_last">倒數第五閱畢的章節</string>
     <string name="dropped">已拋棄</string>
     <string name="on_hold">擱置中</string>
     <string name="no_results_found">找不到結果</string>
@@ -292,7 +276,6 @@
     <string name="label_downloaded_only">僅限下載內容</string>
     <string name="licenses">開放原始碼授權</string>
     <string name="website">網站</string>
-    <string name="check_for_updates">檢查更新</string>
     <string name="label_more">其他</string>
     <string name="manga_info_expand">更多</string>
     <string name="lock_never">永不</string>
@@ -304,7 +287,6 @@
     <string name="pref_category_security">隱私</string>
     <string name="hide_notification_content">隱藏通知內容</string>
     <string name="pref_manage_notifications">管理通知設定</string>
-    <string name="channel_ext_updates">擴充套件更新</string>
     <string name="action_display_show_tabs">類別索引</string>
     <string name="tabs_header">頁籤</string>
     <string name="gray_background">灰色</string>
@@ -405,7 +387,6 @@
     <string name="ext_nsfw_warning">來自此擴充套件的來源可能包含未滿十八歲之人不宜觀賞的內容</string>
     <string name="invalid_backup_file_missing_manga">備份檔並未包含任何書櫃中的作品</string>
     <string name="pref_remove_bookmarked_chapters">允許刪除有書籤的章節</string>
-    <string name="pref_category_delete_chapters">刪除章節</string>
     <string name="chapter_settings_updated">已更新章節設定預設值</string>
     <string name="action_search_settings">搜尋設定</string>
     <string name="chapter_settings">章節設定</string>
@@ -461,10 +442,8 @@
     <string name="include">包含：%s</string>
     <string name="none">無</string>
     <string name="action_show_errors">輕觸以檢視詳細資訊</string>
-    <string name="update_check_eol">不再支援此 Android 版本</string>
     <string name="clipboard_copy_error">無法複製到剪貼簿</string>
     <string name="backup_restore_content_full">你可能需要安裝任何缺少的擴充套件並重新登入各歷程平臺以開始使用</string>
-    <string name="pref_download_new_categories_details">類別同時屬於「排除」及「包含」的作品，將不會自動下載</string>
     <string name="pref_create_folder_per_manga">儲存頁面至個別資料夾</string>
     <string name="pref_create_folder_per_manga_summary">根據作品標題建立資料夾</string>
     <string name="pref_show_navigation_mode_summary">開始閱讀時，短暫浮現輕觸區域</string>
@@ -524,11 +503,8 @@
     <string name="help_translate">協助翻譯</string>
     <string name="pref_remove_exclude_categories">排除的類別</string>
     <string name="ext_app_info">程式資訊</string>
-    <string name="ext_installer_shizuku_unavailable_dialog">若要使用 Shizuku 來安裝擴充套件，請先安裝 Shizuku 並開啟</string>
     <string name="ext_installer_legacy">傳統</string>
-    <string name="ext_installer_shizuku_stopped">Shizuku 未執行</string>
     <string name="ext_installer_pref">套件安裝程式</string>
-    <string name="ext_install_service_notif">正在安裝擴充套件…</string>
     <string name="action_sort_count">作品總數</string>
     <string name="action_display_language_badge">語言</string>
     <string name="label_warning">警告</string>
@@ -540,7 +516,6 @@
     <string name="update_72hour">每 3 天</string>
     <string name="download_queue_size_warning">警告：大量批次下載可能壅塞來源，甚至使其封鎖 %s，輕觸以瞭解詳情</string>
     <string name="ext_update_all">全部更新</string>
-    <string name="channel_app_updates">應用程式更新</string>
     <string name="pref_auto_clear_chapter_cache">啟動應用程式時清除章節快取</string>
     <string name="clear_database_source_item_count">資料庫中有 %1$d 部作品未加入書櫃</string>
     <string name="database_clean">無須清理</string>
@@ -565,7 +540,6 @@
     <string name="action_move_to_top_all_for_series">置頂此作品</string>
     <string name="disabled_nav">停用</string>
     <string name="empty_backup_error">書櫃中尚無作品可供備份</string>
-    <string name="update_check_open">在 GitHub 上檢視</string>
     <string name="error_saving_picture">儲存圖片錯誤</string>
     <string name="pref_clear_webview_data">清除 WebView 資料</string>
     <string name="webview_data_deleted">已清除 WebView 資料</string>
@@ -608,9 +582,6 @@
     <string name="update_already_running">已在進行更新</string>
     <string name="error_user_agent_string_blank">使用者代理字串不得為空</string>
     <string name="theme_tidalwave">潮浪</string>
-    <string name="download_ahead">預先下載</string>
-    <string name="auto_download_while_reading">閱讀時自動下載</string>
-    <string name="download_ahead_info">僅於目前章節及下一章節皆已下載時生效</string>
     <string name="are_you_sure">你確定嗎？</string>
     <string name="multi_lang">多語</string>
     <string name="remove_manga">即將從書櫃中移除《%s》</string>
@@ -621,14 +592,12 @@
     <string name="action_search_hint">搜尋…</string>
     <string name="pref_reader_summary">閱讀模式、檢視、導覽</string>
     <string name="pref_appearance_summary">主題、日期格式</string>
-    <string name="pref_downloads_summary">自動下載、預先下載</string>
     <string name="pref_tracking_summary">單向進度同步、增強式同步</string>
     <string name="pref_backup_summary">手動與自動備份、儲存空間</string>
     <string name="pref_security_summary">上鎖應用程式、防窺畫面</string>
     <string name="pref_advanced_summary">傾印當機記錄、電池效能最佳化</string>
     <string name="crash_screen_restart_application">重新啟動應用程式</string>
     <string name="crash_screen_title">哎呀！</string>
-    <string name="crash_screen_description">「%s」發生了未預期的錯誤，我們建議你將崩潰日誌分享至我們位於 Discord 上的頻道</string>
     <string name="pref_library_summary">類別、全域更新、目錄滑動動作</string>
     <string name="pref_browse_summary">來源、擴充套件、全域搜尋</string>
     <string name="invalid_location">無效的位置：%s</string>
@@ -759,7 +728,16 @@
     <string name="manga_interval_expected_update">預計 %1$s後更新，每 %2$s檢查一次</string>
     <string name="invalid_backup_file_error">完整錯誤訊息：</string>
     <string name="manga_interval_custom_amount">自訂更新頻率：</string>
+    <string name="label_add_repo_input">儲存庫網址</string>
+    <string name="error_repo_exists">已有該儲存庫！</string>
     <string name="pref_library_update_smart_update">智慧更新</string>
+    <string name="invalid_repo_name">無效的儲存庫網址</string>
+    <string name="action_add_repo_message">將額外的擴充套件儲存庫新增至 %s，此處應填入一個結尾為「index.min.json」的網址</string>
+    <string name="delete_repo_confirmation">確定要刪除「%s」儲存庫嗎？</string>
+    <string name="action_delete_repo">刪除儲存庫</string>
+    <string name="action_add_repo">新增儲存庫</string>
+    <string name="information_empty_repos">尚未新增任何儲存庫</string>
+    <string name="label_extension_repos">擴充套件儲存庫</string>
     <string name="onboarding_storage_help_action">儲存空間指南</string>
     <string name="onboarding_storage_help_info">從舊版升級而不確定該如何選擇嗎？請參閱儲存空間指南以取得更多資訊</string>
     <string name="theme_nord">北風</string>
@@ -769,6 +747,9 @@
     <string name="pref_webtoon_disable_zoom_out">停用縮小</string>
     <string name="pref_display_profile">自訂顯示設定檔</string>
     <string name="action_add_anyway">仍要新增</string>
+    <string name="action_replace_repo">取代</string>
+    <string name="action_replace_repo_title">已有相同的簽署金鑰指紋</string>
+    <string name="action_replace_repo_message">「%1$s」儲存庫的簽署金鑰指紋與「%2$s」相同\n若此為預期現象，則「%2$s」將被取代，否則請聯絡該儲存庫的維護者</string>
     <string name="upcoming_guide">即將推出的指南</string>
     <string name="upcoming_calendar_next">下個月</string>
     <string name="upcoming_calendar_prev">上個月</string>
@@ -785,8 +766,9 @@
     <string name="pref_flash_style_black">黑</string>
     <string name="invalid_backup_file_unknown">備份檔案已損壞</string>
     <string name="invalid_backup_file_json">不支援 JSON 備份</string>
+    <string name="extensionRepo_settings">擴充套件儲存庫</string>
     <string name="action_copy_link">複製連結</string>
-    <string name="pref_download_new_unread_chapters_only">略過下載重複閱讀的章節</string>
+    <string name="add_repo_confirmation">您想新增儲存庫\"%s\"嗎？</string>
     <string name="confirm_tracker_update">將進度更新到第 %d 章？</string>
     <string name="onboarding_permission_analytics">允許資料分析</string>
     <string name="onboarding_permission_analytics_description">傳送匿名使用資料來改進應用程式功能</string>
@@ -800,7 +782,6 @@
     <string name="ext_confirm_remove">解除安裝擴充套件？</string>
     <string name="remove_private_extension_message">您真的要解除安裝「%s」擴充套件嗎？</string>
     <string name="non_library_settings">所有已閱讀的作品</string>
-    <string name="pref_auto_update_manga_on_mark_read">標記為已讀時更新章節進度</string>
     <string name="trackers_updated_summary">已更新歷程到第%d章</string>
     <string name="pref_hardware_bitmap_threshold">自訂硬體點陣圖的閾值設定</string>
     <string name="pref_hardware_bitmap_threshold_summary">如果閱讀時載入的是空白影像，請逐步降低閾值\n已選擇：%s</string>
@@ -843,7 +824,7 @@
     <string name="migrationConfigScreen.selectNoneLabel">全不選</string>
     <string name="migrationConfigScreen.selectEnabledLabel">選擇已啟用的來源</string>
     <string name="migrationConfigScreen.selectPinnedLabel">選擇已釘選的來源</string>
-    <string name="migrationConfigScreen.continueButtonText">繼續</string>
+    <string name="migrationConfigScreen.continueButtonText">繼续</string>
     <string name="migrationConfigScreen.dataToMigrateHeader">遷移日期</string>
     <string name="pref_hide_missing_chapter_indicators">隱藏缺少章節指示器</string>
     <string name="migrationConfigScreen.removeDownloadsTitle">遷移後刪除目前項目的下載</string>
@@ -885,17 +866,4 @@
     <string name="action_webview_close_tab">關閉頁籤</string>
     <string name="action_filter_excluded_scanlators">篩選排除掃譯者</string>
     <string name="download_bookmarked">已新增書籤</string>
-    <string name="label_support_us">支持我們</string>
-    <string name="supportUsScreen.contactPlatform">Discord</string>
-    <string name="donationCampaign.contactPlatform">Discord</string>
-    <string name="supportUsScreen.perks">贊助者可使用專屬頻道，未來也會提供更多福利。</string>
-    <string name="supportUsScreen.donationPlatform.patreon">Patreon（建議優先使用）</string>
-    <string name="supportUsScreen.donationPlatform.opencollective">OpenCollective</string>
-    <string name="supportUsScreen.currentlySupportedBy">Mihon 目前由 %d 位以上的贊助者支持。感謝每一位的支持，讓我們一起讓 Mihon 變得更好。</string>
-    <string name="supportUsScreen.contactForDetailsMessage">如需其他贊助方式或有相關問題，請加入我們的 Discord 伺服器。</string>
-    <string name="donationCampaign.title">喜歡這個 App 嗎？</string>
-    <string name="donationCampaign.paragraph1">您好！我是 Mihon 的主要開發者，想邀請您考慮以金錢方式支持本專案的開發。若能獲得足夠的支持，將能全職投入 Mihon 的開發，專注解決長期存在的問題，以及實作許多使用者期待已久的功能。</string>
-    <string name="donationCampaign.paragraph2">您可以透過 Patreon（建議優先使用）或 OpenCollective 進行贊助。如果有任何問題，或希望透過其他方式支持，歡迎透過 Mihon 的 Discord 伺服器與我聯繫。</string>
-    <string name="donationCampaign.paragraph3">無論是否贊助，Mihon 都會持續由我與志工維護，並且維持開源。</string>
-    <string name="donationCampaign.dismiss">關閉</string>
 </resources>

@@ -66,7 +66,6 @@
     <string name="dialog_with_checkbox_reset">Сбросить все главы для этой серии</string>
     <string name="disabled">Отключено</string>
     <string name="display_mode_chapter">Глава %1$s</string>
-    <string name="download_notifier_downloader_title">Загрузчик</string>
     <string name="download_notifier_no_network">Нет соединения с сетью</string>
     <string name="download_notifier_text_only_wifi">Нет соединения Wi-Fi</string>
     <string name="download_notifier_title_error">Ошибка</string>
@@ -75,10 +74,8 @@
     <string name="download_unread">Непрочитанные главы</string>
     <string name="dropped">Брошено</string>
     <string name="error_category_exists">Категория с таким названием уже существует!</string>
-    <string name="fifth_to_last">Пятая от прочитанной главы</string>
     <string name="file_select_backup">Выбрать файл резервной копии</string>
     <string name="file_select_cover">Выбрать обложку</string>
-    <string name="fourth_to_last">Четвёртая от прочитанной главы</string>
     <string name="information_empty_library">Ваша библиотека пуста</string>
     <string name="information_no_downloads">Нет загрузок</string>
     <string name="information_no_recent">Нет новых обновлений</string>
@@ -90,7 +87,6 @@
     <string name="label_recent_updates">Обновления</string>
     <string name="label_settings">Настройки</string>
     <string name="landscape">Альбомная</string>
-    <string name="last_read_chapter">Последняя прочитанная глава</string>
     <string name="left_to_right_viewer">Постранично (Слева направо)</string>
     <string name="licensed">Лицензировано</string>
     <string name="loading">Загрузка…</string>
@@ -111,10 +107,8 @@
     <string name="plan_to_read">Планирую прочесть</string>
     <string name="portrait">Портретная</string>
     <string name="pref_acra_summary">Помогает исправлять все возможные ошибки. Данные пользователя не передаются</string>
-    <string name="pref_auto_update_manga_sync">Обновлять прогресс после прочтения</string>
     <string name="pref_category_about">Информация</string>
     <string name="pref_category_advanced">Дополнительно</string>
-    <string name="pref_category_downloads">Загрузки</string>
     <string name="pref_category_general">Основные</string>
     <string name="pref_category_reader">Читалка</string>
     <string name="pref_category_tracking">Отслеживание</string>
@@ -124,7 +118,6 @@
     <string name="pref_clear_database_summary">Удалить историю для серий, которые не находятся в библиотеке</string>
     <string name="pref_custom_brightness">Пользовательская яркость</string>
     <string name="pref_custom_color_filter">Пользовательский светофильтр</string>
-    <string name="pref_download_new">Загружать новые главы</string>
     <string name="pref_enable_acra">Отправлять отчёты об сбоях</string>
     <string name="pref_page_transitions">Анимированные переходы страниц</string>
     <string name="pref_fullscreen">Полноэкранный режим</string>
@@ -137,7 +130,6 @@
     <string name="pref_reader_navigation">Навигация</string>
     <string name="pref_reader_theme">Цвет фона</string>
     <string name="pref_remove_after_marked_as_read">Удалять помеченое вручную как «Прочитано»</string>
-    <string name="pref_remove_after_read">Удалять после прочтения</string>
     <string name="pref_rotation_type">Ориентация по умолчанию</string>
     <string name="pref_show_page_number">Номер страницы</string>
     <string name="pref_update_only_non_completed">Пропускать завершённые серии</string>
@@ -156,7 +148,6 @@
     <string name="scale_type_smart_fit">Умное</string>
     <string name="scale_type_stretch">Растянуть</string>
     <string name="score">Оценка</string>
-    <string name="second_to_last">Предпоследняя прочитанная глава</string>
     <string name="services">Сервисы отслеживания</string>
     <string name="set_as_cover">Установить как обложку</string>
     <string name="show_chapter_number">Номер главы</string>
@@ -165,7 +156,6 @@
     <string name="sort_by_number">Номер главы</string>
     <string name="sort_by_source">Источник</string>
     <string name="status">Статус</string>
-    <string name="third_to_last">Третья от прочитанной главы</string>
     <string name="title">Название</string>
     <string name="unknown">Неизвестно</string>
     <string name="unknown_error">Неизвестная ошибка</string>
@@ -173,12 +163,6 @@
     <string name="update_24hour">Ежедневно</string>
     <string name="update_48hour">Каждые 2 дня</string>
     <string name="update_6hour">Каждые 6 часов</string>
-    <string name="update_check_confirm">Загрузить</string>
-    <string name="update_check_no_new_updates">Нет обновлений</string>
-    <string name="update_check_notification_download_complete">Нажмите для установки обновления</string>
-    <string name="update_check_notification_download_error">Ошибка загрузки</string>
-    <string name="update_check_notification_download_in_progress">Загрузка…</string>
-    <string name="update_check_notification_update_available">Доступно обновление!</string>
     <string name="update_never">Выключено</string>
     <string name="updating_category">Обновление категории</string>
     <string name="used_cache">Использовано: %1$s</string>
@@ -285,8 +269,8 @@
     <string name="action_webview_forward">Вперед</string>
     <string name="action_webview_refresh">Обновить</string>
     <string name="pref_category_library">Библиотека</string>
-    <string name="ext_obsolete">Неиспользумое</string>
-    <string name="obsolete_extension_message">Это расширение больше не находится ни в одном из хранилищ и не будет получать обновления. Оно может работать неправильно, а также вызывать проблемы с приложением. Рекомендуется его удалить.</string>
+    <string name="ext_obsolete">Устаревшее</string>
+    <string name="obsolete_extension_message">Это расширение больше недоступно. Оно может работать неправильно, а также вызвать проблемы с приложением. Рекомендуется его удалить.</string>
     <string name="pref_date_format">Формат даты</string>
     <string name="pref_category_library_update">Глобальное обновление</string>
     <string name="logout_title">Выйти из %1$s?</string>
@@ -328,7 +312,6 @@
     <string name="action_newest">Новейший</string>
     <string name="action_move_to_top">В начало</string>
     <string name="action_move_to_bottom">В конец</string>
-    <string name="channel_ext_updates">Обновления расширений</string>
     <string name="action_menu">Меню</string>
     <string name="label_sources">Источники</string>
     <string name="pref_category_reading">Чтение</string>
@@ -352,7 +335,6 @@
     <string name="local_source_help_guide">Руководство по источнику на устройстве</string>
     <string name="last_used_source">Последний использованный источник</string>
     <string name="downloaded_only_summary">Включает фильтр «Загружено» для всей библиотеки</string>
-    <string name="check_for_updates">Проверить обновления</string>
     <string name="restoring_backup_canceled">Восстановление отменено</string>
     <string name="restoring_backup_error">Ошибка восстановления из резервной копии</string>
     <string name="restore_in_progress">Восстановление уже выполняется</string>
@@ -405,7 +387,6 @@
     <string name="channel_errors">Ошибки</string>
     <string name="backup_restore_missing_trackers">Сервисы отслеживания в которые не выполнен вход:</string>
     <string name="pref_remove_bookmarked_chapters">Удалять главы с закладками</string>
-    <string name="pref_category_delete_chapters">Удаление глав</string>
     <string name="ext_nsfw_warning">Источики из этого расширения могут содержать контент NSFW (18+)</string>
     <string name="ext_nsfw_short">18+</string>
     <string name="parental_controls_info">Это не предотвращает появление внутри приложения контента NSFW (18+) из неофициальных или потенциально неправильно помеченных расширений.</string>
@@ -461,11 +442,9 @@
     <string name="exclude">Исключать: %s</string>
     <string name="include">Включать: %s</string>
     <string name="action_sort_chapter_fetch_date">Последнее получение главы</string>
-    <string name="pref_download_new_categories_details">Серии в исключённых категориях не будут загружаться, даже если находятся во включённых категориях.</string>
     <string name="pref_library_update_categories_details">Серии в исключённых категориях не будут обновляться, даже если находятся во включённых категориях.</string>
     <string name="pref_category_auto_download">Автозагрузка</string>
     <string name="action_show_errors">Нажать, чтобы увидеть подробности</string>
-    <string name="update_check_eol">Эта версия Android больше не поддерживается</string>
     <string name="clipboard_copy_error">Не удалось скопировать в буфер обмена</string>
     <string name="rotation_landscape">Альбомная</string>
     <string name="rotation_portrait">Портретная</string>
@@ -527,11 +506,8 @@
     <string name="pref_remove_exclude_categories">Исключённые категории</string>
     <string name="help_translate">Помочь с переводом</string>
     <string name="ext_app_info">О приложении</string>
-    <string name="ext_installer_shizuku_unavailable_dialog">Установите и запустите Shizuku, чтобы использовать его как установщик расширений.</string>
-    <string name="ext_installer_shizuku_stopped">Shizuku не работает</string>
     <string name="ext_installer_legacy">По умолчанию</string>
     <string name="ext_installer_pref">Установщик</string>
-    <string name="ext_install_service_notif">Установка расширения…</string>
     <string name="action_sort_count">Всего серий</string>
     <string name="pref_verbose_logging">Подробное ведение журнала</string>
     <string name="pref_verbose_logging_summary">Записывать подробный журнал в системный журнал (Снижает производительность приложения)</string>
@@ -543,7 +519,6 @@
     <string name="update_72hour">Каждые 3 дня</string>
     <string name="download_queue_size_warning">Предупреждение: Большое количество загрузок может привести к замедлению работы источников и/или блокировке %s. Нажмите для подробностей.</string>
     <string name="ext_update_all">Обновить все</string>
-    <string name="channel_app_updates">Обновления приложения</string>
     <string name="pref_auto_clear_chapter_cache">Очищать кэш глав при запуске приложения</string>
     <string name="clear_database_source_item_count">%1$d не библиотечных серий в базе данных</string>
     <string name="database_clean">Нечего очищать</string>
@@ -569,7 +544,6 @@
     <string name="disabled_nav">Отключено</string>
     <string name="error_saving_picture">Не удалось сохранить изображение</string>
     <string name="empty_backup_error">Нет элементов в библиотеке для резервирования</string>
-    <string name="update_check_open">Открыть в GitHub</string>
     <string name="webview_data_deleted">Данные WebView очищены</string>
     <string name="pref_clear_webview_data">Очистить данные WebView</string>
     <string name="action_close">Закрыть</string>
@@ -611,9 +585,6 @@
     <string name="update_already_running">Обновление уже запущено</string>
     <string name="error_user_agent_string_blank">User agent не может быть пустым</string>
     <string name="theme_tidalwave">Приливная Волна</string>
-    <string name="download_ahead">Загрузить наперёд</string>
-    <string name="auto_download_while_reading">При чтении</string>
-    <string name="download_ahead_info">Работает только если текущая + следующая главы уже загружены.</string>
     <string name="are_you_sure">Вы уверены?</string>
     <string name="multi_lang">Многоязыковое</string>
     <string name="remove_manga">Вы собираетесь удалить \"%s\" из вашей библиотеки</string>
@@ -626,14 +597,12 @@
     <string name="pref_appearance_summary">Тема, формат даты и времени</string>
     <string name="pref_library_summary">Категории, глобальное обновление, перелистывание глав</string>
     <string name="pref_reader_summary">Режим чтения, отображение, навигация</string>
-    <string name="pref_downloads_summary">Автоматическая загрузка, загрузка наперёд</string>
     <string name="pref_tracking_summary">Односторонняя синхронизация прогресса, расширенная синхронизация</string>
     <string name="pref_browse_summary">Источники, расширения, глобальный поиск</string>
     <string name="pref_backup_summary">Ручные и автоматические резервные копий, хранилище</string>
     <string name="pref_security_summary">Блокировка приложения, защита экрана</string>
     <string name="pref_advanced_summary">Выгрузка журнала сбоев, оптимизация батареи</string>
     <string name="crash_screen_title">Ой, ошибочка вышла!</string>
-    <string name="crash_screen_description">%s столкнулось с непредвиденной ошибкой. Мы рекомендуем поделиться журналом сбоев в нашем Discord-сервере в ветке поддержки.</string>
     <string name="unknown_title">Неизвестное название</string>
     <string name="invalid_location">Недопустимое расположение: %s</string>
     <string name="error_user_agent_string_invalid">Недопустимый параметр user agent</string>
@@ -767,7 +736,16 @@
     <string name="invalid_backup_file_error">Полная ошибка:</string>
     <string name="manga_interval_expected_update">Выход новых глав ожидается примерно через %1$s, следующая проверка будет через %2$s.</string>
     <string name="manga_interval_custom_amount">Настраиваемая частота обновления:</string>
+    <string name="error_repo_exists">Этот репозиторий уже существует!</string>
     <string name="pref_library_update_smart_update">Умное обновление</string>
+    <string name="invalid_repo_name">Недопустимый URL-адрес репозитория</string>
+    <string name="action_add_repo_message">Добавить дополнительные репозиторий в %s. Это должны быть URL-адреса которые заканчиваться на \"index.min.json\".</string>
+    <string name="delete_repo_confirmation">Хотите ли вы удалить репозиторий \"%s\"?</string>
+    <string name="action_delete_repo">Удалить репозиторий</string>
+    <string name="action_add_repo">Добавить репозиторий</string>
+    <string name="information_empty_repos">У вас нет репозиториев.</string>
+    <string name="label_extension_repos">Репозитории расширений</string>
+    <string name="label_add_repo_input">URL-адрес репозитория</string>
     <string name="onboarding_storage_help_action">Руководство по хранению</string>
     <string name="onboarding_storage_help_info">Обновляетесь со старой версии и не знаете, что выбрать? Обратите внимание на руководство по хранению для большей информации.</string>
     <string name="manga_interval_expected_update_soon">Скоро</string>
@@ -777,6 +755,10 @@
     <string name="pref_webtoon_disable_zoom_out">Отключить уменьшение масштаба</string>
     <string name="action_add_anyway">Добавить в любом случае</string>
     <string name="pref_display_profile">Пользовательский профиль отображения</string>
+    <string name="action_replace_repo">Заменить</string>
+    <string name="action_replace_repo_message">Репозиторий %1$s имеет тот же подписанный ключ отпечатка, что и %2$s.
+\nЕсли это так и задумано, %2$s будет заменён, в противном случае, свяжитесь с сопровождающим вашего репозитория.</string>
+    <string name="action_replace_repo_title">Подписанный ключ отпечатка уже существует</string>
     <string name="upcoming_calendar_prev">Предыдущий месяц</string>
     <string name="action_view_upcoming">Просмотр предстоящих обновлений</string>
     <string name="label_upcoming">Предстоящее</string>
@@ -793,8 +775,9 @@
     <string name="manga_interval_expected_update_null">Эта серия либо завершена, либо дата ее выхода неизвестна.</string>
     <string name="invalid_backup_file_unknown">Файл резервной копии поврежден</string>
     <string name="invalid_backup_file_json">Резервное копирование в формате JSON не поддерживается</string>
+    <string name="extensionRepo_settings">Репозитории расширений</string>
     <string name="action_copy_link">Копировать ссылку</string>
-    <string name="pref_download_new_unread_chapters_only">Пропустить скачивание повторяющихся прочитанных глав</string>
+    <string name="add_repo_confirmation">Хотите ли вы добавить репозиторий \"%s\"?</string>
     <string name="confirm_tracker_update">Обновить сервисы отслеживания для главы %d?</string>
     <string name="onboarding_permission_analytics">Разрешить аналитику</string>
     <string name="pref_firebase">Аналитика и Журнал сбоев</string>
@@ -809,7 +792,6 @@
     <string name="remove_private_extension_message">Вы действительно хотите удалить расширение \"%s\"?</string>
     <string name="non_library_settings">Все прочитанные серии</string>
     <string name="trackers_updated_summary">Сервисы отслеживания обновлены для главы %d</string>
-    <string name="pref_auto_update_manga_on_mark_read">Обновлять прогресс, когда отмечено как «Прочитано»</string>
     <string name="pref_hardware_bitmap_threshold_summary">Если читалка загружает пустое изображение, постепенно уменьшайте пороговую обработку.\nВыбрано: %s</string>
     <string name="pref_hardware_bitmap_threshold">Пользовательская аппаратная пороговая обработка растрового изображения</string>
     <string name="pref_hardware_bitmap_threshold_default">По умолчанию (%d)</string>
@@ -893,29 +875,4 @@
     <string name="pref_download_concurrent_pages_summary">Число одновременных загрузок страниц с источника</string>
     <string name="action_filter_excluded_scanlators">Фильтровать исключенных переводчиков</string>
     <string name="download_bookmarked">В закладках</string>
-    <string name="label_support_us">Поддержите нас</string>
-    <string name="supportUsScreen.donationPlatform.patreon">Patreon (Предпочтительно)</string>
-    <string name="supportUsScreen.donationPlatform.opencollective">OpenCollective</string>
-    <string name="supportUsScreen.currentlySupportedBy">Mihon сейчас поддерживается %d+ спонсорами. Мы хотим поблагодарить каждого из вас. Давайте сделаем Mihon лучше.</string>
-    <string name="donationCampaign.contactPlatform">Discord</string>
-    <string name="supportUsScreen.perks">Спонсоры получать доступ к эксклюзивным каналам с будущими привилегиями и возможностями.</string>
-    <string name="supportUsScreen.contactPlatform">Discord</string>
-    <string name="donationCampaign.title">Нравится приложение?</string>
-    <string name="donationCampaign.paragraph1">Приветствую! Я главный разработчик Mihon и хотел бы попросить вас об финансовой поддержке проекта. При достаточной поддержке я смогу работать над Mihon в полную силу и сосредоточиться как на давно существующих проблемах, так и на функциях, которые пользователи уже давно просят добавить.</string>
-    <string name="donationCampaign.paragraph2">Вы можете поддержать проект через Patreon (Предпочтительно) или OpenCollective. Если у вас есть вопросы или хотите поддержать, используя другие способы, вы можете связаться со мной через Discord-сервер нашего приложения.</string>
-    <string name="donationCampaign.paragraph3">Независимо от поддержки, Mihon останется с открытым исходным кодом, и я с волонтёрами будем и дальше его поддерживать.</string>
-    <string name="donationCampaign.dismiss">Отклонить</string>
-    <string name="supportUsScreen.contactForDetailsMessage">Если у вас есть другие способы поддержки или вопросы по этому поводу, можете присоединиться к нашему Discord-серверу.</string>
-    <string name="pref_webtoon_vertical_navigator">Использовать вертикальную навигацию для читалки с длинными страницами</string>
-    <string name="extensionStores">Хранилище расширений</string>
-    <string name="action.addExtensionStore">Добавить хранилище расширений</string>
-    <string name="extensionStoresScreen.emptyLabel">Вы ещё не добавляли хранилище расширений</string>
-    <string name="extensionStoresScreen.addStore.title">Добавить хранилище расширений</string>
-    <string name="extensionStoresScreen.addStore.alreadyExists">Это хранилище расширений уже существует</string>
-    <string name="extensionStoresScreen.addStore.processing">В процессе…</string>
-    <string name="extensionStoresScreen.addStoreInput.inputLabel">Хранить индекс URL-адреса</string>
-    <string name="extensionStoresScreen.addStoreDeeplink.bodyText">Вы хотите добавить хранилище расширений ниже?</string>
-    <string name="extensionStoresScreen.deleteStore.title">Удалить хранилище расширений</string>
-    <string name="extensionStoresScreen.deleteStore.body">Вы хотите удалить хранилище расширений \"%1$s\" (%2$s)?</string>
-    <string name="pref_webtoon_vertical_navigator_on_left">Разместить вертикальную навигацию с левой стороны</string>
 </resources>

@@ -99,7 +99,6 @@
     <string name="pref_category_about">ॲप बद्दल</string>
     <string name="pref_category_advanced">प्रगत</string>
     <string name="pref_category_tracking">ट्रॅकिंग</string>
-    <string name="pref_category_downloads">डाउनलोडस</string>
     <string name="pref_category_reader">वाचक</string>
     <string name="pref_category_library">संग्रहालय</string>
     <string name="pref_category_general">जनरल</string>
@@ -199,7 +198,6 @@
     <string name="edge_nav">कडा</string>
     <string name="kindlish_nav">किंडल सारख</string>
     <string name="pref_category_appearance">प्रदर्शन</string>
-    <string name="last_read_chapter">शेवटी वाचलेला पाठ</string>
     <string name="label_network">नेटवर्क</string>
     <string name="label_downloaded_only">केवळ डाउनलोड केलेले</string>
     <string name="pref_category_theme">थीम</string>

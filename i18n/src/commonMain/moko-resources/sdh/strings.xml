@@ -115,7 +115,6 @@
     <string name="pref_category_appearance">شێوە</string>
     <string name="pref_category_library">کۆکراوەکان</string>
     <string name="pref_category_reader">خوێنەرەوە</string>
-    <string name="pref_category_downloads">داونلۆدەکان</string>
     <string name="pref_category_tracking">بەدواداچوون</string>
     <string name="pref_category_advanced">سازکارییە ئاڵۆزەکان</string>
     <string name="pager_viewer">شێوازی لاپەڕەکان</string>
@@ -182,7 +181,6 @@
     <string name="filter_mode_overlay">داپۆشراو</string>
     <string name="filter_mode_multiply">شێوازی دوو ‌هێندە</string>
     <string name="pref_category_auto_download">داونلۆدی ئۆتۆماتیکی</string>
-    <string name="pref_download_new">داونلۆدکردنی چاپتەری نوێ</string>
     <string name="add_tracking">بەدواداچوون زیاد بکە</string>
     <string name="add_to_library">کردنە ناو کۆکراوەکان</string>
     <string name="notification_first_add_to_library">تکایە مانگا بۆ کۆکراوەکان زیاد بکە پێش کردنی ئەمە</string>

@@ -111,7 +111,6 @@
     <string name="app_not_available">अनुप्रयोगः न उपलभ्यः</string>
     <string name="pref_category_appearance">रूपम्</string>
     <string name="pref_category_library">ग्रन्थालयः</string>
-    <string name="pref_category_downloads">अवारोपितानि</string>
     <string name="pref_category_tracking">अनुप्रज्ञानम्</string>
     <string name="pref_category_about">स्वसमाचारः</string>
     <string name="pref_category_theme">दृश्यशैली</string>
@@ -182,7 +181,6 @@
     <string name="ext_app_info">अनुप्रयोगविवरणम्</string>
     <string name="ext_nsfw_short">१८+</string>
     <string name="ext_nsfw_warning">प्रौढानां कृते एव (१८+) वस्तु अन्तः स्यात्</string>
-    <string name="ext_install_service_notif">विस्तारं प्रतिष्ठापयति …</string>
     <string name="ext_installer_legacy">क्रमगतम्</string>
     <string name="pref_fullscreen">पूर्णपटलम्</string>
     <string name="pref_library_update_refresh_metadata">प्रदत्तांशं स्वयञ्चालितं नवीकरोतु</string>
@@ -197,9 +195,7 @@
     <string name="ext_install">प्रतिस्थायतु</string>
     <string name="ext_pending">अपूर्णम्</string>
     <string name="ext_uninstall">निष्कासयतु</string>
-    <string name="ext_installer_shizuku_stopped">शिज़ुकुः न चलति</string>
     <string name="ext_installer_pref">प्रतिष्ठापनसहायकम्</string>
-    <string name="ext_installer_shizuku_unavailable_dialog">शिजुकुं विस्तारप्रतिष्ठापनसहायकम् इव उपयोगं कर्तुं शिजुकुं प्रतिष्ठापयित्वा आरभताम्।</string>
     <string name="pref_show_navigation_mode">मार्गणविन्यासस्य उपरिस्तरं दर्शयतु</string>
     <string name="pref_dual_page_invert">द्विपुटविभाजनस्य स्थापनं व्यत्यासं कुरु</string>
     <string name="pref_dual_page_split">द्विपुटविभाजनम्</string>
@@ -297,20 +293,11 @@
     <string name="pref_remove_bookmarked_chapters">पुटचिह्नकृतानाम् अध्यायानां नाशयितुम् अनुमन्यताम्</string>
     <string name="pref_remove_exclude_categories">वर्जितवर्गाः</string>
     <string name="disabled">अशक्तं कृतम्</string>
-    <string name="last_read_chapter">अन्तिमपठितः अध्यायः</string>
-    <string name="second_to_last">अन्तिमपठितात् अध्यायात् पूर्वम्</string>
-    <string name="third_to_last">अन्तिमपठितात् अध्यायात् द्वितीयपूर्वम्</string>
     <string name="services">सेवाः</string>
     <string name="pref_remove_after_marked_as_read">पठितमिति स्वीयचिह्नितात् परम्</string>
-    <string name="pref_remove_after_read">पठनात् परं स्वयञ्चालितं नाशयतु</string>
     <string name="save_chapter_as_cbz">CBZ-लेखागारम् इव अमुकनाम्ना रक्षतु</string>
-    <string name="pref_auto_update_manga_sync">पठनात् परं प्रगतिं नवीकरोतु</string>
     <string name="pref_lowest">अधमम्</string>
-    <string name="pref_category_delete_chapters">अध्यायान् नाशयतु</string>
-    <string name="fourth_to_last">अन्तिमपठितात् अध्यायात् तृतीयपूर्वम्</string>
-    <string name="fifth_to_last">अन्तिमपठितात् अध्यायात् चतुर्थपूर्वम्</string>
     <string name="pref_category_auto_download">स्वचालितम् अवारोपणम्</string>
-    <string name="pref_download_new">नूतनान् अध्यायान् अवतारयतु</string>
     <string name="tracking_guide">अनुप्रज्ञानमार्गदर्शनम्</string>
     <string name="enhanced_services">विवृद्धसेवाः</string>
     <string name="action_track">अनुप्रजानातु</string>
@@ -359,7 +346,6 @@
     <string name="paused">विरमितम्</string>
     <string name="username">उपयोक्तृनाम</string>
     <string name="pref_hide_threshold">सारयति सति सूच्याः गुप्तीकरणाय सूक्ष्मचैतन्यम्</string>
-    <string name="pref_download_new_categories_details">यद्यपि अन्तर्भूतवर्गेषु स्थिताः सन्ति तथापि वर्जितवर्गेषु स्थिताः माङ्गाः अवारोपिताः न भविष्यन्ति।</string>
     <string name="tracking_info">अनुप्रज्ञानसेवासु अध्यायप्रगतिं नवीकर्तुं एकमार्गसमाकलनम्। तदीयात् अनुप्रज्ञानगण्डात् व्यक्तिगतेभ्यः माङ्गानिवेशेभ्यः अनुप्रज्ञानं स्थापयतु॥</string>
     <string name="label_data">दत्तांशः</string>
     <string name="tabs_header">प्लवनखण्डाः</string>
@@ -381,8 +367,6 @@
     <string name="completed">समापितम्</string>
     <string name="migrate">स्थानान्तरगमनम्</string>
     <string name="copy">प्रतिलेखं करोतु</string>
-    <string name="update_check_confirm">अवतारयतु</string>
-    <string name="update_check_notification_download_in_progress">अवारोपयामि…</string>
     <string name="local_source_help_guide">स्थानीयमूलमार्गदर्शनम्</string>
     <string name="action_global_search_hint">सार्वत्रिकान्वेषणम्…</string>
     <string name="chapter_not_found">अध्यायः न लभ्यः</string>
@@ -392,7 +376,6 @@
     <string name="display_mode_chapter">अध्यायः %1$s</string>
     <string name="chapter_downloading_progress">अवारोपयति (%1$d/%2$d)</string>
     <string name="sort_by_source">मूलेन</string>
-    <string name="update_check_notification_download_complete">अवारोपणं समाप्तम्</string>
     <string name="download_notifier_title_error">दोषः</string>
     <string name="spen_previous_page">पूर्वपुटः</string>
     <string name="spen_next_page">अग्रिमपुटः</string>
@@ -420,14 +403,12 @@
     <string name="channel_errors">दोषाः</string>
     <string name="label_downloaded_only">अवारोपितानि एव</string>
     <string name="channel_progress">प्रगतिः</string>
-    <string name="download_notifier_downloader_title">अवारोपणसाधनम्</string>
     <string name="channel_common">सामान्यम्</string>
     <string name="pref_incognito_mode">प्रच्छन्ननामदशा</string>
     <string name="pref_clear_cookies">ज्ञापकानि मार्जयतु</string>
     <string name="cookies_cleared">ज्ञापकानि मार्जितानि</string>
     <string name="used_cache">उपयुक्तम् - %1$s</string>
     <string name="clear_database_completed">निवेशाः नाशिताः</string>
-    <string name="check_for_updates">नवीकरणेभ्यः मार्गतु</string>
     <string name="email">ईपत्रसङ्केतः</string>
     <string name="login_success">अन्तर्गतम्</string>
     <string name="logout">बहिर्गच्छतु</string>
@@ -455,11 +436,8 @@
     <string name="clear_history_completed">चरित्रं नाशितम्</string>
     <string name="notification_chapters_single">अध्यायः %1$s</string>
     <string name="notification_chapters_multiple">अध्यायाः %1$s</string>
-    <string name="update_check_notification_download_error">अवारोपणदोषः</string>
     <string name="channel_complete">पूर्णम्</string>
     <string name="channel_new_chapters">अध्यायनवीकरणानि</string>
-    <string name="channel_app_updates">अनुप्रयोगनवीकरणानि</string>
-    <string name="channel_ext_updates">विस्तारनवीकरणानि</string>
     <string name="pref_dns_over_https">HTTPS उपरि DNS (DoH)</string>
     <string name="getting_started_guide">प्रारम्भिकमार्गदर्शनम्</string>
     <string name="battery_optimization_setting_activity_not_found">साधनसमायोजनानि उद्घाटयितुं न अशक्नोम्</string>
@@ -467,7 +445,6 @@
     <string name="plan_to_read">पठितुं इच्छामि</string>
     <string name="page_list_empty_error">पुटाः न लभ्याः</string>
     <string name="loader_not_implemented_error">मूलं न लभ्यम्</string>
-    <string name="update_check_notification_update_available">नूतनसंस्करणम् उपलभ्यम्</string>
     <string name="action_show_manga">माङ्गां दर्शयतु</string>
     <string name="notification_new_chapters">नूतनाध्यायाः लभ्याः</string>
     <string name="action_display_cover_only_grid">केवलं मुखचित्रेण इष्टिकाविन्यासः</string>
@@ -505,7 +482,6 @@
     <string name="transition_no_previous">पूर्वाध्यायः नास्ति</string>
     <string name="share_page_info">%1$s: %2$s पुटः च %3$d</string>
     <string name="pref_update_only_started">पठिताः अध्यायाः न सन्ति</string>
-    <string name="update_check_no_new_updates">नूतननवीकरणानि न उपलभ्यानि</string>
     <string name="chapter_settings_updated">अध्यायस्य प्राथमिकसमायोजनानि नवीकृतानि</string>
     <string name="source_unsupported">मूलं न भरितम्</string>
     <string name="migration_dialog_what_to_include">संयोजयितुं दत्तांशान् चिनोतु</string>
@@ -532,7 +508,6 @@
     <string name="download_notifier_unknown_error">यादृच्छिकदोषकारणात् अध्यायस्य अवारोपणम् न शक्नुयात्</string>
     <string name="also_set_chapter_settings_for_library">अपि मम ग्रन्थालये सर्वाभ्यः माङ्गाभ्यः आचरतु</string>
     <string name="clear_history_confirmation">त्वं निश्चितं किम् ? चरित्रं सर्वं लुप्तं भविष्यति।</string>
-    <string name="update_check_eol">एतत् आण्ड्रायिड्-संस्करणम् अधुना न भरितम्</string>
     <string name="information_webview_outdated">इतोऽपि उत्तमतरसङ्गतिं प्रप्तुं कृपया वेब्-व्यू-अनुप्रयोगं नवीकरोतु</string>
     <string name="downloaded_only_summary">तव ग्रन्थालये सर्वाः माङ्गाः शोधनीकरोति</string>
     <string name="pref_clear_database_summary">तव ग्रन्थालये न रक्षितानां माङ्गानां चरित्रं नाशय</string>

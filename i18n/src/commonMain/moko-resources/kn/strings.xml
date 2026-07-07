@@ -20,7 +20,6 @@
     <string name="pref_category_about">ಅಪ್ಲಿಕೇಶನ್ ಬಗ್ಗೆ</string>
     <string name="pref_category_advanced">ಸುಧಾರಿತ</string>
     <string name="pref_category_tracking">ಟ್ರ್ಯಾಕಿಂಗ್</string>
-    <string name="pref_category_downloads">ಡೌನ್ಲೋಡ್ ಸಂಯೋಜನೆಗಳು</string>
     <string name="pref_category_reader">ಓದುವ ಸಂಯೋಜನೆಗಳು</string>
     <string name="pref_category_library">ಗ್ರಂಥಾಲಯ</string>
     <string name="pref_category_general">ಸಾಮಾನ್ಯ</string>
@@ -121,15 +120,7 @@
     <string name="pref_create_backup">ಬ್ಯಾಕಪ್ ರಚಿಸಿ</string>
     <string name="tracking_info">ಟ್ರ್ಯಾಕಿಂಗ್ ಸೇವೆಗಳಲ್ಲಿ ಅಧ್ಯಾಯದ ಪ್ರಗತಿಯನ್ನು ನವೀಕರಿಸಲು ಏಕಮುಖ ಸಿಂಕ್. ಅವರ ಟ್ರ್ಯಾಕಿಂಗ್ ಬಟನ್ ನಿಂದ ಪ್ರತ್ಯೇಕ ಮಾಂಗಾ ನಮೂದುಗಳಿಗಾಗಿ ಟ್ರ್ಯಾಕಿಂಗ್ ಅನ್ನು ಹೊಂದಿಸಿ.</string>
     <string name="services">ಸೇವೆಗಳು</string>
-    <string name="pref_auto_update_manga_sync">ಓದಿದ ನಂತರ ಅಧ್ಯಾಯದ ಪ್ರಗತಿಯನ್ನು ನವೀಕರಿಸಿ</string>
-    <string name="pref_download_new">ಹೊಸ ಅಧ್ಯಾಯಗಳನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ</string>
-    <string name="fifth_to_last">ಕೊನೆಯ ಅಧ್ಯಾಯದಿಂದ ಐದನೆಯದು</string>
-    <string name="fourth_to_last">ಕೊನೆಯ ಅಧ್ಯಾಯದಿಂದ ನಾಲ್ಕನೆಯದು</string>
-    <string name="third_to_last">ಕೊನೆಯ ಅಧ್ಯಾಯದಿಂದ ಮೂರನೆಯದು</string>
-    <string name="second_to_last">ಕೊನೆಯ ಅಧ್ಯಾಯದಿಂದ ಎರಡನೆಯದು</string>
-    <string name="last_read_chapter">ಕೊನೆಯದಾಗಿ ಓದಿದ ಅಧ್ಯಾಯ</string>
     <string name="disabled">ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಿದ</string>
-    <string name="pref_remove_after_read">ಓದಿದ ನಂತರ</string>
     <string name="pref_remove_after_marked_as_read">ಓದಿದಂತೆ ಗುರುತಿಸಿದಾಗ ತೆಗೆದುಹಾಕಿ</string>
     <string name="pref_webtoon_side_padding">ಸೈಡ್ ಪ್ಯಾಡಿಂಗ್</string>
     <string name="pref_category_reading">ಓದುತ್ತಿರುವ</string>
@@ -221,7 +212,6 @@
     <string name="update_never">ಸ್ವಂತ ಮಾಡು</string>
     <string name="pref_library_update_interval">ನವೀಕರಣ ಆವರ್ತನ</string>
     <string name="pref_category_library_update">ನವೀಕರಣಗಳು</string>
-    <string name="channel_ext_updates">ವಿಸ್ತರಣೆ ನವೀಕರಣಗಳು</string>
     <string name="channel_new_chapters">ಅಧ್ಯಾಯ ನವೀಕರಣಗಳು</string>
     <string name="channel_common">ಸಾಮಾನ್ಯ</string>
     <string name="download_notifier_download_paused">ಡೌನ್‌ಲೋಡ್ ವಿರಾಮಗೊಳಿಸಲಾಗಿದೆ</string>
@@ -229,16 +219,9 @@
     <string name="download_notifier_text_only_wifi">ಯಾವುದೇ ವೈ-ಫೈ ಸಂಪರ್ಕ ಲಭ್ಯವಿಲ್ಲ</string>
     <string name="download_notifier_unknown_error">ಅನಿರೀಕ್ಷಿತ ದೋಷದಿಂದಾಗಿ ಅಧ್ಯಾಯವನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ</string>
     <string name="download_notifier_title_error">ದೋಷ</string>
-    <string name="download_notifier_downloader_title">ಡೌನ್‌ಲೋಡರ್</string>
     <string name="information_webview_outdated">ಉತ್ತಮ ಹೊಂದಾಣಿಕೆಗಾಗಿ ದಯವಿಟ್ಟು ವೆಬ್‌ವೀಕ್ಷಣೆ ಅಪ್ಲಿಕೇಶನ್ ಅನ್ನು ನವೀಕರಿಸಿ</string>
     <string name="information_webview_required">ತಚಿಯೋಮಿಗೆ ವೆಬ್‌ವೀಕ್ಷಣೆ ಅಗತ್ಯವಿದೆ</string>
     <string name="information_cloudflare_bypass_failure">ಕ್ಲೌಡ್‌ಫ್ಲೇರ್ ಅನ್ನು ಬೈಪಾಸ್ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ</string>
-    <string name="update_check_notification_update_available">ಹೊಸ ಆವೃತ್ತಿ ಲಭ್ಯವಿದೆ!</string>
-    <string name="update_check_notification_download_error">ಡೌನ್‌ಲೋಡ್ ದೋಷ</string>
-    <string name="update_check_notification_download_complete">ಡೌನ್‌ಲೋಡ್ ಪೂರ್ಣಗೊಂಡಿದೆ</string>
-    <string name="update_check_notification_download_in_progress">ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ…</string>
-    <string name="update_check_no_new_updates">ಹೊಸ ನವೀಕರಣಗಳು ಲಭ್ಯವಿಲ್ಲ</string>
-    <string name="update_check_confirm">ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ</string>
     <string name="file_select_backup">ಬ್ಯಾಕಪ್ ಫೈಲ್ ಆಯ್ಕೆಮಾಡಿ</string>
     <string name="file_select_cover">ಕವರ್ ಇಮೇಜ್ ಆಯ್ಕೆಮಾಡಿ</string>
     <string name="notification_first_add_to_library">ಇದನ್ನು ಮಾಡುವ ಮೊದಲು ದಯವಿಟ್ಟು ನಿಮ್ಮ ಗ್ರಂಥಾಲಯಕ್ಕೆ ಮಾಂಗಾವನ್ನು ಸೇರಿಸಿ</string>
@@ -341,7 +324,6 @@
     <string name="label_downloaded_only">ಡೌನ್ಲೋಡ್ ಮಾಡಿದ</string>
     <string name="pref_acra_summary">ಯಾವುದೇ ದೋಷಗಳನ್ನು ಸರಿಪಡಿಸಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ. ಯಾವುದೇ ಸೂಕ್ಷ್ಮ ಡೇಟಾವನ್ನು ಕಳುಹಿಸಲಾಗುವುದಿಲ್ಲ</string>
     <string name="pref_enable_acra">ಕ್ರ್ಯಾಶ್ ವರದಿಗಳನ್ನು ಕಳುಹಿಸಿ</string>
-    <string name="check_for_updates">ನವೀಕರಣಗಳಿಗಾಗಿ ಪರಿಶೀಲಿಸಿ</string>
     <string name="licenses">ಓಪನ್ ಸೋರ್ಸ್ ಪರವಾನಗಿಗಳು</string>
     <string name="version">ಆವೃತ್ತಿ</string>
     <string name="website">ವೆಬ್ಸೈಟ್</string>
@@ -417,7 +399,6 @@
     <string name="manga_from_library">ಗ್ರಂಥಾಲಯದಿಂದ ಮಾಂಗಾ</string>
     <string name="backup_restore_missing_trackers">ಟ್ರ್ಯಾಕರ್ ಗಳು ಲಾಗಿನ್ ಆಗಿಲ್ಲ:</string>
     <string name="pref_remove_bookmarked_chapters">ಬುಕ್ ಮಾರ್ಕ್ ಮಾಡಿದ ಅಧ್ಯಾಯಗಳನ್ನು ಅಳಿಸಿ</string>
-    <string name="pref_category_delete_chapters">ಅಧ್ಯಾಯಗಳನ್ನು ಅಳಿಸಿ</string>
     <string name="ext_nsfw_warning">NSFW (18+) ವಿಷಯವನ್ನು ಹೊಂದಿರಬಹುದು</string>
     <string name="ext_nsfw_short">18+</string>
     <string name="action_search_settings">ಸಂಯೋಜನೆಗಳಲ್ಲಿ ಹುಡುಕಿ</string>
@@ -448,7 +429,6 @@
     <string name="backup_restore_content_full">ಬ್ಯಾಕಪ್ ಫೈಲ್‌ನಿಂದ ಡೇಟಾವನ್ನು ಮರುಸ್ಥಾಪಿಸಲಾಗುತ್ತದೆ.
 \n
 \nಕಾಣೆಯಾದ ಯಾವುದೇ ವಿಸ್ತರಣೆಗಳನ್ನು ನೀವು ಪುನಃ ಸ್ಥಾಪಿಸಬೇಕಾಗುತ್ತದೆ ಮತ್ತು ಅವುಗಳನ್ನು ಬಳಸಲು ಟ್ರ್ಯಾಕಿಂಗ್ ಸೇವೆಗಳಿಗೆ ಲಾಗ್ ಇನ್ ಮಾಡಬೇಕಾಗುತ್ತದೆ.</string>
-    <string name="pref_download_new_categories_details">ಹೊರಗಿಡಲಾದ ವಿಭಾಗಗಳಲ್ಲಿ ಮಾಂಗಾವನ್ನು ಸೇರಿಸಿದ ವಿಭಾಗಗಳಲ್ಲಿದ್ದರೂ ಅವುಗಳನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗುವುದಿಲ್ಲ.</string>
     <string name="pref_category_auto_download">ಸ್ವಯಂ ಡೌನ್‌ಲೋಡ್</string>
     <string name="pref_viewer_nav">ನ್ಯಾವಿಗೇಶನ್ ಲೇಔಟ್</string>
     <string name="nav_zone_right">ಬಲಕ್ಕೆ</string>
@@ -472,7 +452,6 @@
     <string name="cancel_all_for_series">ಈ ಸರಣಿಯ ಎಲ್ಲವನ್ನೂ ರದ್ದುಮಾಡಿ</string>
     <string name="action_display_local_badge">ಸ್ಥಳೀಯ ಬ್ಯಾಡ್ಜ್ ಗಳು</string>
     <string name="information_empty_category_dialog">ನೀವು ಇನ್ನೂ ಯಾವುದೇ ವರ್ಗಗಳನ್ನು ಹೊಂದಿಲ್ಲ.</string>
-    <string name="update_check_eol">ಈ ಆಂಡ್ರಾಯ್ಡ್ ಆವೃತ್ತಿಯನ್ನು ಇನ್ನು ಮುಂದೆ ಬೆಂಬಲಿಸುವುದಿಲ್ಲ</string>
     <string name="error_no_match">ಯಾವುದೇ ಹೋಲಿಕೆ ಕಂಡುಬಂದಿಲ್ಲ</string>
     <string name="source_unsupported">ಮೂಲವನ್ನು ಬೆಂಬಲಿಸುವುದಿಲ್ಲ</string>
     <string name="unread">ಓದದ</string>
