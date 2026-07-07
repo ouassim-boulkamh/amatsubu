@@ -390,7 +390,10 @@ class SuwayomiModelsTest {
         )
 
         assertEquals("Example Store", storesResponse.data?.extensionStores?.nodes?.single()?.name)
-        assertEquals("https://store.example/index.min.json", addResponse.data?.addExtensionStore?.extensionStore?.indexUrl)
+        assertEquals(
+            "https://store.example/index.min.json",
+            addResponse.data?.addExtensionStore?.extensionStore?.indexUrl,
+        )
         assertNull(removeResponse.data?.removeExtensionStore?.extensionStore)
     }
 
@@ -478,7 +481,11 @@ class SuwayomiModelsTest {
             contentWarning = "CONTENT_WARNING_UNSPECIFIED",
             isNsfw = false,
         )
-        val legacySource = safeCurrentSource.copy(contentWarning = null, homeUrl = null, baseUrl = "https://legacy.example")
+        val legacySource = safeCurrentSource.copy(
+            contentWarning = null,
+            homeUrl = null,
+            baseUrl = "https://legacy.example",
+        )
         val safeCurrentExtension = SuwayomiExtensionDto(
             contentWarning = "SAFE",
             extensionLib = "1.4",

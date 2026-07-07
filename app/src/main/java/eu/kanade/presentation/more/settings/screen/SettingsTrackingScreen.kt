@@ -278,7 +278,19 @@ object SettingsTrackingScreen : SearchableSettings {
                     OutlinedTextField(
                         value = username,
                         onValueChange = { username = it },
-                        label = { Text(text = stringResource(if (tracker.name == "Kitsu") MR.strings.email else MR.strings.username)) },
+                        label = {
+                            Text(
+                                text = stringResource(
+                                    if (tracker.name ==
+                                        "Kitsu"
+                                    ) {
+                                        MR.strings.email
+                                    } else {
+                                        MR.strings.username
+                                    },
+                                ),
+                            )
+                        },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     )

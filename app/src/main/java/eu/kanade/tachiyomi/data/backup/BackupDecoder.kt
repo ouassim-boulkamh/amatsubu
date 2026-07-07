@@ -45,7 +45,10 @@ class BackupDecoder(
                     peeked.require(2)
                     when (peeked.readShort().toInt()) {
                         GZIP_MAGIC -> it.gzip().buffer().use { gzipSource -> gzipSource.readByteArray() }
-                        MAGIC_JSON_SIGNATURE1, MAGIC_JSON_SIGNATURE2, MAGIC_JSON_SIGNATURE3 -> throw JsonBackupException()
+                        MAGIC_JSON_SIGNATURE1,
+                        MAGIC_JSON_SIGNATURE2,
+                        MAGIC_JSON_SIGNATURE3,
+                        -> throw JsonBackupException()
                         else -> it.readByteArray()
                     }
                 } else {

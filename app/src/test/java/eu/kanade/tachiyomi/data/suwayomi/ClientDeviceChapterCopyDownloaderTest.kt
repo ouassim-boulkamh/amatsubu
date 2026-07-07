@@ -36,8 +36,18 @@ class ClientDeviceChapterCopyDownloaderTest {
         assertTrue(File(copy.storagePath!!).exists())
         assertFalse(File(File(copy.storagePath).parentFile, "${manifest.chapter.id}.tmp").exists())
         assertEquals(listOf(true, true), copy.pages.map { it.isPresent })
-        assertEquals(listOf("bytes-page-0", "bytes-page-1"), copy.pages.map { File(java.net.URI(it.localUri)).readText() })
-        assertEquals(copy.pages.map { sha256(File(java.net.URI(it.localUri)).readBytes()) }, copy.pages.map { it.sha256 })
+        assertEquals(
+            listOf("bytes-page-0", "bytes-page-1"),
+            copy.pages.map {
+                File(java.net.URI(it.localUri)).readText()
+            },
+        )
+        assertEquals(
+            copy.pages.map {
+                sha256(File(java.net.URI(it.localUri)).readBytes())
+            },
+            copy.pages.map { it.sha256 },
+        )
         assertEquals(listOf(1, 2), store.progressUpdates)
     }
 

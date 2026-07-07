@@ -13,21 +13,20 @@ import eu.kanade.domain.manga.model.readingMode
 import eu.kanade.domain.source.interactor.GetIncognitoState
 import eu.kanade.tachiyomi.data.database.models.isRecognizedNumber
 import eu.kanade.tachiyomi.data.database.models.toDomainChapter
-import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyStore
+import eu.kanade.tachiyomi.data.saver.Image
+import eu.kanade.tachiyomi.data.saver.ImageSaver
+import eu.kanade.tachiyomi.data.saver.Location
 import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyFreshness
+import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyStore
 import eu.kanade.tachiyomi.data.suwayomi.MangaStatus
 import eu.kanade.tachiyomi.data.suwayomi.ServerReadStatePendingStore
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
-import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaMetaDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaDto
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaMetaDto
 import eu.kanade.tachiyomi.data.suwayomi.normalizedGenre
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
 import eu.kanade.tachiyomi.data.suwayomi.serverCoverLastModified
-import eu.kanade.tachiyomi.data.suwayomi.UpdateStrategy as SuwayomiUpdateStrategy
-import eu.kanade.tachiyomi.data.saver.Image
-import eu.kanade.tachiyomi.data.saver.ImageSaver
-import eu.kanade.tachiyomi.data.saver.Location
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.ui.reader.loader.ClientDeviceChapterCopyPageLoader
@@ -58,7 +57,10 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import logcat.LogPriority
+import mihon.core.common.extensions.EMPTY
 import tachiyomi.core.common.preference.toggle
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
@@ -70,10 +72,8 @@ import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import mihon.core.common.extensions.EMPTY
 import java.time.Instant
+import eu.kanade.tachiyomi.data.suwayomi.UpdateStrategy as SuwayomiUpdateStrategy
 
 /**
  * Presenter used by the activity to perform background operations.
@@ -857,7 +857,10 @@ class ReaderViewModel @JvmOverloads constructor(
                 value = orientation.toSuwayomiReaderOrientation(),
             )
             val updatedManga = manga.copy(
-                viewerFlags = manga.viewerFlags.setFlag(orientation.flagValue.toLong(), ReaderOrientation.MASK.toLong()),
+                viewerFlags = manga.viewerFlags.setFlag(
+                    orientation.flagValue.toLong(),
+                    ReaderOrientation.MASK.toLong(),
+                ),
             )
             mutableState.update { it.copy(manga = updatedManga) }
             eventChannel.send(Event.SetOrientation(getMangaOrientation()))

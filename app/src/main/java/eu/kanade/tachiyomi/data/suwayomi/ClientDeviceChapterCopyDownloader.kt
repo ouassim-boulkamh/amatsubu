@@ -109,7 +109,9 @@ internal class ClientDeviceChapterCopyDownloader(
             }
             val incompletePages = expectedPages.map { expected ->
                 downloadedPages.firstOrNull { it.index == expected.index }
-                    ?.copy(localUri = File(finalDir, expected.fileName ?: pageFileName(expected.index)).toURI().toString())
+                    ?.copy(
+                        localUri = File(finalDir, expected.fileName ?: pageFileName(expected.index)).toURI().toString(),
+                    )
                     ?: expected
             }
             store.upsert(

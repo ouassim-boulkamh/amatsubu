@@ -106,15 +106,15 @@ data object LibraryTab : Tab {
                 }
                 false
             } else {
-            scope.launch {
-                val started = screenModel.updateServerLibrary(category)
-                val msgRes = when {
-                    !started -> MR.strings.update_already_running
-                    else -> MR.strings.updating_library
+                scope.launch {
+                    val started = screenModel.updateServerLibrary(category)
+                    val msgRes = when {
+                        !started -> MR.strings.update_already_running
+                        else -> MR.strings.updating_library
+                    }
+                    snackbarHostState.showSnackbar(context.stringResource(msgRes))
                 }
-                snackbarHostState.showSnackbar(context.stringResource(msgRes))
-            }
-            true
+                true
             }
         }
 
@@ -136,7 +136,10 @@ data object LibraryTab : Tab {
                     onClickRefresh = { onClickRefresh(state.activeCategory) },
                     onClickGlobalUpdate = { onClickRefresh(null) },
                     onClickStopUpdate = if (isOfflineSnapshot) {
-                        { onClickRefresh(null); Unit }
+                        {
+                            onClickRefresh(null)
+                            Unit
+                        }
                     } else {
                         screenModel::stopServerLibraryUpdate
                     },
@@ -172,7 +175,9 @@ data object LibraryTab : Tab {
                     onMarkAsUnreadClicked = { screenModel.markReadSelection(false) },
                     onDownloadClicked = screenModel::performDownloadAction,
                     onDeleteClicked = screenModel::openDeleteMangaDialog,
-                    onMigrateClicked = state.selectedManga.map { it.id }.takeIf { it.isNotEmpty() && !isOfflineSnapshot }?.let { mangaIds ->
+                    onMigrateClicked = state.selectedManga.map {
+                        it.id
+                    }.takeIf { it.isNotEmpty() && !isOfflineSnapshot }?.let { mangaIds ->
                         {
                             screenModel.clearSelection()
                             navigator.push(

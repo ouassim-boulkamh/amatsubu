@@ -33,6 +33,8 @@ import java.time.ZoneId
 
 object AboutScreen : Screen() {
 
+    private const val REPOSITORY_URL = "https://github.com/ouassim-boulkamh/amatsubu"
+
     @Composable
     override fun Content() {
         val context = LocalContext.current
@@ -69,11 +71,18 @@ object AboutScreen : Screen() {
                     )
                 }
 
+                item {
+                    TextPreferenceWidget(
+                        title = "Based on Mihon",
+                        subtitle = "${BuildConfig.MIHON_BASE_VERSION} (${BuildConfig.MIHON_BASE_COMMIT})",
+                    )
+                }
+
                 if (!BuildConfig.DEBUG) {
                     item {
                         TextPreferenceWidget(
                             title = stringResource(MR.strings.whats_new),
-                            onPreferenceClick = { uriHandler.openUri("https://github.com/Suwayomi/Suwayomi-Server/releases") },
+                            onPreferenceClick = { uriHandler.openUri("$REPOSITORY_URL/releases") },
                         )
                     }
                 }
@@ -89,7 +98,7 @@ object AboutScreen : Screen() {
                     LinkIcon(
                         label = "Source",
                         icon = CustomIcons.Github,
-                        url = "https://github.com/Suwayomi",
+                        url = REPOSITORY_URL,
                     )
                 }
             }
@@ -99,7 +108,7 @@ object AboutScreen : Screen() {
     fun getVersionName(withBuildDate: Boolean): String {
         return when {
             BuildConfig.DEBUG -> {
-                "Debug ${BuildConfig.COMMIT_SHA}".let {
+                "${BuildConfig.VERSION_NAME} debug ${BuildConfig.COMMIT_SHA}".let {
                     if (withBuildDate) {
                         "$it (${getFormattedBuildTime()})"
                     } else {
@@ -108,7 +117,7 @@ object AboutScreen : Screen() {
                 }
             }
             isPreviewBuildType -> {
-                "Beta r${BuildConfig.COMMIT_COUNT}".let {
+                "${BuildConfig.VERSION_NAME} preview r${BuildConfig.COMMIT_COUNT}".let {
                     if (withBuildDate) {
                         "$it (${BuildConfig.COMMIT_SHA}, ${getFormattedBuildTime()})"
                     } else {
@@ -117,7 +126,7 @@ object AboutScreen : Screen() {
                 }
             }
             else -> {
-                "Stable ${BuildConfig.VERSION_NAME}".let {
+                BuildConfig.VERSION_NAME.let {
                     if (withBuildDate) {
                         "$it (${getFormattedBuildTime()})"
                     } else {

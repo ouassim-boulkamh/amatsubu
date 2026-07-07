@@ -1,7 +1,7 @@
 package eu.kanade.tachiyomi.ui.reader.loader
 
-import eu.kanade.tachiyomi.data.suwayomi.SuwayomiGraphQlClient
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiGraphQlClient
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.awaitSuccess
@@ -9,9 +9,9 @@ import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.util.storage.saveTo
-import java.io.File
 import okhttp3.OkHttpClient
 import tachiyomi.core.common.util.lang.withIOContext
+import java.io.File
 
 internal class SuwayomiPageLoader(
     private val chapter: ReaderChapter,

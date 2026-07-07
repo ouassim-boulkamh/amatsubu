@@ -48,27 +48,50 @@ class GetApplicationRelease(
         versionName: String,
         versionTag: String,
     ): Boolean {
-        // Removes prefixes like "r" or "v"
-        val newVersion = versionTag.replace("[^\\d.]".toRegex(), "")
         return if (isPreview) {
             // Preview builds: based on preview release tags
             // tagged as something like "r1234"
+            val newVersion = versionTag.replace("[^\\d]".toRegex(), "")
             newVersion.toInt() > commitCount
         } else {
             // Release builds: based on stable release tags
-            // tagged as something like "v0.1.2"
-            val oldVersion = versionName.replace("[^\\d.]".toRegex(), "")
+            // tagged as something like "v0.1.2" or "v0.1.2-alpha.1"
+            ReleaseVersion.parse(versionTag) > ReleaseVersion.parse(versionName)
+        }
+    }
 
-            val newSemVer = newVersion.split(".").map { it.toInt() }
-            val oldSemVer = oldVersion.split(".").map { it.toInt() }
+    private data class ReleaseVersion(
+        val major: Int,
+        val minor: Int,
+        val patch: Int,
+        val prerelease: String?,
+    ) : Comparable<ReleaseVersion> {
 
-            oldSemVer.mapIndexed { index, i ->
-                if (newSemVer[index] > i) {
-                    return true
-                }
+        override fun compareTo(other: ReleaseVersion): Int {
+            compareValuesBy(this, other, ReleaseVersion::major, ReleaseVersion::minor, ReleaseVersion::patch)
+                .takeIf { it != 0 }
+                ?.let { return it }
+
+            return when {
+                prerelease == other.prerelease -> 0
+                prerelease == null -> 1
+                other.prerelease == null -> -1
+                else -> compareValues(prerelease, other.prerelease)
             }
+        }
 
-            false
+        companion object {
+            private val semverRegex = Regex("""v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?""")
+
+            fun parse(version: String): ReleaseVersion {
+                val match = semverRegex.find(version) ?: return ReleaseVersion(0, 0, 0, version)
+                return ReleaseVersion(
+                    major = match.groupValues[1].toInt(),
+                    minor = match.groupValues[2].toInt(),
+                    patch = match.groupValues[3].toInt(),
+                    prerelease = match.groupValues[4].ifEmpty { null },
+                )
+            }
         }
     }
 

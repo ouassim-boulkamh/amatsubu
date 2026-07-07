@@ -1464,13 +1464,13 @@ internal class SuwayomiGraphQlClient(
         """.trimIndent()
         val chapters = runCatching {
             execute(
-            query = query,
-            variables = buildJsonObject {
-                putJsonObject("input") {
-                    put("mangaId", mangaId)
-                }
-            },
-            deserializer = GraphQlResponse.serializer(FetchChaptersData.serializer()),
+                query = query,
+                variables = buildJsonObject {
+                    putJsonObject("input") {
+                        put("mangaId", mangaId)
+                    }
+                },
+                deserializer = GraphQlResponse.serializer(FetchChaptersData.serializer()),
             ).fetchChapters?.chapters.orEmpty()
         }.getOrElse { error ->
             if (error.message?.contains("No chapters found", ignoreCase = true) == true) {

@@ -1,11 +1,11 @@
 package eu.kanade.tachiyomi.ui.manga
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Refresh
 import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -44,10 +44,10 @@ import eu.kanade.presentation.manga.components.SetIntervalDialog
 import eu.kanade.presentation.util.AssistContentScreen
 import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.util.isTabletUi
+import eu.kanade.tachiyomi.data.suwayomi.SUWAYOMI_MANGA_REAL_URL_META_KEY
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.isLocalOrStub
 import eu.kanade.tachiyomi.source.online.HttpSource
-import eu.kanade.tachiyomi.data.suwayomi.SUWAYOMI_MANGA_REAL_URL_META_KEY
 import eu.kanade.tachiyomi.ui.browse.ServerGlobalSearchScreen
 import eu.kanade.tachiyomi.ui.browse.migration.search.ServerMigrateSearchScreen
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
@@ -59,8 +59,8 @@ import eu.kanade.tachiyomi.ui.webview.WebViewScreen
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import eu.kanade.tachiyomi.util.system.toShareIntent
 import eu.kanade.tachiyomi.util.system.toast
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import logcat.LogPriority
@@ -71,10 +71,10 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
-import tachiyomi.presentation.core.screens.LoadingScreen
+import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.EmptyScreenAction
-import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.screens.LoadingScreen
 import kotlin.time.Duration.Companion.seconds
 
 class MangaScreen(
@@ -415,8 +415,8 @@ class MangaScreen(
                         } else {
                             { action ->
                                 when (action) {
-                                EditCoverAction.EDIT -> getContent.launch("image/*")
-                                EditCoverAction.DELETE -> sm.deleteCustomCover(context)
+                                    EditCoverAction.EDIT -> getContent.launch("image/*")
+                                    EditCoverAction.DELETE -> sm.deleteCustomCover(context)
                                 }
                             }
                         },

@@ -74,7 +74,12 @@ data object UpdatesTab : Tab {
             onMultiDeleteClicked = screenModel::showConfirmDeleteChapters,
             onUpdateSelected = screenModel::toggleSelection,
             onOpenChapter = {
-                val intent = ReaderActivity.newIntent(context, it.update.mangaId, it.update.chapterId, isServerBacked = true)
+                val intent = ReaderActivity.newIntent(
+                    context,
+                    it.update.mangaId,
+                    it.update.chapterId,
+                    isServerBacked = true,
+                )
                 context.startActivity(intent)
             },
             onCalendarClicked = { navigator.push(UpcomingScreen()) },

@@ -12,12 +12,12 @@ import eu.kanade.core.util.insertSeparators
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.updates.UpdatesUiModel
 import eu.kanade.tachiyomi.data.download.model.Download
-import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterWithMangaDto
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiDownloadStatusDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiLibraryUpdateStatusDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaDto
-import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.isSuwayomiServerUnavailable
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
 import eu.kanade.tachiyomi.data.suwayomi.syncTrackerProgressAfterReadStateChange
@@ -45,8 +45,8 @@ import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.manga.model.applyFilter
 import tachiyomi.domain.manga.model.MangaCover
+import tachiyomi.domain.manga.model.applyFilter
 import tachiyomi.domain.updates.model.UpdatesWithRelations
 import tachiyomi.domain.updates.service.UpdatesPreferences
 import uy.kohesive.injekt.Injekt

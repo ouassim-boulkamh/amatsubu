@@ -86,7 +86,8 @@ class ClearDatabaseScreen : Screen() {
                             ) {
                                 Text(text = stringResource(MR.strings.clear_database_text))
                                 Text(
-                                    text = "This only clears Android client database rows. It does not delete Suwayomi server library, history, downloads, or backups.",
+                                    text = "This only clears Android client database rows. It does not delete " +
+                                        "Suwayomi server library, history, downloads, or backups.",
                                     style = MaterialTheme.typography.bodySmall,
                                 )
                                 Row(

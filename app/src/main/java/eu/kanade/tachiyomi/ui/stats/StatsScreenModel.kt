@@ -90,13 +90,16 @@ class StatsScreenModel : StateScreenModel<StatsScreenState>(StatsScreenState.Loa
 
         return libraryManga.count { manga ->
             manga.updateStrategy == UpdateStrategy.ALWAYS_UPDATE &&
-                (!hasIncludedCategories || manga.categories.nodes.any { it.includeInUpdate == SuwayomiCategoryFlag.INCLUDE }) &&
+                (
+                    !hasIncludedCategories ||
+                        manga.categories.nodes.any { it.includeInUpdate == SuwayomiCategoryFlag.INCLUDE }
+                    ) &&
                 manga.categories.nodes.none { it.includeInUpdate == SuwayomiCategoryFlag.EXCLUDE } &&
                 (!settings.excludeUnreadChapters || manga.unreadCount == 0L) &&
                 (!settings.excludeNotStarted || !manga.initialized || manga.hasStarted) &&
                 (!settings.excludeCompleted || manga.status != MangaStatus.COMPLETED) &&
                 (!settings.excludeEntryWithUnreadChapters || manga.unreadCount == 0L)
-            }
+        }
     }
 
     private fun getMangaTrackMap(

@@ -43,9 +43,9 @@ import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.i18n.MR
-import tachiyomi.presentation.core.i18n.stringResource as composeStringResource
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import tachiyomi.presentation.core.i18n.stringResource as composeStringResource
 
 data object MoreTab : Tab {
 
@@ -196,7 +196,9 @@ private class MoreScreenModel(
             }
             val updateStarted = libraryUpdateResult.getOrElse { error ->
                 if (error is CancellationException) throw error
-                logcat(LogPriority.ERROR, error) { "Failed to trigger Suwayomi library update during server state sync" }
+                logcat(LogPriority.ERROR, error) {
+                    "Failed to trigger Suwayomi library update during server state sync"
+                }
                 null
             }
 

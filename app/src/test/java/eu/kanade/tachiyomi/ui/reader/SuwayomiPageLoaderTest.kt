@@ -7,6 +7,8 @@ import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.JsonObject
+import mihon.core.common.extensions.EMPTY
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -17,11 +19,9 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import tachiyomi.domain.chapter.model.Chapter
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
-import kotlinx.serialization.json.JsonObject
-import mihon.core.common.extensions.EMPTY
-import tachiyomi.domain.chapter.model.Chapter
 
 class SuwayomiPageLoaderTest {
 

@@ -7,10 +7,10 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.core.util.insertSeparators
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.presentation.history.HistoryUiModel
-import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterWithMangaDto
-import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.isSuwayomiServerUnavailable
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
 import eu.kanade.tachiyomi.util.lang.toLocalDate
@@ -34,10 +34,10 @@ import tachiyomi.core.common.preference.mapAsCheckboxState
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
+import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
@@ -80,7 +80,9 @@ class HistoryScreenModel(
                     }.onFailure { error ->
                         logcat(LogPriority.ERROR, error) { "Failed to load Suwayomi reading history" }
                         mutableState.update { it.copy(serverUnavailable = error.isSuwayomiServerUnavailable()) }
-                        _events.send(if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError)
+                        _events.send(
+                            if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError,
+                        )
                     }.onSuccess {
                         mutableState.update { it.copy(serverUnavailable = false) }
                     }.getOrDefault(emptyList())
@@ -123,7 +125,9 @@ class HistoryScreenModel(
             }.onFailure { error ->
                 if (error is CancellationException) throw error
                 logcat(LogPriority.ERROR, error) { "Failed to sync server state from history" }
-                _events.send(if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.ServerSyncFailed)
+                _events.send(
+                    if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.ServerSyncFailed,
+                )
             }
         }
     }
@@ -218,7 +222,7 @@ class HistoryScreenModel(
                 url = manga.thumbnailUrl?.let { resolveServerUrl(suwayomiProvider.baseUrl(), it) },
                 lastModified = 0L,
             ),
-            )
+        )
     }
 
     private fun SuwayomiChapterWithMangaDto.toDomainChapter(): Chapter {

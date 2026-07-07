@@ -32,29 +32,27 @@ import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopy
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyStore
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyWorker
 import eu.kanade.tachiyomi.data.suwayomi.MangaStatus
-import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
+import eu.kanade.tachiyomi.data.suwayomi.SUWAYOMI_MANGA_REAL_URL_META_KEY
 import eu.kanade.tachiyomi.data.suwayomi.ServerReadStatePendingStore
-import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterDto
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiCategoryDto
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterDto
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiDisplaySource
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiDownloadDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiDownloadStatusDto
-import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiFetchEstimate
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiStaleSnapshotState
-import eu.kanade.tachiyomi.data.suwayomi.SUWAYOMI_MANGA_REAL_URL_META_KEY
 import eu.kanade.tachiyomi.data.suwayomi.estimateFetchInterval
 import eu.kanade.tachiyomi.data.suwayomi.isSuwayomiServerUnavailable
 import eu.kanade.tachiyomi.data.suwayomi.normalizedGenre
 import eu.kanade.tachiyomi.data.suwayomi.oldestPositive
-import eu.kanade.tachiyomi.data.suwayomi.UpdateStrategy as SuwayomiUpdateStrategy
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
 import eu.kanade.tachiyomi.data.suwayomi.serverCoverLastModified
 import eu.kanade.tachiyomi.data.suwayomi.syncTrackerProgressAfterReadStateChange
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.SManga
-import eu.kanade.tachiyomi.ui.browse.migration.SERVER_MIGRATION_NOTES_META_KEY as SERVER_MANGA_NOTES_META_KEY
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.util.chapter.getNextUnread
 import eu.kanade.tachiyomi.util.removeCovers
@@ -70,10 +68,13 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
-import logcat.LogPriority
-import mihon.domain.source.interactor.UpdateMangaFromRemote
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import logcat.LogPriority
+import mihon.core.common.extensions.EMPTY
+import mihon.domain.source.interactor.UpdateMangaFromRemote
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.core.common.preference.TriState
@@ -104,11 +105,10 @@ import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import mihon.core.common.extensions.EMPTY
 import kotlin.math.floor
 import kotlin.time.Duration.Companion.seconds
+import eu.kanade.tachiyomi.data.suwayomi.UpdateStrategy as SuwayomiUpdateStrategy
+import eu.kanade.tachiyomi.ui.browse.migration.SERVER_MIGRATION_NOTES_META_KEY as SERVER_MANGA_NOTES_META_KEY
 
 class MangaScreenModel(
     private val context: Context,
@@ -222,7 +222,7 @@ class MangaScreenModel(
                 .getOrElse {
                     loadInitialServerMangaState()
                     return@launchIO
-            }
+                }
             val chapters = getMangaAndChapters.awaitChapters(mangaId, applyScanlatorFilter = true)
                 .toChapterListItems(manga)
 

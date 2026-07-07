@@ -18,9 +18,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -36,25 +36,25 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import coil3.compose.AsyncImage
 import eu.kanade.domain.source.interactor.SetMigrateSorting
 import eu.kanade.domain.source.service.SourcePreferences
-import eu.kanade.presentation.browse.MigrateSourceScreen
-import eu.kanade.presentation.browse.MigrateSourceState
-import eu.kanade.presentation.browse.SourceOptionsDialog
-import eu.kanade.presentation.browse.SourceGroup
-import eu.kanade.presentation.browse.SourceListing
-import eu.kanade.presentation.browse.SourceUiModel
-import eu.kanade.presentation.browse.SourcesState
-import eu.kanade.presentation.browse.SourcesScreen
 import eu.kanade.presentation.browse.ExtensionScreen
 import eu.kanade.presentation.browse.ExtensionUiModel
 import eu.kanade.presentation.browse.ExtensionsState
+import eu.kanade.presentation.browse.MigrateSourceScreen
+import eu.kanade.presentation.browse.MigrateSourceState
+import eu.kanade.presentation.browse.SourceGroup
+import eu.kanade.presentation.browse.SourceListing
+import eu.kanade.presentation.browse.SourceOptionsDialog
+import eu.kanade.presentation.browse.SourceUiModel
+import eu.kanade.presentation.browse.SourcesScreen
+import eu.kanade.presentation.browse.SourcesState
 import eu.kanade.presentation.browse.components.SourceIcon
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.TabContent
@@ -90,7 +90,6 @@ import eu.kanade.tachiyomi.ui.browse.migration.manga.MigrateMangaScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.webview.WebViewScreen
 import eu.kanade.tachiyomi.util.system.LocaleHelper
-import mihon.domain.extension.model.ExtensionStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
@@ -98,7 +97,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import logcat.LogPriority
-import tachiyomi.core.common.i18n.stringResource as contextStringResource
+import mihon.domain.extension.model.ExtensionStore
 import tachiyomi.core.common.preference.getAndSet
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
@@ -114,6 +113,7 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.util.TreeMap
 import kotlin.math.absoluteValue
+import tachiyomi.core.common.i18n.stringResource as contextStringResource
 
 data object BrowseTab : Tab {
 
@@ -282,7 +282,9 @@ private fun serverMigrateSourceTab(
     val uriHandler = LocalUriHandler.current
     val navigator = LocalNavigator.currentOrThrow
     val sourcePreferences = remember { Injekt.get<SourcePreferences>() }
-    var sortingMode by remember { androidx.compose.runtime.mutableStateOf(sourcePreferences.migrationSortingMode.get()) }
+    var sortingMode by remember {
+        androidx.compose.runtime.mutableStateOf(sourcePreferences.migrationSortingMode.get())
+    }
     var sortingDirection by remember {
         androidx.compose.runtime.mutableStateOf(sourcePreferences.migrationSortingDirection.get())
     }
@@ -474,7 +476,12 @@ private fun ServerExtensionsContent(
                 val availableExtensions = current.extensions
                     .filterNot { it.isInstalled }
                     .filter { it.lang in enabledLanguages }
-                fun runAction(pkgName: String, install: Boolean = false, update: Boolean = false, uninstall: Boolean = false) {
+                fun runAction(
+                    pkgName: String,
+                    install: Boolean = false,
+                    update: Boolean = false,
+                    uninstall: Boolean = false,
+                ) {
                     scope.launch {
                         loadingActions[pkgName] = InstallStep.Installing
                         runCatching {
@@ -507,7 +514,9 @@ private fun ServerExtensionsContent(
                         put(ExtensionUiModel.Header.Resource(MR.strings.ext_updates_pending), updates)
                     }
 
-                    val installed = installedExtensions.map { it.toInstalledExtension().toExtensionItem(loadingActions) }
+                    val installed = installedExtensions.map {
+                        it.toInstalledExtension().toExtensionItem(loadingActions)
+                    }
                     if (installed.isNotEmpty()) {
                         put(ExtensionUiModel.Header.Resource(MR.strings.ext_installed), installed)
                     }

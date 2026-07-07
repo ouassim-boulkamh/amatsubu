@@ -57,7 +57,8 @@ internal class GuidesStep(
 }
 
 const val GETTING_STARTED_URL = "https://github.com/Suwayomi/Suwayomi-Server/wiki"
-private const val SUWAYOMI_SETUP_URL = "https://github.com/Suwayomi/Suwayomi-Server/wiki/Configuring-Suwayomi%E2%80%90Server"
+private const val SUWAYOMI_SETUP_URL =
+    "https://github.com/Suwayomi/Suwayomi-Server/wiki/Configuring-Suwayomi%E2%80%90Server"
 
 @PreviewLightDark
 @Composable

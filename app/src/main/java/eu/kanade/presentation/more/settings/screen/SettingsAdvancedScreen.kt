@@ -47,7 +47,6 @@ import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.launch
 import logcat.LogPriority
 import okhttp3.Headers
-import tachiyomi.core.common.i18n.stringResource as contextStringResource
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
@@ -60,6 +59,7 @@ import tachiyomi.presentation.core.util.collectAsState
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.File
+import tachiyomi.core.common.i18n.stringResource as contextStringResource
 
 object SettingsAdvancedScreen : SearchableSettings {
 
@@ -171,7 +171,8 @@ object SettingsAdvancedScreen : SearchableSettings {
             preferenceItems = listOf(
                 Preference.PreferenceItem.TextPreference(
                     title = "Clear client database",
-                    subtitle = "Delete non-library manga records from Android's local database. Suwayomi server data is not changed.",
+                    subtitle = "Delete non-library manga records from Android's local database. " +
+                        "Suwayomi server data is not changed.",
                     onClick = { navigator.push(ClearDatabaseScreen()) },
                 ),
             ),
