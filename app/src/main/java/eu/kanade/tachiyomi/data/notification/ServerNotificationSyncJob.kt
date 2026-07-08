@@ -50,9 +50,10 @@ internal class ServerNotificationSyncJob(
                 serverIdentity = serverIdentity,
                 status = libraryUpdateStatus,
             )
+            val recentChaptersChecked = libraryResult.recentChaptersChecked
             logcat(LogPriority.DEBUG) {
                 "Server notification sync library reconciliation: " +
-                    "completed=${libraryResult.completed}, recentChaptersChecked=${libraryResult.recentChaptersChecked}, " +
+                    "completed=${libraryResult.completed}, recentChaptersChecked=$recentChaptersChecked, " +
                     "unnotifiedChapters=${libraryResult.unnotifiedChapterCount}"
             }
             reconciler.reconcileDownloadStatus(

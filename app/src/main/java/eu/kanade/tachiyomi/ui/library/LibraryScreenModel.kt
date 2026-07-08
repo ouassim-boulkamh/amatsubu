@@ -11,8 +11,8 @@ import eu.kanade.core.preference.asState
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.presentation.library.components.LibraryToolbarTitle
 import eu.kanade.presentation.manga.DownloadAction
-import eu.kanade.tachiyomi.data.notification.ServerNotificationSyncJob
 import eu.kanade.tachiyomi.data.cache.CoverCache
+import eu.kanade.tachiyomi.data.notification.ServerNotificationSyncJob
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyStore
 import eu.kanade.tachiyomi.data.suwayomi.MangaStatus
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
