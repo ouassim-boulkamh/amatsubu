@@ -1,17 +1,15 @@
 package eu.kanade.tachiyomi.ui.library
 
-import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import tachiyomi.domain.library.model.LibraryManga
-import tachiyomi.domain.source.service.SourceManager
 
 private const val LOCAL_SOURCE_ID_ALIAS = "local"
-private const val RETIRED_LOCAL_SOURCE_ID = 0L
 
 data class LibraryItem(
     val libraryManga: LibraryManga,
     val downloadCount: Int,
     val unreadCount: Long,
     val isLocal: Boolean,
+    val sourceName: String,
     val badges: Badges,
     val staleSnapshotSyncedAt: Long? = null,
 ) {
@@ -23,17 +21,15 @@ data class LibraryItem(
      * @param constraint the query to check.
      * @return true if the manga matches the query, false otherwise.
      */
-    fun matches(constraint: String, sourceManager: SourceManager): Boolean {
-        val source = sourceManager.getOrStub(libraryManga.manga.source)
-        val sourceName by lazy { source.getNameForMangaInfo() }
+    fun matches(constraint: String): Boolean {
         if (constraint.startsWith("id:", true)) {
             return id == constraint.substringAfter("id:").toLongOrNull()
         } else if (constraint.startsWith("src:", true)) {
             val querySource = constraint.substringAfter("src:")
             return if (querySource.equals(LOCAL_SOURCE_ID_ALIAS, ignoreCase = true)) {
-                source.id == RETIRED_LOCAL_SOURCE_ID
+                isLocal
             } else {
-                source.id == querySource.toLongOrNull()
+                libraryManga.manga.source == querySource.toLongOrNull()
             }
         }
         return libraryManga.manga.title.contains(constraint, true) ||

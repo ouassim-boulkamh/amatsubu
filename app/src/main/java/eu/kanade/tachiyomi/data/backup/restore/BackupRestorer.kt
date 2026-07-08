@@ -9,17 +9,12 @@ import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.awaitSuccess
-import eu.kanade.tachiyomi.source.ConfigurableSource
-import eu.kanade.tachiyomi.source.preferenceKey
-import eu.kanade.tachiyomi.source.sourcePreferences
 import logcat.LogPriority
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import tachiyomi.core.common.i18n.stringResource
-import tachiyomi.core.common.preference.AndroidPreferenceStore
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -74,7 +69,6 @@ class BackupRestorer(
     private val isSync: Boolean,
     private val decoder: BackupDecoder = BackupDecoder(context),
     private val preferenceStore: PreferenceStore = Injekt.get(),
-    private val sourceManager: SourceManager = Injekt.get(),
     private val preferenceRestorer: PreferenceRestorer = PreferenceRestorer(context, preferenceStore),
 ) {
 
@@ -94,7 +88,7 @@ class BackupRestorer(
         )
         val compatibility = BackupCompatibilityPolicy(
             appPreferences = appPreferenceDefaults + preferenceStore.getAll(),
-            sourcePreferences = sourceManager.getLocalConfigurableSourcePreferences(),
+            sourcePreferences = emptyMap(),
         ).evaluate(backup, options)
 
         compatibility.summary.log()
@@ -117,17 +111,6 @@ class BackupRestorer(
             file = null,
             sync = isSync,
         )
-    }
-
-    private fun SourceManager.getLocalConfigurableSourcePreferences(): Map<String, Map<String, *>> {
-        return getAll()
-            .filterIsInstance<ConfigurableSource>()
-            .associate { source ->
-                source.preferenceKey() to AndroidPreferenceStore(
-                    context = context,
-                    sharedPreferences = source.sourcePreferences(),
-                ).getAll()
-            }
     }
 
     private fun BackupCompatibilitySummary.log() {

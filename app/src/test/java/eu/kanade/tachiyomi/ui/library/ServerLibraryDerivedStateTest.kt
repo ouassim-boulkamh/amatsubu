@@ -194,6 +194,30 @@ class ServerLibraryDerivedStateTest {
         assertEquals(1, grouped.getValue(categories.single()).size)
     }
 
+    @Test
+    fun `library search matches server source display name without local source manager`() {
+        val item = libraryItem(
+            sourceId = 5,
+            sourceName = "MangaDex",
+        )
+
+        assertEquals(true, item.matches("mangadex"))
+        assertEquals(true, item.matches("src:5"))
+        assertEquals(false, item.matches("src:local"))
+    }
+
+    @Test
+    fun `library local source alias uses server local source classification`() {
+        val item = libraryItem(
+            sourceId = 0,
+            sourceName = "Local source",
+            isLocal = true,
+        )
+
+        assertEquals(true, item.matches("src:local"))
+        assertEquals(true, item.matches("src:0"))
+    }
+
     private fun chapter(
         id: Int,
         read: Boolean,
@@ -254,13 +278,14 @@ class ServerLibraryDerivedStateTest {
     private fun libraryManga(
         id: Long,
         categories: List<Long>,
+        sourceId: Long = 1,
     ): LibraryManga {
         return LibraryManga(
             manga = Manga.create().copy(
                 id = id,
                 title = "Manga $id",
                 favorite = true,
-                source = 1,
+                source = sourceId,
             ),
             categories = categories,
             totalChapters = 0,
@@ -270,6 +295,27 @@ class ServerLibraryDerivedStateTest {
             chapterFetchedAt = 0,
             lastRead = 0,
             unreadCount = 0,
+        )
+    }
+
+    private fun libraryItem(
+        sourceId: Long,
+        sourceName: String,
+        isLocal: Boolean = false,
+    ): LibraryItem {
+        return LibraryItem(
+            libraryManga = libraryManga(id = 1, categories = listOf(0), sourceId = sourceId),
+            downloadCount = 0,
+            unreadCount = 0,
+            isLocal = isLocal,
+            sourceName = sourceName,
+            badges = LibraryItem.Badges(
+                downloadCount = 0,
+                localDownloadCount = 0,
+                unreadCount = 0,
+                isLocal = isLocal,
+                sourceLanguage = "",
+            ),
         )
     }
 }

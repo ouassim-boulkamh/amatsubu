@@ -60,7 +60,6 @@ import eu.kanade.presentation.manga.components.MangaToolbar
 import eu.kanade.presentation.manga.components.MissingChapterCountListItem
 import eu.kanade.presentation.util.formatChapterNumber
 import eu.kanade.tachiyomi.data.download.model.Download
-import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import eu.kanade.tachiyomi.ui.manga.ChapterList
 import eu.kanade.tachiyomi.ui.manga.MangaScreenModel
 import eu.kanade.tachiyomi.util.system.copyToClipboard
@@ -68,7 +67,6 @@ import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.service.missingChaptersCount
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
-import tachiyomi.domain.source.model.StubSource
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.TwoPanelBox
 import tachiyomi.presentation.core.components.VerticalFastScroller
@@ -420,19 +418,16 @@ private fun MangaScreenSmallImpl(
                         key = MangaScreenItem.INFO_BOX,
                         contentType = MangaScreenItem.INFO_BOX,
                     ) {
-                        val isSourceUnavailable = state.staleSnapshot != null && state.source is StubSource
                         MangaInfoBox(
                             isTabletUi = false,
                             appBarPadding = topPadding,
                             manga = state.manga,
-                            sourceName = if (isSourceUnavailable) {
+                            sourceName = if (state.staleSnapshot != null && state.isSourceMissing) {
                                 stringResource(MR.strings.source_unavailable)
                             } else {
-                                remember(state.source) { state.source.getNameForMangaInfo() }
+                                state.sourceName
                             },
-                            isStubSource = remember(state.source, isSourceUnavailable) {
-                                state.source is StubSource && !isSourceUnavailable
-                            },
+                            isStubSource = state.isSourceMissing && state.staleSnapshot == null,
                             onCoverClick = onCoverClicked,
                             doSearch = onSearch,
                         )
@@ -699,19 +694,16 @@ fun MangaScreenLargeImpl(
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                             )
                         }
-                        val isSourceUnavailable = state.staleSnapshot != null && state.source is StubSource
                         MangaInfoBox(
                             isTabletUi = true,
                             appBarPadding = contentPadding.calculateTopPadding(),
                             manga = state.manga,
-                            sourceName = if (isSourceUnavailable) {
+                            sourceName = if (state.staleSnapshot != null && state.isSourceMissing) {
                                 stringResource(MR.strings.source_unavailable)
                             } else {
-                                remember(state.source) { state.source.getNameForMangaInfo() }
+                                state.sourceName
                             },
-                            isStubSource = remember(state.source, isSourceUnavailable) {
-                                state.source is StubSource && !isSourceUnavailable
-                            },
+                            isStubSource = state.isSourceMissing && state.staleSnapshot == null,
                             onCoverClick = onCoverClicked,
                             doSearch = onSearch,
                         )

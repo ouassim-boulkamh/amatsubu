@@ -6,7 +6,6 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.util.fastMap
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -17,8 +16,6 @@ import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiCategoryDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
-import kotlinx.coroutines.launch
-import tachiyomi.domain.category.interactor.ResetCategoryFlags
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.library.service.LibraryPreferences.Companion.MARK_DUPLICATE_CHAPTER_READ_EXISTING
@@ -60,7 +57,6 @@ object SettingsLibraryScreen : SearchableSettings {
         allCategories: List<Category>,
         libraryPreferences: LibraryPreferences,
     ): Preference.PreferenceGroup {
-        val scope = rememberCoroutineScope()
         val userCategoriesCount = allCategories.filterNot(Category::isSystemCategory).size
 
         // For default category
@@ -91,9 +87,7 @@ object SettingsLibraryScreen : SearchableSettings {
                     title = stringResource(MR.strings.categorized_display_settings),
                     onValueChanged = {
                         if (!it) {
-                            scope.launch {
-                                Injekt.get<ResetCategoryFlags>().await()
-                            }
+                            libraryPreferences.categorySortingModes.set(emptyMap())
                         }
                         true
                     },

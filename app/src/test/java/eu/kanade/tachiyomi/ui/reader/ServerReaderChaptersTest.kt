@@ -115,6 +115,26 @@ class ServerReaderChaptersTest {
     }
 
     @Test
+    fun `downloaded only includes fresh local device copy ids`() {
+        val chapters = listOf(
+            chapter(id = 1, number = 1.0),
+            chapter(id = 2, number = 2.0),
+            chapter(id = 3, number = 3.0),
+        )
+
+        val result = build(
+            chapters,
+            selectedChapter = chapters[1],
+            downloadedOnly = true,
+            downloadedChapterIds = setOf(3L),
+            localDownloadedChapterIds = setOf(2L),
+        )
+
+        assertEquals(listOf(2L, 3L), result.chapterIds())
+        assertEquals(2L, result.selectedChapter.chapter.id)
+    }
+
+    @Test
     fun `downloaded only rejects unavailable selected chapter`() {
         val chapters = listOf(
             chapter(id = 1, number = 1.0),

@@ -63,7 +63,6 @@ import tachiyomi.core.common.util.lang.compareToWithCollator
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.library.model.LibraryDisplayMode
@@ -74,7 +73,6 @@ import tachiyomi.domain.library.model.sort
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.applyFilter
-import tachiyomi.domain.source.service.SourceManager
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import kotlin.coroutines.cancellation.CancellationException
@@ -83,11 +81,9 @@ import kotlin.time.Duration.Companion.seconds
 import eu.kanade.tachiyomi.data.suwayomi.UpdateStrategy as SuwayomiUpdateStrategy
 
 class LibraryScreenModel(
-    private val getCategories: GetCategories = Injekt.get(),
     private val preferences: BasePreferences = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
     private val coverCache: CoverCache = Injekt.get(),
-    private val sourceManager: SourceManager = Injekt.get(),
 ) : StateScreenModel<LibraryScreenModel.State>(State()) {
 
     private val suwayomiProvider = SuwayomiClientProvider()
@@ -97,6 +93,7 @@ class LibraryScreenModel(
     private val serverDownloadCounts = mutableMapOf<Long, Int>()
     private val localDownloadCounts = mutableMapOf<Long, Int>()
     private val serverSourceLanguages = mutableMapOf<Long, String>()
+    private val serverSourceNames = mutableMapOf<Long, String>()
     private val serverLocalSourceIds = mutableSetOf<Long>()
     private val serverStaleSnapshotSyncedAt = mutableMapOf<Long, Long>()
     private val serverLibraryRefreshes = MutableStateFlow(0)
@@ -118,7 +115,7 @@ class LibraryScreenModel(
                 val showSystemCategory = favorites.any { it.libraryManga.categories.contains(0) }
                 val filteredFavorites = favorites
                     .applyFilters(trackingState.recordsByMangaId, trackingState.filters, itemPreferences)
-                    .let { if (searchQuery == null) it else it.filter { m -> m.matches(searchQuery, sourceManager) } }
+                    .let { if (searchQuery == null) it else it.filter { m -> m.matches(searchQuery) } }
 
                 LibraryData(
                     isInitialized = true,
@@ -502,16 +499,15 @@ class LibraryScreenModel(
 
         return combine(
             serverCategoriesFlow,
-            getCategories.subscribe(),
             libraryPreferences.sortingMode.changes(),
             libraryPreferences.categorizedDisplaySettings.changes(),
-        ) { serverCategories, localCategories, sortingMode, categorizedDisplaySettings ->
+            libraryPreferences.categorySortingModes.changes(),
+        ) { serverCategories, sortingMode, categorizedDisplaySettings, categorySortingModes ->
             val globalFlags = sortingMode.type + sortingMode.direction
-            val localCategoriesById = localCategories.associateBy { it.id }
 
             serverCategories.map { category ->
                 val flags = if (categorizedDisplaySettings) {
-                    localCategoriesById[category.id.toLong()]?.flags ?: globalFlags
+                    categorySortingModes[category.id.toLong()]?.flag ?: globalFlags
                 } else {
                     globalFlags
                 }
@@ -534,6 +530,7 @@ class LibraryScreenModel(
         serverDownloadCounts.clear()
         localDownloadCounts.clear()
         serverSourceLanguages.clear()
+        serverSourceNames.clear()
         serverLocalSourceIds.clear()
         serverStaleSnapshotSyncedAt.clear()
 
@@ -550,6 +547,7 @@ class LibraryScreenModel(
                     ?: 0L.takeIf { source.isLocalFolderSource() }
                 sourceId?.let {
                     serverSourceLanguages[sourceId] = source.lang
+                    serverSourceNames[sourceId] = source.displayName.ifBlank { source.name }
                     if (source.isLocalFolderSource()) {
                         serverLocalSourceIds += sourceId
                     }
@@ -681,19 +679,20 @@ class LibraryScreenModel(
             val localDownloadCount = localDownloadCounts[manga.manga.id] ?: 0
             val downloadCount = maxOf(serverDownloadCount, localDownloadCount)
             val isLocal = manga.manga.source in serverLocalSourceIds
+            val sourceName = serverSourceNames[manga.manga.source].orEmpty()
             LibraryItem(
                 libraryManga = manga,
                 downloadCount = downloadCount,
                 unreadCount = manga.unreadCount,
                 isLocal = isLocal,
+                sourceName = sourceName,
                 badges = LibraryItem.Badges(
                     downloadCount = if (preferences.downloadBadge) serverDownloadCount else 0,
                     localDownloadCount = if (preferences.localDownloadBadge) localDownloadCount else 0,
                     unreadCount = if (preferences.unreadBadge) manga.unreadCount else 0,
                     isLocal = preferences.localBadge && isLocal,
                     sourceLanguage = if (preferences.languageBadge) {
-                        serverSourceLanguages[manga.manga.source]
-                            ?: sourceManager.getOrStub(manga.manga.source).lang
+                        serverSourceLanguages[manga.manga.source].orEmpty()
                     } else {
                         ""
                     },

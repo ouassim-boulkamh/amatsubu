@@ -1,7 +1,6 @@
 package tachiyomi.domain.manga.interactor
 
 import io.kotest.matchers.shouldBe
-import io.mockk.mockk
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
@@ -25,7 +24,7 @@ class FetchIntervalTest {
         dateUpload = testTime.toEpochSecond() * 1000,
     )
 
-    private val fetchInterval = FetchInterval(mockk())
+    private val fetchInterval = FetchInterval()
 
     @Test
     fun `returns default interval of 7 days when not enough distinct days`() {

@@ -20,7 +20,6 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.presentation.more.settings.Preference
-import eu.kanade.presentation.more.settings.screen.advanced.ClearDatabaseScreen
 import eu.kanade.presentation.more.settings.screen.debug.DebugInfoScreen
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiGraphQlClient
@@ -52,7 +51,6 @@ import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.ImageUtil
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.manga.interactor.ResetViewerFlags
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
@@ -114,7 +112,6 @@ object SettingsAdvancedScreen : SearchableSettings {
                 },
             ),
             getBackgroundActivityGroup(),
-            getDataGroup(),
             getNetworkGroup(networkPreferences = networkPreferences),
             getLibraryGroup(
                 suwayomiClient = suwayomiClient,
@@ -157,23 +154,6 @@ object SettingsAdvancedScreen : SearchableSettings {
                     title = "Don't kill my app!",
                     subtitle = stringResource(MR.strings.about_dont_kill_my_app),
                     onClick = { uriHandler.openUri("https://dontkillmyapp.com/") },
-                ),
-            ),
-        )
-    }
-
-    @Composable
-    private fun getDataGroup(): Preference.PreferenceGroup {
-        val navigator = LocalNavigator.currentOrThrow
-
-        return Preference.PreferenceGroup(
-            title = stringResource(MR.strings.label_data),
-            preferenceItems = listOf(
-                Preference.PreferenceItem.TextPreference(
-                    title = "Clear client database",
-                    subtitle = "Delete non-library manga records from Android's local database. " +
-                        "Suwayomi server data is not changed.",
-                    onClick = { navigator.push(ClearDatabaseScreen()) },
                 ),
             ),
         )
@@ -284,30 +264,16 @@ object SettingsAdvancedScreen : SearchableSettings {
                     subtitle = stringResource(MR.strings.pref_reset_viewer_flags_summary),
                     onClick = {
                         scope.launchNonCancellable {
-                            val localSuccess = runCatching {
-                                Injekt.get<ResetViewerFlags>().await()
-                            }.onFailure { error ->
-                                logcat(LogPriority.ERROR, error) { "Failed to reset local viewer flags" }
-                            }.getOrDefault(false)
                             val serverSuccess = runCatching {
                                 resetServerViewerFlags(suwayomiClient)
                             }.onFailure { error ->
                                 logcat(LogPriority.ERROR, error) { "Failed to reset Suwayomi viewer flags" }
                             }.isSuccess
                             withUIContext {
-                                val message = when {
-                                    localSuccess && serverSuccess -> {
-                                        context.contextStringResource(MR.strings.pref_reset_viewer_flags_success)
-                                    }
-                                    localSuccess -> {
-                                        "Local viewer flags reset, but Suwayomi reader settings failed to reset."
-                                    }
-                                    serverSuccess -> {
-                                        "Suwayomi reader settings reset, but local viewer flags failed to reset."
-                                    }
-                                    else -> {
-                                        context.contextStringResource(MR.strings.pref_reset_viewer_flags_error)
-                                    }
+                                val message = if (serverSuccess) {
+                                    context.contextStringResource(MR.strings.pref_reset_viewer_flags_success)
+                                } else {
+                                    context.contextStringResource(MR.strings.pref_reset_viewer_flags_error)
                                 }
                                 context.toast(message)
                             }

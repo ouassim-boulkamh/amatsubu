@@ -31,7 +31,6 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 rootProject.name = "Amatsubu"
 include(":app")
 include(":core-metadata")
-include(":core:archive")
 include(":core:common")
 include(":data")
 include(":domain")

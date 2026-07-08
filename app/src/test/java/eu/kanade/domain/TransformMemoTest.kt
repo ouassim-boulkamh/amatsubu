@@ -12,7 +12,6 @@ import kotlinx.serialization.json.put
 import mihon.domain.manga.model.toDomainManga
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import tachiyomi.domain.chapter.interactor.ShouldUpdateDbChapter
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
 
@@ -87,15 +86,5 @@ class TransformMemoTest {
             it.memo = mangaMemo
         }
         assertEquals(mangaMemo, sourceManga.copy().memo)
-    }
-
-    @Test
-    fun `chapter update decision includes memo changes`() {
-        val oldMemo = buildJsonObject { put("amatsubu.chapter", "old") }
-        val newMemo = buildJsonObject { put("amatsubu.chapter", "new") }
-        val dbChapter = Chapter.create().copy(memo = oldMemo)
-        val sourceChapter = dbChapter.copy(memo = newMemo)
-
-        assertEquals(true, ShouldUpdateDbChapter().await(dbChapter, sourceChapter))
     }
 }

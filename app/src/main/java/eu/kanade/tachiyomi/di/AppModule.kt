@@ -19,7 +19,6 @@ import eu.kanade.tachiyomi.data.suwayomi.SuwayomiSnapshotCache
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiUpdatesWidgetDataSource
 import eu.kanade.tachiyomi.network.JavaScriptEngine
 import eu.kanade.tachiyomi.network.NetworkHelper
-import eu.kanade.tachiyomi.source.AndroidSourceManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.plus
@@ -29,15 +28,7 @@ import nl.adaptivity.xmlutil.XmlDeclMode
 import nl.adaptivity.xmlutil.core.XmlVersion
 import nl.adaptivity.xmlutil.serialization.XML
 import tachiyomi.core.common.storage.AndroidStorageFolderProvider
-import tachiyomi.data.Chapters
 import tachiyomi.data.Database
-import tachiyomi.data.DateColumnAdapter
-import tachiyomi.data.History
-import tachiyomi.data.Mangas
-import tachiyomi.data.MemoColumnAdapter
-import tachiyomi.data.StringListColumnAdapter
-import tachiyomi.data.UpdateStrategyColumnAdapter
-import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.storage.service.StorageManager
 import tachiyomi.presentation.widget.UpdatesWidgetDataSource
 import uy.kohesive.injekt.api.InjektModule
@@ -72,20 +63,7 @@ class AppModule(val app: Application) : InjektModule {
             }
         }
         addSingletonFactory {
-            Database(
-                driver = get(),
-                historyAdapter = History.Adapter(
-                    last_readAdapter = DateColumnAdapter,
-                ),
-                mangasAdapter = Mangas.Adapter(
-                    genreAdapter = StringListColumnAdapter,
-                    update_strategyAdapter = UpdateStrategyColumnAdapter,
-                    memoAdapter = MemoColumnAdapter,
-                ),
-                chaptersAdapter = Chapters.Adapter(
-                    memoAdapter = MemoColumnAdapter,
-                ),
-            )
+            Database(driver = get())
         }
 
         addSingletonFactory {
@@ -117,8 +95,6 @@ class AppModule(val app: Application) : InjektModule {
         addSingletonFactory { NetworkHelper(app, get()) }
         addSingletonFactory { JavaScriptEngine(app) }
 
-        addSingletonFactory<SourceManager> { AndroidSourceManager(get(), get()) }
-
         addSingletonFactory { ImageSaver(app) }
 
         addSingletonFactory { AndroidStorageFolderProvider(app) }
@@ -131,8 +107,6 @@ class AppModule(val app: Application) : InjektModule {
         // Asynchronously init expensive components for a faster cold start
         ContextCompat.getMainExecutor(app).execute {
             get<NetworkHelper>()
-
-            get<SourceManager>()
 
             get<Database>()
         }

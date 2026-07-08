@@ -1,6 +1,5 @@
 package eu.kanade.tachiyomi.util
 
-import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.manga.model.hasCustomCover
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import tachiyomi.domain.manga.model.Manga
@@ -19,11 +18,10 @@ fun Manga.removeCovers(coverCache: CoverCache = Injekt.get()): Manga {
 
 suspend fun Manga.editCover(
     stream: InputStream,
-    updateManga: UpdateManga = Injekt.get(),
     coverCache: CoverCache = Injekt.get(),
-) {
-    if (favorite) {
-        coverCache.setCustomCoverToCache(this, stream)
-        updateManga.awaitUpdateCoverLastModified(id)
-    }
+): Manga {
+    if (!favorite) return this
+
+    coverCache.setCustomCoverToCache(this, stream)
+    return copy(coverLastModified = Instant.now().toEpochMilli())
 }

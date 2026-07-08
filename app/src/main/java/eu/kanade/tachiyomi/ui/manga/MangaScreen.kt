@@ -28,7 +28,6 @@ import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import eu.kanade.core.util.ifSourcesLoaded
 import eu.kanade.domain.manga.model.hasCustomCover
 import eu.kanade.domain.manga.model.toSManga
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
@@ -89,18 +88,13 @@ class MangaScreen(
 
     @Composable
     override fun Content() {
-        if (!ifSourcesLoaded()) {
-            LoadingScreen()
-            return
-        }
-
         val navigator = LocalNavigator.currentOrThrow
         val context = LocalContext.current
         val haptic = LocalHapticFeedback.current
         val scope = rememberCoroutineScope()
         val lifecycleOwner = LocalLifecycleOwner.current
         val screenModel = rememberScreenModel {
-            MangaScreenModel(context, lifecycleOwner.lifecycle, mangaId, fromSource, fetchChaptersOnOpen)
+            MangaScreenModel(context, mangaId, fromSource, fetchChaptersOnOpen)
         }
 
         val state by screenModel.state.collectAsStateWithLifecycle()
@@ -295,8 +289,8 @@ class MangaScreen(
                 navigator.push(ServerMigrateSearchScreen(successState.manga.id))
             }.takeIf { successState.manga.favorite && isServerBacked && !isOfflineSnapshot },
             onEditNotesClicked = {
-                navigator.push(MangaNotesScreen(manga = successState.manga, isServerBacked = isServerBacked))
-            }.takeIf { !isOfflineSnapshot },
+                navigator.push(MangaNotesScreen(manga = successState.manga))
+            }.takeIf { isServerBacked && !isOfflineSnapshot },
             onMultiBookmarkClicked = { chapters, bookmarked ->
                 if (!isOfflineSnapshot) screenModel.bookmarkChapters(chapters, bookmarked)
             },
@@ -349,6 +343,7 @@ class MangaScreen(
             is MangaScreenModel.Dialog.DuplicateManga -> {
                 DuplicateMangaDialog(
                     duplicates = dialog.duplicates,
+                    sourceNamesById = successState.sourceNamesById,
                     onDismissRequest = onDismissRequest,
                     onConfirm = { screenModel.toggleFavorite(onRemoved = {}, checkDuplicate = false) },
                     onOpenManga = { navigator.push(MangaScreen(it.id)) },
@@ -394,8 +389,7 @@ class MangaScreen(
             MangaScreenModel.Dialog.FullCover -> {
                 val sm = rememberScreenModel {
                     MangaCoverScreenModel(
-                        mangaId = successState.manga.id,
-                        initialManga = successState.manga.takeIf { successState.isServerBacked },
+                        initialManga = successState.manga,
                     )
                 }
                 val manga by sm.state.collectAsState()
