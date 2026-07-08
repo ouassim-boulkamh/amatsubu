@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.more
 
+import android.app.Application
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
@@ -24,6 +25,7 @@ import eu.kanade.domain.base.BasePreferences
 import eu.kanade.presentation.more.MoreScreen
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
+import eu.kanade.tachiyomi.data.notification.ServerNotificationSyncJob
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
@@ -205,6 +207,7 @@ private class MoreScreenModel(
             when (updateStarted) {
                 true -> {
                     libraryPreferences.lastUpdatedTimestamp.set(System.currentTimeMillis())
+                    ServerNotificationSyncJob.schedulePromptReconciliation(Injekt.get<Application>())
                     _serverSyncState.value = ServerSyncState.LibraryUpdating()
                     _events.send(Event.ServerSyncSuccess)
                 }

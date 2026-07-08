@@ -5,7 +5,10 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -30,14 +33,28 @@ internal class ServerNotificationSyncJob(
 
     override suspend fun doWork(): Result {
         return try {
+            logcat(LogPriority.DEBUG) { "Server notification sync worker started" }
             val serverIdentity = clientProvider.baseUrl()
             val client = clientProvider.graphQlClient
+            val libraryUpdateStatus = client.getLibraryUpdateStatus()
+            val jobs = libraryUpdateStatus.jobsInfo
 
-            reconciler.reconcileLibraryUpdate(
+            logcat(LogPriority.DEBUG) {
+                "Server notification sync library status: " +
+                    "running=${jobs.isRunning}, finished=${jobs.finishedJobs}, total=${jobs.totalJobs}, " +
+                    "skippedCategories=${jobs.skippedCategoriesCount}, skippedMangas=${jobs.skippedMangasCount}"
+            }
+
+            val libraryResult = reconciler.reconcileLibraryUpdate(
                 client = client,
                 serverIdentity = serverIdentity,
-                status = client.getLibraryUpdateStatus(),
+                status = libraryUpdateStatus,
             )
+            logcat(LogPriority.DEBUG) {
+                "Server notification sync library reconciliation: " +
+                    "completed=${libraryResult.completed}, recentChaptersChecked=${libraryResult.recentChaptersChecked}, " +
+                    "unnotifiedChapters=${libraryResult.unnotifiedChapterCount}"
+            }
             reconciler.reconcileDownloadStatus(
                 serverIdentity = serverIdentity,
                 status = client.getDownloadStatus(),
@@ -51,13 +68,16 @@ internal class ServerNotificationSyncJob(
                 extensions = client.extensionList(),
             )
 
+            logcat(LogPriority.DEBUG) { "Server notification sync completed: success" }
             Result.success()
         } catch (error: Throwable) {
             if (error is CancellationException) throw error
             if (error.isSuwayomiServerUnavailable()) {
                 logcat(LogPriority.DEBUG, error) { "Server notification sync skipped; Suwayomi server unavailable" }
+                logcat(LogPriority.DEBUG) { "Server notification sync completed: server_unavailable_retry" }
             } else {
                 logcat(LogPriority.ERROR, error) { "Server notification sync failed" }
+                logcat(LogPriority.DEBUG) { "Server notification sync completed: retry" }
             }
             Result.retry()
         }
@@ -83,8 +103,13 @@ internal class ServerNotificationSyncJob(
 
     companion object {
         private const val UNIQUE_WORK_NAME = "ServerNotificationSync"
+        private const val UNIQUE_IMMEDIATE_WORK_NAME = "ServerNotificationSyncImmediate"
+        private const val UNIQUE_DELAYED_30_SECONDS_WORK_NAME = "ServerNotificationSyncDelayed30s"
+        private const val UNIQUE_DELAYED_2_MINUTES_WORK_NAME = "ServerNotificationSyncDelayed2m"
         private const val TAG = "ServerNotificationSync"
         private const val REPEAT_INTERVAL_MINUTES = 15L
+        private const val FIRST_DELAY_SECONDS = 30L
+        private const val SECOND_DELAY_MINUTES = 2L
 
         fun schedule(context: Context) {
             val notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
@@ -116,8 +141,52 @@ internal class ServerNotificationSyncJob(
             )
         }
 
+        fun schedulePromptReconciliation(context: Context) {
+            schedule(context)
+
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+            val immediateRequest = OneTimeWorkRequestBuilder<ServerNotificationSyncJob>()
+                .addTag(TAG)
+                .setConstraints(constraints)
+                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                .build()
+            val delayed30SecondsRequest = OneTimeWorkRequestBuilder<ServerNotificationSyncJob>()
+                .addTag(TAG)
+                .setConstraints(constraints)
+                .setInitialDelay(FIRST_DELAY_SECONDS, TimeUnit.SECONDS)
+                .build()
+            val delayed2MinutesRequest = OneTimeWorkRequestBuilder<ServerNotificationSyncJob>()
+                .addTag(TAG)
+                .setConstraints(constraints)
+                .setInitialDelay(SECOND_DELAY_MINUTES, TimeUnit.MINUTES)
+                .build()
+
+            val workManager = context.workManager
+            workManager.enqueueUniqueWork(
+                UNIQUE_IMMEDIATE_WORK_NAME,
+                ExistingWorkPolicy.REPLACE,
+                immediateRequest,
+            )
+            workManager.enqueueUniqueWork(
+                UNIQUE_DELAYED_30_SECONDS_WORK_NAME,
+                ExistingWorkPolicy.REPLACE,
+                delayed30SecondsRequest,
+            )
+            workManager.enqueueUniqueWork(
+                UNIQUE_DELAYED_2_MINUTES_WORK_NAME,
+                ExistingWorkPolicy.REPLACE,
+                delayed2MinutesRequest,
+            )
+            logcat(LogPriority.DEBUG) { "Scheduled prompt server notification reconciliation work" }
+        }
+
         fun cancel(context: Context) {
             WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_WORK_NAME)
+            WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_IMMEDIATE_WORK_NAME)
+            WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_DELAYED_30_SECONDS_WORK_NAME)
+            WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_DELAYED_2_MINUTES_WORK_NAME)
         }
     }
 }

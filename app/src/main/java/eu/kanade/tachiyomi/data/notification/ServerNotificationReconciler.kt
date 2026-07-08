@@ -19,20 +19,32 @@ internal class ServerNotificationReconciler(
         client: SuwayomiGraphQlClient,
         serverIdentity: String,
         status: SuwayomiLibraryUpdateStatusDto,
-    ) {
+    ): LibraryReconciliationResult {
         val jobs = status.jobsInfo
         val transition = checkpoints.recordLibraryUpdate(serverIdentity, jobs)
 
         if (!jobs.isRunning) {
             renderer.cancelLibraryProgress()
-            if (transition.completed) {
+            return if (transition.completed) {
                 ServerStateSync.requestRefresh()
                 showLibraryUpdateCompleteNotification(client, transition.startedAt)
+            } else {
+                LibraryReconciliationResult(
+                    started = false,
+                    completed = false,
+                    recentChaptersChecked = false,
+                    unnotifiedChapterCount = 0,
+                )
             }
-            return
         }
 
         renderer.showLibraryProgress(jobs)
+        return LibraryReconciliationResult(
+            started = !transition.wasRunning,
+            completed = false,
+            recentChaptersChecked = false,
+            unnotifiedChapterCount = 0,
+        )
     }
 
     fun reconcileDownloadStatus(
@@ -89,7 +101,7 @@ internal class ServerNotificationReconciler(
     private suspend fun showLibraryUpdateCompleteNotification(
         client: SuwayomiGraphQlClient,
         startedAt: Long,
-    ) {
+    ): LibraryReconciliationResult {
         val recentUnread = withContext(Dispatchers.IO) {
             runCatching {
                 val chapters = client.getRecentChapters()
@@ -97,7 +109,7 @@ internal class ServerNotificationReconciler(
                 chapters
                     .asSequence()
                     .filter { !it.isRead }
-                    .filter { (it.fetchedAt.toLongOrNull() ?: 0L) >= startedAt }
+                    .filter { it.fetchedAt.wasFetchedDuringObservedLibraryUpdate(startedAt) }
                     .filter { it.id in unnotifiedChapterIds }
                     .toList()
             }.getOrElse { error ->
@@ -109,6 +121,12 @@ internal class ServerNotificationReconciler(
 
         renderer.showNewChapters(recentUnread)
         checkpoints.markChaptersNotified(recentUnread.map { it.id })
+        return LibraryReconciliationResult(
+            started = false,
+            completed = true,
+            recentChaptersChecked = true,
+            unnotifiedChapterCount = recentUnread.size,
+        )
     }
 
     private fun String.isDoneState(): Boolean {
@@ -125,3 +143,22 @@ internal class ServerNotificationReconciler(
         return equals("ERROR", ignoreCase = true) || equals("FAILED", ignoreCase = true)
     }
 }
+
+internal data class LibraryReconciliationResult(
+    val started: Boolean,
+    val completed: Boolean,
+    val recentChaptersChecked: Boolean,
+    val unnotifiedChapterCount: Int,
+)
+
+internal fun String.toSuwayomiEpochMillis(): Long {
+    val value = toLongOrNull() ?: return 0L
+    return if (value in 1 until EPOCH_MILLIS_THRESHOLD) value * 1_000L else value
+}
+
+internal fun String.wasFetchedDuringObservedLibraryUpdate(startedAtMillis: Long): Boolean {
+    return toSuwayomiEpochMillis() >= startedAtMillis - OBSERVED_LIBRARY_UPDATE_START_GRACE_MS
+}
+
+private const val EPOCH_MILLIS_THRESHOLD = 1_000_000_000_000L
+private const val OBSERVED_LIBRARY_UPDATE_START_GRACE_MS = 60_000L
