@@ -61,12 +61,9 @@ import eu.kanade.presentation.components.TabbedDialogPaddings
 import eu.kanade.presentation.manga.components.MangaCover
 import eu.kanade.presentation.more.settings.LocalPreferenceMinHeight
 import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
-import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.SManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaWithChapterCount
-import tachiyomi.domain.source.model.StubSource
-import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.Badge
 import tachiyomi.presentation.core.components.BadgeGroup
@@ -74,19 +71,17 @@ import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.secondaryItemAlpha
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 @Composable
 fun DuplicateMangaDialog(
     duplicates: List<MangaWithChapterCount>,
+    sourceNamesById: Map<Long, String>,
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
     onOpenManga: (manga: Manga) -> Unit,
     onMigrate: (manga: Manga) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val sourceManager = remember { Injekt.get<SourceManager>() }
     val minHeight = LocalPreferenceMinHeight.current
     val horizontalPadding = PaddingValues(horizontal = TabbedDialogPaddings.Horizontal)
     val horizontalPaddingModifier = Modifier.padding(horizontalPadding)
@@ -127,7 +122,8 @@ fun DuplicateMangaDialog(
                 ) {
                     DuplicateMangaListItem(
                         duplicate = it,
-                        getSource = { sourceManager.getOrStub(it.manga.source) },
+                        sourceName = sourceNamesById[it.manga.source] ?: it.manga.source.toString(),
+                        sourceMissing = it.manga.source !in sourceNamesById,
                         onMigrate = { onMigrate(it.manga) },
                         onDismissRequest = onDismissRequest,
                         onOpenManga = { onOpenManga(it.manga) },
@@ -171,12 +167,12 @@ fun DuplicateMangaDialog(
 @Composable
 private fun DuplicateMangaListItem(
     duplicate: MangaWithChapterCount,
-    getSource: () -> Source,
+    sourceName: String,
+    sourceMissing: Boolean,
     onDismissRequest: () -> Unit,
     onOpenManga: () -> Unit,
     onMigrate: () -> Unit,
 ) {
-    val source = getSource()
     val manga = duplicate.manga
     Column(
         modifier = Modifier
@@ -269,7 +265,7 @@ private fun DuplicateMangaListItem(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
         ) {
-            if (source is StubSource) {
+            if (sourceMissing) {
                 Icon(
                     imageVector = Icons.Filled.Warning,
                     contentDescription = null,
@@ -278,7 +274,7 @@ private fun DuplicateMangaListItem(
                 )
             }
             Text(
-                text = source.name,
+                text = sourceName,
                 style = MaterialTheme.typography.labelSmall,
                 overflow = TextOverflow.Ellipsis,
                 maxLines = 1,

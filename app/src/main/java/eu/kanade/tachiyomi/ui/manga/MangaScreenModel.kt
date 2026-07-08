@@ -7,18 +7,11 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.util.fastAny
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.flowWithLifecycle
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.core.preference.asState
 import eu.kanade.core.util.addOrRemove
 import eu.kanade.core.util.insertSeparators
-import eu.kanade.domain.chapter.interactor.GetAvailableScanlators
-import eu.kanade.domain.chapter.interactor.SetReadStatus
-import eu.kanade.domain.manga.interactor.GetExcludedScanlators
-import eu.kanade.domain.manga.interactor.SetExcludedScanlators
-import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.manga.model.chaptersFiltered
 import eu.kanade.domain.manga.model.downloadedFilter
 import eu.kanade.domain.manga.model.localDownloadedFilter
@@ -55,16 +48,11 @@ import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.util.chapter.getNextUnread
-import eu.kanade.tachiyomi.util.removeCovers
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
@@ -74,7 +62,6 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import logcat.LogPriority
 import mihon.core.common.extensions.EMPTY
-import mihon.domain.source.interactor.UpdateMangaFromRemote
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.core.common.preference.TriState
@@ -83,25 +70,14 @@ import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.category.interactor.GetCategories
-import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
-import tachiyomi.domain.chapter.interactor.SetMangaDefaultChapterFlags
-import tachiyomi.domain.chapter.interactor.UpdateChapter
 import tachiyomi.domain.chapter.model.Chapter
-import tachiyomi.domain.chapter.model.ChapterUpdate
-import tachiyomi.domain.chapter.model.NoChaptersException
 import tachiyomi.domain.chapter.service.calculateChapterGap
 import tachiyomi.domain.chapter.service.getChapterSort
 import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
-import tachiyomi.domain.manga.interactor.GetMangaWithChapters
-import tachiyomi.domain.manga.interactor.SetMangaChapterFlags
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaWithChapterCount
 import tachiyomi.domain.manga.model.applyFilter
-import tachiyomi.domain.manga.repository.MangaRepository
-import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -112,26 +88,11 @@ import eu.kanade.tachiyomi.ui.browse.migration.SERVER_MIGRATION_NOTES_META_KEY a
 
 class MangaScreenModel(
     private val context: Context,
-    private val lifecycle: Lifecycle,
     private val mangaId: Long,
     private val isFromSource: Boolean,
     private val fetchChaptersOnOpen: Boolean = isFromSource,
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
     readerPreferences: ReaderPreferences = Injekt.get(),
-    private val getMangaAndChapters: GetMangaWithChapters = Injekt.get(),
-    private val getDuplicateLibraryManga: GetDuplicateLibraryManga = Injekt.get(),
-    private val getAvailableScanlators: GetAvailableScanlators = Injekt.get(),
-    private val getExcludedScanlators: GetExcludedScanlators = Injekt.get(),
-    private val setExcludedScanlators: SetExcludedScanlators = Injekt.get(),
-    private val setMangaChapterFlags: SetMangaChapterFlags = Injekt.get(),
-    private val setMangaDefaultChapterFlags: SetMangaDefaultChapterFlags = Injekt.get(),
-    private val setReadStatus: SetReadStatus = Injekt.get(),
-    private val updateChapter: UpdateChapter = Injekt.get(),
-    private val updateManga: UpdateManga = Injekt.get(),
-    private val getCategories: GetCategories = Injekt.get(),
-    private val setMangaCategories: SetMangaCategories = Injekt.get(),
-    private val mangaRepository: MangaRepository = Injekt.get(),
-    private val updateMangaFromRemote: UpdateMangaFromRemote = Injekt.get(),
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
 ) : StateScreenModel<MangaScreenModel.State>(State.Loading) {
 
@@ -214,95 +175,7 @@ class MangaScreenModel(
             .launchIn(screenModelScope)
 
         screenModelScope.launchIO {
-            if (isFromSource) {
-                loadInitialServerMangaState(fetchChapters = fetchChaptersOnOpen)
-                return@launchIO
-            }
-            val manga = runCatching { getMangaAndChapters.awaitManga(mangaId) }
-                .getOrElse {
-                    loadInitialServerMangaState()
-                    return@launchIO
-                }
-            val chapters = getMangaAndChapters.awaitChapters(mangaId, applyScanlatorFilter = true)
-                .toChapterListItems(manga)
-
-            if (!manga.favorite) {
-                setMangaDefaultChapterFlags.await(manga)
-            }
-
-            val needRefreshInfo = !manga.initialized
-            val needRefreshChapter = chapters.isEmpty()
-
-            // Show what we have earlier
-            mutableState.update {
-                State.Success(
-                    manga = manga,
-                    source = Injekt.get<SourceManager>().getOrStub(manga.source),
-                    isFromSource = isFromSource,
-                    isServerBacked = false,
-                    chapters = chapters,
-                    availableScanlators = getAvailableScanlators.await(mangaId),
-                    excludedScanlators = getExcludedScanlators.await(mangaId),
-                    isRefreshingData = needRefreshInfo || needRefreshChapter,
-                    dialog = null,
-                    hideMissingChapters = libraryPreferences.hideMissingChapters.get(),
-                )
-            }
-
-            startLocalObservers()
-
-            // Fetch info-chapters when needed
-            if ((needRefreshInfo || needRefreshChapter) && screenModelScope.isActive) {
-                fetchAllFromSource(
-                    manualFetch = false,
-                    fetchDetails = needRefreshInfo,
-                    fetchChapters = needRefreshChapter,
-                )
-            }
-
-            // Initial loading finished
-            updateSuccessState { it.copy(isRefreshingData = false) }
-        }
-    }
-
-    private fun startLocalObservers() {
-        screenModelScope.launchIO {
-            getMangaAndChapters.subscribe(mangaId, applyScanlatorFilter = true)
-                .distinctUntilChanged()
-                .flowWithLifecycle(lifecycle)
-                .catch { error -> logcat(LogPriority.ERROR, error) { "Ignoring local manga observer failure" } }
-                .collectLatest { (manga, chapters) ->
-                    updateSuccessState {
-                        it.copy(
-                            manga = manga,
-                            chapters = chapters.toChapterListItems(manga),
-                        )
-                    }
-                }
-        }
-
-        screenModelScope.launchIO {
-            getExcludedScanlators.subscribe(mangaId)
-                .flowWithLifecycle(lifecycle)
-                .distinctUntilChanged()
-                .catch { error -> logcat(LogPriority.ERROR, error) { "Ignoring local scanlator exclusion failure" } }
-                .collectLatest { excludedScanlators ->
-                    updateSuccessState {
-                        it.copy(excludedScanlators = excludedScanlators)
-                    }
-                }
-        }
-
-        screenModelScope.launchIO {
-            getAvailableScanlators.subscribe(mangaId)
-                .flowWithLifecycle(lifecycle)
-                .distinctUntilChanged()
-                .catch { error -> logcat(LogPriority.ERROR, error) { "Ignoring local scanlator availability failure" } }
-                .collectLatest { availableScanlators ->
-                    updateSuccessState {
-                        it.copy(availableScanlators = availableScanlators)
-                    }
-                }
+            loadInitialServerMangaState(fetchChapters = fetchChaptersOnOpen)
         }
     }
 
@@ -375,14 +248,29 @@ class MangaScreenModel(
             .associate { it.chapterId.toLong() to it.isRead }
         val pendingReadStateCount = pendingReadStateStore.count(suwayomiProvider.serverKey()).toInt()
         val chapters = serverChapters.toServerChapterListItems(manga)
-        val source = if (staleSnapshot == null) {
-            suwayomiClient.sourceList()
-                .firstOrNull { it.id == serverManga.sourceId }
-                ?.let { SuwayomiDisplaySource(it, manga.source) }
-                ?: Injekt.get<SourceManager>().getOrStub(manga.source)
+        val serverSources = if (staleSnapshot == null) {
+            runCatching { suwayomiClient.sourceList() }
+                .onFailure { error ->
+                    if (error is CancellationException) throw error
+                    logcat(LogPriority.ERROR, error) { "Failed to load Suwayomi source list for manga display" }
+                }
+                .getOrDefault(emptyList())
         } else {
-            Injekt.get<SourceManager>().getOrStub(manga.source)
+            emptyList()
         }
+        val sourceNamesById = serverSources.mapNotNull { source ->
+            source.id.toLongOrNull()?.let { id ->
+                id to source.displayName.ifBlank { source.name }
+            }
+        }.toMap()
+        val serverSource = serverSources.firstOrNull { it.id == serverManga.sourceId }
+        val source = serverSource?.let { SuwayomiDisplaySource(it, manga.source) }
+            ?: SuwayomiDisplaySource(
+                sourceId = manga.source,
+                name = serverManga.sourceId,
+                lang = "",
+                supportsLatest = false,
+            )
         val trackingCount = if (staleSnapshot == null) {
             runCatching {
                 suwayomiClient.getTrackRecords(mangaId.toInt()).size
@@ -409,6 +297,9 @@ class MangaScreenModel(
                 hideMissingChapters = libraryPreferences.hideMissingChapters.get(),
                 staleSnapshot = staleSnapshot,
                 pendingReadStateCount = pendingReadStateCount,
+                sourceName = serverSource?.displayName?.ifBlank { serverSource.name } ?: serverManga.sourceId,
+                isSourceMissing = serverSource == null,
+                sourceNamesById = sourceNamesById,
             )
         }
         return partialErrors
@@ -497,12 +388,7 @@ class MangaScreenModel(
     fun fetchAllFromSource(manualFetch: Boolean = true) {
         screenModelScope.launch {
             updateSuccessState { it.copy(isRefreshingData = true) }
-            fetchAllFromSource(
-                manualFetch = manualFetch,
-                fetchDetails = true,
-                fetchChapters = true,
-            )
-            updateSuccessState { it.copy(isRefreshingData = false) }
+            refreshServerManga()
         }
     }
 
@@ -534,51 +420,10 @@ class MangaScreenModel(
         }
     }
 
-    private suspend fun fetchAllFromSource(
-        manualFetch: Boolean,
-        fetchDetails: Boolean,
-        fetchChapters: Boolean,
-    ) {
-        val state = successState ?: return
-        try {
-            withUIContext {
-                val update = updateMangaFromRemote(
-                    source = state.source,
-                    manga = state.manga,
-                    fetchDetails = fetchDetails,
-                    fetchChapters = fetchChapters,
-                    manualFetch = manualFetch,
-                )
-                    .getOrThrow()
-
-                if (manualFetch) {
-                    refreshServerManga()
-                }
-            }
-        } catch (_: CancellationException) {
-            // ignore
-        } catch (e: Exception) {
-            val message = if (e is NoChaptersException) {
-                context.stringResource(MR.strings.no_chapters_error)
-            } else {
-                logcat(LogPriority.ERROR, e)
-                with(context) { e.formattedMessage }
-            }
-
-            screenModelScope.launch {
-                snackbarHostState.showSnackbar(message = message)
-            }
-        }
-    }
-
     // Manga info - start
 
     fun toggleFavorite() {
-        toggleFavorite(
-            onRemoved = {
-                // Local manga downloads are retired; server-backed removal is handled by toggleServerLibrary().
-            },
-        )
+        toggleServerLibrary()
     }
 
     fun toggleServerLibrary() {
@@ -616,59 +461,7 @@ class MangaScreenModel(
         onRemoved: () -> Unit,
         checkDuplicate: Boolean = true,
     ) {
-        val state = successState ?: return
-        if (state.isServerBacked) {
-            toggleServerLibrary()
-            return
-        }
-        screenModelScope.launchIO {
-            val manga = state.manga
-
-            if (isFavorited) {
-                // Remove from library
-                if (updateManga.awaitUpdateFavorite(manga.id, false)) {
-                    // Remove covers and update last modified in db
-                    if (manga.removeCovers() != manga) {
-                        updateManga.awaitUpdateCoverLastModified(manga.id)
-                    }
-                    withUIContext { onRemoved() }
-                }
-            } else {
-                // Add to library
-                // First, check if duplicate exists if callback is provided
-                if (checkDuplicate) {
-                    val duplicates = getDuplicateLibraryManga(manga)
-
-                    if (duplicates.isNotEmpty()) {
-                        updateSuccessState { it.copy(dialog = Dialog.DuplicateManga(manga, duplicates)) }
-                        return@launchIO
-                    }
-                }
-
-                // Now check if user previously set categories, when available
-                val categories = getCategories()
-                val defaultCategoryId = libraryPreferences.defaultCategory.get().toLong()
-                val defaultCategory = categories.find { it.id == defaultCategoryId }
-                when {
-                    // Default category set
-                    defaultCategory != null -> {
-                        val result = updateManga.awaitUpdateFavorite(manga.id, true)
-                        if (!result) return@launchIO
-                        moveMangaToCategory(defaultCategory)
-                    }
-
-                    // Automatic 'Default' or no categories
-                    defaultCategoryId == 0L || categories.isEmpty() -> {
-                        val result = updateManga.awaitUpdateFavorite(manga.id, true)
-                        if (!result) return@launchIO
-                        moveMangaToCategory(null)
-                    }
-
-                    // Choose a category
-                    else -> showChangeCategoryDialog()
-                }
-            }
-        }
+        toggleServerLibrary()
     }
 
     fun showChangeCategoryDialog() {
@@ -703,17 +496,7 @@ class MangaScreenModel(
     }
 
     fun setFetchInterval(manga: Manga, interval: Int) {
-        screenModelScope.launchIO {
-            if (
-                updateManga.awaitUpdateFetchInterval(
-                    // Custom intervals are negative
-                    manga.copy(fetchInterval = -interval),
-                )
-            ) {
-                val updatedManga = mangaRepository.getMangaById(manga.id)
-                updateSuccessState { it.copy(manga = updatedManga) }
-            }
-        }
+        // Server-backed manga fetch intervals are estimated from Suwayomi state.
     }
 
     private suspend fun promptDeleteServerDownloads() {
@@ -749,11 +532,8 @@ class MangaScreenModel(
      * @return List of categories, not including the default category
      */
     suspend fun getCategories(): List<Category> {
-        if (successState?.isServerBacked == true) {
-            return suwayomiClient.getCategories()
-                .map { it.toCategory() }
-        }
-        return getCategories.await().filterNot { it.isSystemCategory }
+        return suwayomiClient.getCategories()
+            .map { it.toCategory() }
     }
 
     /**
@@ -763,51 +543,37 @@ class MangaScreenModel(
      * @return Array of category ids the manga is in, if none returns default id
      */
     private suspend fun getMangaCategoryIds(manga: Manga): List<Long> {
-        if (successState?.isServerBacked == true) {
-            return suwayomiClient.getMangaCategories(manga.id.toInt()).map { it.id.toLong() }
-        }
-        return getCategories.await(manga.id)
-            .map { it.id }
+        return suwayomiClient.getMangaCategories(manga.id.toInt()).map { it.id.toLong() }
     }
 
     fun moveMangaToCategoriesAndAddToLibrary(manga: Manga, categories: List<Long>) {
-        if (successState?.isServerBacked == true) {
-            screenModelScope.launchIO {
-                runCatching {
-                    val updatedManga = if (!manga.favorite) {
-                        suwayomiClient.updateMangaLibrary(
-                            mangaId = manga.id.toInt(),
-                            inLibrary = true,
-                        )
-                    } else {
-                        null
-                    }
-                    suwayomiClient.updateMangaCategories(
+        screenModelScope.launchIO {
+            runCatching {
+                val updatedManga = if (!manga.favorite) {
+                    suwayomiClient.updateMangaLibrary(
                         mangaId = manga.id.toInt(),
-                        categoryIds = categories.toServerCategoryIds(),
+                        inLibrary = true,
                     )
-                    if (updatedManga != null) {
-                        updateSuccessState {
-                            it.copy(manga = updatedManga.toDomainManga(it.manga.fetchEstimate()))
-                        }
-                    }
-                    loadServerMangaState()
-                    ServerStateSync.requestRefresh()
-                }.onFailure { error ->
-                    logcat(LogPriority.ERROR, error) { "Failed to add Suwayomi manga to categories" }
-                    withUIContext {
-                        snackbarHostState.showSnackbar(message = with(context) { error.formattedMessage })
+                } else {
+                    null
+                }
+                suwayomiClient.updateMangaCategories(
+                    mangaId = manga.id.toInt(),
+                    categoryIds = categories.toServerCategoryIds(),
+                )
+                if (updatedManga != null) {
+                    updateSuccessState {
+                        it.copy(manga = updatedManga.toDomainManga(it.manga.fetchEstimate()))
                     }
                 }
+                loadServerMangaState()
+                ServerStateSync.requestRefresh()
+            }.onFailure { error ->
+                logcat(LogPriority.ERROR, error) { "Failed to add Suwayomi manga to categories" }
+                withUIContext {
+                    snackbarHostState.showSnackbar(message = with(context) { error.formattedMessage })
+                }
             }
-            return
-        }
-
-        moveMangaToCategory(categories)
-        if (manga.favorite) return
-
-        screenModelScope.launchIO {
-            updateManga.awaitUpdateFavorite(manga.id, true)
         }
     }
 
@@ -823,23 +589,19 @@ class MangaScreenModel(
 
     private fun moveMangaToCategory(categoryIds: List<Long>) {
         screenModelScope.launchIO {
-            if (successState?.isServerBacked == true) {
-                runCatching {
-                    suwayomiClient.updateMangaCategories(
-                        mangaId = mangaId.toInt(),
-                        categoryIds = categoryIds.toServerCategoryIds(),
-                    )
-                    loadServerMangaState()
-                    ServerStateSync.requestRefresh()
-                }.onFailure { error ->
-                    logcat(LogPriority.ERROR, error) { "Failed to update Suwayomi manga categories" }
-                    withUIContext {
-                        snackbarHostState.showSnackbar(message = with(context) { error.formattedMessage })
-                    }
+            runCatching {
+                suwayomiClient.updateMangaCategories(
+                    mangaId = mangaId.toInt(),
+                    categoryIds = categoryIds.toServerCategoryIds(),
+                )
+                loadServerMangaState()
+                ServerStateSync.requestRefresh()
+            }.onFailure { error ->
+                logcat(LogPriority.ERROR, error) { "Failed to update Suwayomi manga categories" }
+                withUIContext {
+                    snackbarHostState.showSnackbar(message = with(context) { error.formattedMessage })
                 }
-                return@launchIO
             }
-            setMangaCategories.await(mangaId, categoryIds)
         }
     }
 
@@ -869,19 +631,6 @@ class MangaScreenModel(
     // Manga info - end
 
     // Chapters list - start
-
-    private fun List<Chapter>.toChapterListItems(manga: Manga): List<ChapterList.Item> {
-        return map { chapter ->
-            ChapterList.Item(
-                chapter = chapter.withPendingReadState(),
-                downloadState = Download.State.NOT_DOWNLOADED,
-                downloadProgress = 0,
-                selected = chapter.id in selectedChapterIds,
-                deviceCopyState = DeviceCopyState.NONE,
-                deviceCopyProgress = 0,
-            )
-        }
-    }
 
     private fun List<SuwayomiChapterDto>.toServerChapterListItems(manga: Manga): List<ChapterList.Item> {
         return map { serverChapter ->
@@ -1309,50 +1058,42 @@ class MangaScreenModel(
         toggleAllSelection(false)
         if (chapters.isEmpty()) return
         screenModelScope.launchIO {
-            if (successState?.isServerBacked == true) {
-                try {
-                    val chaptersToUpdate = chapters.filter { it.read != read || (!read && it.lastPageRead > 0) }
-                    if (successState?.staleSnapshot != null) {
-                        queueServerReadStates(chaptersToUpdate, read)
-                        applyPendingReadStateToUi(chaptersToUpdate.map { it.id }.toSet(), read)
-                    } else {
-                        suwayomiClient.updateChaptersRead(
-                            chapterIds = chaptersToUpdate.map { it.id.toInt() },
-                            isRead = read,
-                        )
-                        syncTrackerProgressAfterReadStateChange(
-                            read = read,
-                            changedMangaIds = chaptersToUpdate.map { mangaId.toInt() },
-                            trackProgress = suwayomiClient::trackProgress,
-                            onFailure = { error ->
-                                logcat(LogPriority.ERROR, error) { "Failed to update server tracker progress" }
-                            },
-                        )
-                        loadServerMangaState()
-                        ServerStateSync.requestRefresh()
-                    }
-                } catch (e: Throwable) {
-                    if (e is CancellationException) throw e
-                    logcat(LogPriority.ERROR, e) { "Failed to update server chapter read state" }
-                    if (e.isSuwayomiServerUnavailable()) {
-                        val chaptersToUpdate = chapters.filter { it.read != read || (!read && it.lastPageRead > 0) }
-                        queueServerReadStates(chaptersToUpdate, read)
-                        applyPendingReadStateToUi(chaptersToUpdate.map { it.id }.toSet(), read)
-                    } else {
-                        snackbarHostState.showSnackbar(
-                            message = with(context) { e.formattedMessage },
-                            duration = SnackbarDuration.Short,
-                            withDismissAction = true,
-                        )
-                    }
+            try {
+                val chaptersToUpdate = chapters.filter { it.read != read || (!read && it.lastPageRead > 0) }
+                if (successState?.staleSnapshot != null) {
+                    queueServerReadStates(chaptersToUpdate, read)
+                    applyPendingReadStateToUi(chaptersToUpdate.map { it.id }.toSet(), read)
+                } else {
+                    suwayomiClient.updateChaptersRead(
+                        chapterIds = chaptersToUpdate.map { it.id.toInt() },
+                        isRead = read,
+                    )
+                    syncTrackerProgressAfterReadStateChange(
+                        read = read,
+                        changedMangaIds = chaptersToUpdate.map { mangaId.toInt() },
+                        trackProgress = suwayomiClient::trackProgress,
+                        onFailure = { error ->
+                            logcat(LogPriority.ERROR, error) { "Failed to update server tracker progress" }
+                        },
+                    )
+                    loadServerMangaState()
+                    ServerStateSync.requestRefresh()
                 }
-                return@launchIO
+            } catch (e: Throwable) {
+                if (e is CancellationException) throw e
+                logcat(LogPriority.ERROR, e) { "Failed to update server chapter read state" }
+                if (e.isSuwayomiServerUnavailable()) {
+                    val chaptersToUpdate = chapters.filter { it.read != read || (!read && it.lastPageRead > 0) }
+                    queueServerReadStates(chaptersToUpdate, read)
+                    applyPendingReadStateToUi(chaptersToUpdate.map { it.id }.toSet(), read)
+                } else {
+                    snackbarHostState.showSnackbar(
+                        message = with(context) { e.formattedMessage },
+                        duration = SnackbarDuration.Short,
+                        withDismissAction = true,
+                    )
+                }
             }
-
-            setReadStatus.await(
-                read = read,
-                chapters = chapters.toTypedArray(),
-            )
         }
     }
 
@@ -1397,32 +1138,24 @@ class MangaScreenModel(
      */
     fun bookmarkChapters(chapters: List<Chapter>, bookmarked: Boolean) {
         screenModelScope.launchIO {
-            if (successState?.isServerBacked == true) {
-                try {
-                    val chaptersToUpdate = chapters
-                        .filterNot { it.bookmark == bookmarked }
-                    suwayomiClient.updateChaptersBookmark(
-                        chapterIds = chaptersToUpdate.map { it.id.toInt() },
-                        isBookmarked = bookmarked,
-                    )
-                    loadServerMangaState()
-                    ServerStateSync.requestRefresh()
-                } catch (e: Throwable) {
-                    if (e is CancellationException) throw e
-                    logcat(LogPriority.ERROR, e) { "Failed to update server chapter bookmark state" }
-                    snackbarHostState.showSnackbar(
-                        message = with(context) { e.formattedMessage },
-                        duration = SnackbarDuration.Short,
-                        withDismissAction = true,
-                    )
-                }
-                return@launchIO
+            try {
+                val chaptersToUpdate = chapters
+                    .filterNot { it.bookmark == bookmarked }
+                suwayomiClient.updateChaptersBookmark(
+                    chapterIds = chaptersToUpdate.map { it.id.toInt() },
+                    isBookmarked = bookmarked,
+                )
+                loadServerMangaState()
+                ServerStateSync.requestRefresh()
+            } catch (e: Throwable) {
+                if (e is CancellationException) throw e
+                logcat(LogPriority.ERROR, e) { "Failed to update server chapter bookmark state" }
+                snackbarHostState.showSnackbar(
+                    message = with(context) { e.formattedMessage },
+                    duration = SnackbarDuration.Short,
+                    withDismissAction = true,
+                )
             }
-
-            chapters
-                .filterNot { it.bookmark == bookmarked }
-                .map { ChapterUpdate(id = it.id, bookmark = bookmarked) }
-                .let { updateChapter.awaitAll(it) }
         }
         toggleAllSelection(false)
     }
@@ -1435,14 +1168,10 @@ class MangaScreenModel(
     fun deleteChapters(chapters: List<Chapter>) {
         screenModelScope.launchNonCancellable {
             try {
-                successState?.let { state ->
-                    if (state.isServerBacked) {
-                        runServerDownloadAction {
-                            suwayomiClient.deleteDownloadedChapters(chapters.map { it.id.toInt() })
-                        }
-                        return@launchNonCancellable
+                if (successState != null) {
+                    runServerDownloadAction {
+                        suwayomiClient.deleteDownloadedChapters(chapters.map { it.id.toInt() })
                     }
-                    toggleAllSelection(false)
                 }
             } catch (e: Throwable) {
                 logcat(LogPriority.ERROR, e)
@@ -1479,13 +1208,7 @@ class MangaScreenModel(
             TriState.ENABLED_IS -> Manga.CHAPTER_SHOW_UNREAD
             TriState.ENABLED_NOT -> Manga.CHAPTER_SHOW_READ
         }
-        if (successState?.isServerBacked == true) {
-            setServerChapterFlags(manga.chapterFlags.setChapterFlag(flag, Manga.CHAPTER_UNREAD_MASK))
-            return
-        }
-        screenModelScope.launchNonCancellable {
-            setMangaChapterFlags.awaitSetUnreadFilter(manga, flag)
-        }
+        setServerChapterFlags(manga.chapterFlags.setChapterFlag(flag, Manga.CHAPTER_UNREAD_MASK))
     }
 
     /**
@@ -1501,13 +1224,7 @@ class MangaScreenModel(
             TriState.ENABLED_NOT -> Manga.CHAPTER_SHOW_NOT_DOWNLOADED
         }
 
-        if (successState?.isServerBacked == true) {
-            setServerChapterFlags(manga.chapterFlags.setChapterFlag(flag, Manga.CHAPTER_DOWNLOADED_MASK))
-            return
-        }
-        screenModelScope.launchNonCancellable {
-            setMangaChapterFlags.awaitSetDownloadedFilter(manga, flag)
-        }
+        setServerChapterFlags(manga.chapterFlags.setChapterFlag(flag, Manga.CHAPTER_DOWNLOADED_MASK))
     }
 
     /**
@@ -1523,13 +1240,7 @@ class MangaScreenModel(
             TriState.ENABLED_NOT -> Manga.CHAPTER_SHOW_NOT_LOCAL_DOWNLOADED
         }
 
-        if (successState?.isServerBacked == true) {
-            setServerChapterFlags(manga.chapterFlags.setChapterFlag(flag, Manga.CHAPTER_LOCAL_DOWNLOADED_MASK))
-            return
-        }
-        screenModelScope.launchNonCancellable {
-            setMangaChapterFlags.awaitSetLocalDownloadedFilter(manga, flag)
-        }
+        setServerChapterFlags(manga.chapterFlags.setChapterFlag(flag, Manga.CHAPTER_LOCAL_DOWNLOADED_MASK))
     }
 
     /**
@@ -1545,13 +1256,7 @@ class MangaScreenModel(
             TriState.ENABLED_NOT -> Manga.CHAPTER_SHOW_NOT_BOOKMARKED
         }
 
-        if (successState?.isServerBacked == true) {
-            setServerChapterFlags(manga.chapterFlags.setChapterFlag(flag, Manga.CHAPTER_BOOKMARKED_MASK))
-            return
-        }
-        screenModelScope.launchNonCancellable {
-            setMangaChapterFlags.awaitSetBookmarkFilter(manga, flag)
-        }
+        setServerChapterFlags(manga.chapterFlags.setChapterFlag(flag, Manga.CHAPTER_BOOKMARKED_MASK))
     }
 
     /**
@@ -1561,13 +1266,7 @@ class MangaScreenModel(
     fun setDisplayMode(mode: Long) {
         val manga = successState?.manga ?: return
 
-        if (successState?.isServerBacked == true) {
-            setServerChapterFlags(manga.chapterFlags.setChapterFlag(mode, Manga.CHAPTER_DISPLAY_MASK))
-            return
-        }
-        screenModelScope.launchNonCancellable {
-            setMangaChapterFlags.awaitSetDisplayMode(manga, mode)
-        }
+        setServerChapterFlags(manga.chapterFlags.setChapterFlag(mode, Manga.CHAPTER_DISPLAY_MASK))
     }
 
     /**
@@ -1577,53 +1276,33 @@ class MangaScreenModel(
     fun setSorting(sort: Long) {
         val manga = successState?.manga ?: return
 
-        if (successState?.isServerBacked == true) {
-            val newFlags = manga.chapterFlags.let {
-                if (manga.sorting == sort) {
-                    val orderFlag = if (manga.sortDescending()) {
-                        Manga.CHAPTER_SORT_ASC
-                    } else {
-                        Manga.CHAPTER_SORT_DESC
-                    }
-                    it.setChapterFlag(orderFlag, Manga.CHAPTER_SORT_DIR_MASK)
+        val newFlags = manga.chapterFlags.let {
+            if (manga.sorting == sort) {
+                val orderFlag = if (manga.sortDescending()) {
+                    Manga.CHAPTER_SORT_ASC
                 } else {
-                    it
-                        .setChapterFlag(sort, Manga.CHAPTER_SORTING_MASK)
-                        .setChapterFlag(Manga.CHAPTER_SORT_ASC, Manga.CHAPTER_SORT_DIR_MASK)
+                    Manga.CHAPTER_SORT_DESC
                 }
+                it.setChapterFlag(orderFlag, Manga.CHAPTER_SORT_DIR_MASK)
+            } else {
+                it
+                    .setChapterFlag(sort, Manga.CHAPTER_SORTING_MASK)
+                    .setChapterFlag(Manga.CHAPTER_SORT_ASC, Manga.CHAPTER_SORT_DIR_MASK)
             }
-            setServerChapterFlags(newFlags)
-            return
         }
-        screenModelScope.launchNonCancellable {
-            setMangaChapterFlags.awaitSetSortingModeOrFlipOrder(manga, sort)
-        }
+        setServerChapterFlags(newFlags)
     }
 
     fun setCurrentSettingsAsDefault(applyToExisting: Boolean) {
         val manga = successState?.manga ?: return
         screenModelScope.launchNonCancellable {
             libraryPreferences.setChapterSettingsDefault(manga)
-            if (successState?.isServerBacked == true) {
-                snackbarHostState.showSnackbar(message = context.stringResource(MR.strings.chapter_settings_updated))
-                return@launchNonCancellable
-            }
-            if (applyToExisting) {
-                setMangaDefaultChapterFlags.awaitAll()
-            }
             snackbarHostState.showSnackbar(message = context.stringResource(MR.strings.chapter_settings_updated))
         }
     }
 
     fun resetToDefaultSettings() {
-        val manga = successState?.manga ?: return
-        if (successState?.isServerBacked == true) {
-            setServerChapterFlags(defaultServerChapterFlags())
-            return
-        }
-        screenModelScope.launchNonCancellable {
-            setMangaDefaultChapterFlags.await(manga)
-        }
+        setServerChapterFlags(defaultServerChapterFlags())
     }
 
     private fun setServerChapterFlags(chapterFlags: Long) {
@@ -1777,13 +1456,7 @@ class MangaScreenModel(
     }
 
     fun setExcludedScanlators(excludedScanlators: Set<String>) {
-        if (successState?.isServerBacked == true) {
-            setServerExcludedScanlators(excludedScanlators)
-            return
-        }
-        screenModelScope.launchIO {
-            setExcludedScanlators.await(mangaId, excludedScanlators)
-        }
+        setServerExcludedScanlators(excludedScanlators)
     }
 
     private fun setServerExcludedScanlators(excludedScanlators: Set<String>) {
@@ -1841,6 +1514,9 @@ class MangaScreenModel(
             val hideMissingChapters: Boolean = false,
             val staleSnapshot: SuwayomiStaleSnapshotState? = null,
             val pendingReadStateCount: Int = 0,
+            val sourceName: String = source.name,
+            val isSourceMissing: Boolean = false,
+            val sourceNamesById: Map<Long, String> = emptyMap(),
         ) : State {
             val processedChapters by lazy {
                 chapters.applyFilters(manga).toList()

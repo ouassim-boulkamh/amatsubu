@@ -12,8 +12,6 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.ui.browse.ServerGlobalSearchScreen
-import eu.kanade.tachiyomi.ui.manga.MangaScreen
-import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
@@ -46,26 +44,8 @@ class DeepLinkScreen(
                     LoadingScreen(Modifier.padding(contentPadding))
                 }
                 is DeepLinkScreenModel.State.NoResults -> {
-                    navigator.replace(ServerGlobalSearchScreen(query))
-                }
-                is DeepLinkScreenModel.State.Result -> {
-                    val resultState = state as DeepLinkScreenModel.State.Result
-                    if (resultState.chapterId == null) {
-                        navigator.replace(
-                            MangaScreen(
-                                resultState.manga.id,
-                                true,
-                            ),
-                        )
-                    } else {
-                        navigator.pop()
-                        ReaderActivity.newIntent(
-                            context,
-                            resultState.manga.id,
-                            resultState.chapterId,
-                            isServerBacked = true,
-                        ).also(context::startActivity)
-                    }
+                    val resultState = state as DeepLinkScreenModel.State.NoResults
+                    navigator.replace(ServerGlobalSearchScreen(resultState.query))
                 }
             }
         }

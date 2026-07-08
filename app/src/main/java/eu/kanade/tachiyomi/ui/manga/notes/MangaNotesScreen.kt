@@ -16,23 +16,18 @@ import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import kotlinx.coroutines.flow.update
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.launchIO
-import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.manga.interactor.UpdateMangaNotes
 import tachiyomi.domain.manga.model.Manga
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import eu.kanade.tachiyomi.ui.browse.migration.SERVER_MIGRATION_NOTES_META_KEY as SERVER_MANGA_NOTES_META_KEY
 
 class MangaNotesScreen(
     private val manga: Manga,
-    private val isServerBacked: Boolean = false,
 ) : Screen() {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
 
-        val screenModel = rememberScreenModel { Model(manga, isServerBacked) }
+        val screenModel = rememberScreenModel { Model(manga) }
         val state by screenModel.state.collectAsState()
 
         MangaNotesScreen(
@@ -44,8 +39,6 @@ class MangaNotesScreen(
 
     private class Model(
         private val manga: Manga,
-        private val isServerBacked: Boolean,
-        private val updateMangaNotes: UpdateMangaNotes = Injekt.get(),
         private val suwayomiProvider: SuwayomiClientProvider = SuwayomiClientProvider(),
     ) : StateScreenModel<State>(State(manga, manga.notes)) {
 
@@ -56,24 +49,17 @@ class MangaNotesScreen(
                 it.copy(notes = content)
             }
 
-            if (isServerBacked) {
-                screenModelScope.launchIO {
-                    runCatching {
-                        suwayomiProvider.graphQlClient.setMangaMeta(
-                            mangaId = manga.id.toInt(),
-                            key = SERVER_MANGA_NOTES_META_KEY,
-                            value = content,
-                        )
-                        ServerStateSync.requestRefresh()
-                    }.onFailure { error ->
-                        logcat(LogPriority.ERROR, error) { "Failed to update Suwayomi manga notes" }
-                    }
+            screenModelScope.launchIO {
+                runCatching {
+                    suwayomiProvider.graphQlClient.setMangaMeta(
+                        mangaId = manga.id.toInt(),
+                        key = SERVER_MANGA_NOTES_META_KEY,
+                        value = content,
+                    )
+                    ServerStateSync.requestRefresh()
+                }.onFailure { error ->
+                    logcat(LogPriority.ERROR, error) { "Failed to update Suwayomi manga notes" }
                 }
-                return
-            }
-
-            screenModelScope.launchNonCancellable {
-                updateMangaNotes(manga.id, content)
             }
         }
     }

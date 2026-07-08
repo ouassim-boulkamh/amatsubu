@@ -5,15 +5,19 @@ import androidx.compose.runtime.Immutable
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.core.util.insertSeparators
-import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.presentation.history.HistoryUiModel
+import eu.kanade.tachiyomi.data.suwayomi.MangaStatus
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiCategoryDto
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterWithMangaDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaDto
 import eu.kanade.tachiyomi.data.suwayomi.isSuwayomiServerUnavailable
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
+import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.util.lang.toLocalDate
+import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -34,28 +38,18 @@ import tachiyomi.core.common.preference.mapAsCheckboxState
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.category.interactor.GetCategories
-import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
-import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaCover
-import tachiyomi.domain.manga.model.MangaWithChapterCount
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.util.Date
 
 class HistoryScreenModel(
-    private val getCategories: GetCategories = Injekt.get(),
-    private val getDuplicateLibraryManga: GetDuplicateLibraryManga = Injekt.get(),
-    private val getManga: GetManga = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
-    private val setMangaCategories: SetMangaCategories = Injekt.get(),
-    private val updateManga: UpdateManga = Injekt.get(),
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
 ) : StateScreenModel<HistoryScreenModel.State>(State()) {
 
@@ -269,41 +263,48 @@ class HistoryScreenModel(
      * @return List of categories, not including the default category
      */
     suspend fun getCategories(): List<Category> {
-        return getCategories.await().filterNot { it.isSystemCategory }
-    }
-
-    private fun moveMangaToCategory(mangaId: Long, categories: Category?) {
-        val categoryIds = listOfNotNull(categories).map { it.id }
-        moveMangaToCategory(mangaId, categoryIds)
-    }
-
-    private fun moveMangaToCategory(mangaId: Long, categoryIds: List<Long>) {
-        screenModelScope.launchIO {
-            setMangaCategories.await(mangaId, categoryIds)
-        }
+        return suwayomiClient.getCategories()
+            .map { it.toCategory() }
     }
 
     fun moveMangaToCategoriesAndAddToLibrary(manga: Manga, categories: List<Long>) {
-        moveMangaToCategory(manga.id, categories)
-        if (manga.favorite) return
-
         screenModelScope.launchIO {
-            updateManga.awaitUpdateFavorite(manga.id, true)
+            runCatching {
+                if (!manga.favorite) {
+                    suwayomiClient.updateMangaLibrary(
+                        mangaId = manga.id.toInt(),
+                        inLibrary = true,
+                    )
+                }
+                suwayomiClient.updateMangaCategories(
+                    mangaId = manga.id.toInt(),
+                    categoryIds = categories.toServerCategoryIds(),
+                )
+                serverHistoryRefreshes.update { it + 1 }
+                ServerStateSync.requestRefresh()
+                mutableState.update { it.copy(dialog = null) }
+            }.onFailure { error ->
+                logcat(LogPriority.ERROR, error) { "Failed to add Suwayomi history manga to categories" }
+                _events.send(if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError)
+            }
         }
     }
 
     private suspend fun getMangaCategoryIds(manga: Manga): List<Long> {
-        return getCategories.await(manga.id)
-            .map { it.id }
+        return suwayomiClient.getMangaCategories(manga.id.toInt()).map { it.id.toLong() }
     }
 
     fun addFavorite(mangaId: Long) {
         screenModelScope.launchIO {
-            val manga = getManga.await(mangaId) ?: return@launchIO
+            val manga = runCatching { suwayomiClient.getManga(mangaId.toInt()).toDomainManga() }
+                .getOrElse { error ->
+                    logcat(LogPriority.ERROR, error) { "Failed to load Suwayomi history manga before adding to library" }
+                    _events.send(if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError)
+                    return@launchIO
+                }
 
-            val duplicates = getDuplicateLibraryManga(manga)
-            if (duplicates.isNotEmpty()) {
-                mutableState.update { it.copy(dialog = Dialog.DuplicateManga(manga, duplicates)) }
+            if (manga.favorite) {
+                serverHistoryRefreshes.update { it + 1 }
                 return@launchIO
             }
 
@@ -313,42 +314,57 @@ class HistoryScreenModel(
 
     fun addFavorite(manga: Manga) {
         screenModelScope.launchIO {
-            // Move to default category if applicable
-            val categories = getCategories()
-            val defaultCategoryId = libraryPreferences.defaultCategory.get().toLong()
-            val defaultCategory = categories.find { it.id == defaultCategoryId }
+            runCatching {
+                val categories = getCategories()
+                val defaultCategoryId = libraryPreferences.defaultCategory.get().toLong()
+                val defaultCategory = categories.find { it.id == defaultCategoryId }
 
-            when {
-                // Default category set
-                defaultCategory != null -> {
-                    val result = updateManga.awaitUpdateFavorite(manga.id, true)
-                    if (!result) return@launchIO
-                    moveMangaToCategory(manga.id, defaultCategory)
+                when {
+                    defaultCategory != null -> {
+                        suwayomiClient.updateMangaLibrary(
+                            mangaId = manga.id.toInt(),
+                            inLibrary = true,
+                        )
+                        suwayomiClient.updateMangaCategories(
+                            mangaId = manga.id.toInt(),
+                            categoryIds = listOf(defaultCategory.id).toServerCategoryIds(),
+                        )
+                        serverHistoryRefreshes.update { it + 1 }
+                        ServerStateSync.requestRefresh()
+                        mutableState.update { it.copy(dialog = null) }
+                    }
+
+                    defaultCategoryId == 0L || categories.isEmpty() -> {
+                        suwayomiClient.updateMangaLibrary(
+                            mangaId = manga.id.toInt(),
+                            inLibrary = true,
+                        )
+                        serverHistoryRefreshes.update { it + 1 }
+                        ServerStateSync.requestRefresh()
+                        mutableState.update { it.copy(dialog = null) }
+                    }
+
+                    else -> showChangeCategoryDialog(manga)
                 }
-
-                // Automatic 'Default' or no categories
-                defaultCategoryId == 0L || categories.isEmpty() -> {
-                    val result = updateManga.awaitUpdateFavorite(manga.id, true)
-                    if (!result) return@launchIO
-                    moveMangaToCategory(manga.id, null)
-                }
-
-                // Choose a category
-                else -> showChangeCategoryDialog(manga)
+            }.onFailure { error ->
+                logcat(LogPriority.ERROR, error) { "Failed to add Suwayomi history manga to library" }
+                _events.send(if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError)
             }
-        }
-    }
-
-    fun showMigrateDialog(target: Manga, current: Manga) {
-        mutableState.update { currentState ->
-            currentState.copy(dialog = Dialog.Migrate(target = target, current = current))
         }
     }
 
     fun showChangeCategoryDialog(manga: Manga) {
         screenModelScope.launch {
-            val categories = getCategories()
-            val selection = getMangaCategoryIds(manga)
+            val categories = runCatching { getCategories() }.getOrElse { error ->
+                logcat(LogPriority.ERROR, error) { "Failed to load Suwayomi categories from history" }
+                _events.send(if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError)
+                return@launch
+            }
+            val selection = runCatching { getMangaCategoryIds(manga) }.getOrElse { error ->
+                logcat(LogPriority.ERROR, error) { "Failed to load Suwayomi manga categories from history" }
+                _events.send(if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError)
+                return@launch
+            }
             mutableState.update { currentState ->
                 currentState.copy(
                     dialog = Dialog.ChangeCategory(
@@ -358,6 +374,51 @@ class HistoryScreenModel(
                 )
             }
         }
+    }
+
+    private fun SuwayomiCategoryDto.toCategory(): Category {
+        return Category(
+            id = id.toLong(),
+            name = name,
+            order = order.toLong(),
+            flags = 0L,
+        )
+    }
+
+    private fun List<Long>.toServerCategoryIds(): List<Int> {
+        return filterNot { it == Category.UNCATEGORIZED_ID }
+            .map { it.toInt() }
+    }
+
+    private fun SuwayomiMangaDto.toDomainManga(): Manga {
+        return Manga.create().copy(
+            id = id.toLong(),
+            source = sourceId.toLongOrNull() ?: 0L,
+            favorite = inLibrary,
+            dateAdded = inLibraryAt ?: 0L,
+            url = url,
+            title = title,
+            artist = artist,
+            author = author,
+            description = description,
+            genre = genre,
+            status = status.toDomainStatus(),
+            thumbnailUrl = thumbnailUrl?.let { resolveServerUrl(suwayomiProvider.baseUrl(), it) },
+            updateStrategy = UpdateStrategy.ALWAYS_UPDATE,
+            initialized = initialized,
+        )
+    }
+
+    private fun MangaStatus.toDomainStatus(): Long {
+        return when (this) {
+            MangaStatus.UNKNOWN -> SManga.UNKNOWN
+            MangaStatus.ONGOING -> SManga.ONGOING
+            MangaStatus.COMPLETED -> SManga.COMPLETED
+            MangaStatus.LICENSED -> SManga.LICENSED
+            MangaStatus.PUBLISHING_FINISHED -> SManga.PUBLISHING_FINISHED
+            MangaStatus.CANCELLED -> SManga.CANCELLED
+            MangaStatus.ON_HIATUS -> SManga.ON_HIATUS
+        }.toLong()
     }
 
     @Immutable
@@ -372,12 +433,10 @@ class HistoryScreenModel(
     sealed interface Dialog {
         data object DeleteAll : Dialog
         data class Delete(val history: HistoryWithRelations) : Dialog
-        data class DuplicateManga(val manga: Manga, val duplicates: List<MangaWithChapterCount>) : Dialog
         data class ChangeCategory(
             val manga: Manga,
             val initialSelection: List<CheckboxState<Category>>,
         ) : Dialog
-        data class Migrate(val target: Manga, val current: Manga) : Dialog
     }
 
     sealed interface Event {

@@ -9,13 +9,22 @@ import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.model.SMangaUpdate
 
 internal class SuwayomiDisplaySource(
-    dto: SuwayomiSourceDto,
-    fallbackId: Long,
+    sourceId: Long,
+    override val name: String,
+    override val lang: String,
+    override val supportsLatest: Boolean,
 ) : Source {
-    override val id: Long = dto.id.toLongOrNull() ?: fallbackId
-    override val name: String = dto.name
-    override val lang: String = dto.lang
-    override val supportsLatest: Boolean = dto.supportsLatest
+    constructor(
+        dto: SuwayomiSourceDto,
+        fallbackId: Long,
+    ) : this(
+        sourceId = dto.id.toLongOrNull() ?: fallbackId,
+        name = dto.displayName.ifBlank { dto.name },
+        lang = dto.lang,
+        supportsLatest = dto.supportsLatest,
+    )
+
+    override val id: Long = sourceId
 
     override suspend fun getPopularManga(page: Int): MangasPage = unsupported()
 

@@ -9,7 +9,6 @@ import coil3.asDrawable
 import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.size.Size
-import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.saver.Image
 import eu.kanade.tachiyomi.data.saver.ImageSaver
@@ -25,31 +24,19 @@ import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import java.time.Instant
 
 class MangaCoverScreenModel(
-    private val mangaId: Long,
     initialManga: Manga? = null,
-    private val getManga: GetManga = Injekt.get(),
     private val imageSaver: ImageSaver = Injekt.get(),
     private val coverCache: CoverCache = Injekt.get(),
-    private val updateManga: UpdateManga = Injekt.get(),
 
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
 ) : StateScreenModel<Manga?>(initialManga) {
-
-    init {
-        if (initialManga == null) {
-            screenModelScope.launchIO {
-                getManga.subscribe(mangaId)
-                    .collect { newManga -> mutableState.update { newManga } }
-            }
-        }
-    }
 
     fun saveCover(context: Context) {
         screenModelScope.launch {
@@ -125,7 +112,8 @@ class MangaCoverScreenModel(
         screenModelScope.launchIO {
             context.contentResolver.openInputStream(data)?.use {
                 try {
-                    manga.editCover(it, updateManga, coverCache)
+                    val updatedManga = manga.editCover(it, coverCache)
+                    mutableState.update { updatedManga }
                     notifyCoverUpdated(context)
                 } catch (e: Exception) {
                     notifyFailedCoverUpdate(context, e)
@@ -135,11 +123,13 @@ class MangaCoverScreenModel(
     }
 
     fun deleteCustomCover(context: Context) {
-        val mangaId = state.value?.id ?: return
+        val manga = state.value ?: return
         screenModelScope.launchIO {
             try {
-                coverCache.deleteCustomCover(mangaId)
-                updateManga.awaitUpdateCoverLastModified(mangaId)
+                coverCache.deleteCustomCover(manga.id)
+                mutableState.update {
+                    it?.copy(coverLastModified = Instant.now().toEpochMilli())
+                }
                 notifyCoverUpdated(context)
             } catch (e: Exception) {
                 notifyFailedCoverUpdate(context, e)

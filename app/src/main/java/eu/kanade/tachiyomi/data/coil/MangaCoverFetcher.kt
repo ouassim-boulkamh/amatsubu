@@ -15,7 +15,6 @@ import com.hippo.unifile.UniFile
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.coil.MangaCoverFetcher.Companion.USE_CUSTOM_COVER_KEY
 import eu.kanade.tachiyomi.network.await
-import eu.kanade.tachiyomi.source.online.HttpSource
 import logcat.LogPriority
 import okhttp3.CacheControl
 import okhttp3.Call
@@ -30,7 +29,6 @@ import okio.source
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaCover
-import tachiyomi.domain.source.service.SourceManager
 import uy.kohesive.injekt.injectLazy
 import java.io.File
 import java.io.IOException
@@ -53,7 +51,6 @@ class MangaCoverFetcher(
     private val customCoverFileLazy: Lazy<File>,
     private val coverLastModified: Long,
     private val diskCacheKeyLazy: Lazy<String>,
-    private val sourceLazy: Lazy<HttpSource?>,
     private val callFactoryLazy: Lazy<Call.Factory>,
     private val imageLoader: ImageLoader,
 ) : Fetcher {
@@ -175,8 +172,7 @@ class MangaCoverFetcher(
     }
 
     private suspend fun executeNetworkRequest(): Response {
-        val client = sourceLazy.value?.client ?: callFactoryLazy.value
-        val response = client.newCall(newRequest()).await()
+        val response = callFactoryLazy.value.newCall(newRequest()).await()
         if (!response.isSuccessful && response.code != HTTP_NOT_MODIFIED) {
             response.close()
             throw IOException(response.message)
@@ -187,11 +183,6 @@ class MangaCoverFetcher(
     private fun newRequest(): Request {
         val request = Request.Builder().apply {
             url(url!!)
-
-            val sourceHeaders = sourceLazy.value?.headers
-            if (sourceHeaders != null) {
-                headers(sourceHeaders)
-            }
         }
 
         when {
@@ -314,7 +305,6 @@ class MangaCoverFetcher(
     ) : Fetcher.Factory<Manga> {
 
         private val coverCache: CoverCache by injectLazy()
-        private val sourceManager: SourceManager by injectLazy()
 
         override fun create(data: Manga, options: Options, imageLoader: ImageLoader): Fetcher {
             return MangaCoverFetcher(
@@ -325,7 +315,6 @@ class MangaCoverFetcher(
                 customCoverFileLazy = lazy { coverCache.getCustomCoverFile(data.id) },
                 coverLastModified = data.coverLastModified,
                 diskCacheKeyLazy = lazy { imageLoader.components.key(data, options)!! },
-                sourceLazy = lazy { sourceManager.get(data.source) as? HttpSource },
                 callFactoryLazy = callFactoryLazy,
                 imageLoader = imageLoader,
             )
@@ -337,7 +326,6 @@ class MangaCoverFetcher(
     ) : Fetcher.Factory<MangaCover> {
 
         private val coverCache: CoverCache by injectLazy()
-        private val sourceManager: SourceManager by injectLazy()
 
         override fun create(data: MangaCover, options: Options, imageLoader: ImageLoader): Fetcher {
             return MangaCoverFetcher(
@@ -348,7 +336,6 @@ class MangaCoverFetcher(
                 customCoverFileLazy = lazy { coverCache.getCustomCoverFile(data.mangaId) },
                 coverLastModified = data.lastModified,
                 diskCacheKeyLazy = lazy { imageLoader.components.key(data, options)!! },
-                sourceLazy = lazy { sourceManager.get(data.sourceId) as? HttpSource },
                 callFactoryLazy = callFactoryLazy,
                 imageLoader = imageLoader,
             )

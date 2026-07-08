@@ -1,70 +1,11 @@
 package eu.kanade.domain
 
-import eu.kanade.domain.chapter.interactor.GetAvailableScanlators
-import eu.kanade.domain.chapter.interactor.SetReadStatus
-import eu.kanade.domain.chapter.interactor.SyncChaptersWithSource
-import eu.kanade.domain.manga.interactor.GetExcludedScanlators
-import eu.kanade.domain.manga.interactor.SetExcludedScanlators
-import eu.kanade.domain.manga.interactor.SetMangaViewerFlags
-import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.source.interactor.GetIncognitoState
-import eu.kanade.domain.source.interactor.GetLanguagesWithSources
 import eu.kanade.domain.source.interactor.SetMigrateSorting
 import eu.kanade.domain.source.interactor.ToggleIncognito
-import eu.kanade.domain.source.interactor.ToggleLanguage
-import eu.kanade.domain.source.interactor.ToggleSourcePin
-import mihon.domain.source.interactor.UpdateMangaFromRemote
-import mihon.domain.upcoming.interactor.GetUpcomingManga
-import tachiyomi.data.category.CategoryRepositoryImpl
-import tachiyomi.data.chapter.ChapterRepositoryImpl
-import tachiyomi.data.history.HistoryRepositoryImpl
-import tachiyomi.data.manga.MangaRepositoryImpl
 import tachiyomi.data.release.ReleaseServiceImpl
-import tachiyomi.data.source.SourceRepositoryImpl
-import tachiyomi.data.source.StubSourceRepositoryImpl
-import tachiyomi.data.updates.UpdatesRepositoryImpl
-import tachiyomi.domain.category.interactor.CreateCategoryWithName
-import tachiyomi.domain.category.interactor.DeleteCategory
-import tachiyomi.domain.category.interactor.GetCategories
-import tachiyomi.domain.category.interactor.RenameCategory
-import tachiyomi.domain.category.interactor.ReorderCategory
-import tachiyomi.domain.category.interactor.ResetCategoryFlags
-import tachiyomi.domain.category.interactor.SetDisplayMode
-import tachiyomi.domain.category.interactor.SetMangaCategories
-import tachiyomi.domain.category.interactor.SetSortModeForCategory
-import tachiyomi.domain.category.interactor.UpdateCategory
-import tachiyomi.domain.category.repository.CategoryRepository
-import tachiyomi.domain.chapter.interactor.GetBookmarkedChaptersByMangaId
-import tachiyomi.domain.chapter.interactor.GetChapter
-import tachiyomi.domain.chapter.interactor.GetChapterByUrlAndMangaId
-import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
-import tachiyomi.domain.chapter.interactor.SetMangaDefaultChapterFlags
-import tachiyomi.domain.chapter.interactor.ShouldUpdateDbChapter
-import tachiyomi.domain.chapter.interactor.UpdateChapter
-import tachiyomi.domain.chapter.repository.ChapterRepository
-import tachiyomi.domain.history.interactor.GetHistory
-import tachiyomi.domain.history.interactor.GetNextChapters
-import tachiyomi.domain.history.interactor.UpsertHistory
-import tachiyomi.domain.history.repository.HistoryRepository
-import tachiyomi.domain.manga.interactor.FetchInterval
-import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
-import tachiyomi.domain.manga.interactor.GetFavorites
-import tachiyomi.domain.manga.interactor.GetLibraryManga
-import tachiyomi.domain.manga.interactor.GetManga
-import tachiyomi.domain.manga.interactor.GetMangaByUrlAndSourceId
-import tachiyomi.domain.manga.interactor.GetMangaWithChapters
-import tachiyomi.domain.manga.interactor.NetworkToLocalManga
-import tachiyomi.domain.manga.interactor.ResetViewerFlags
-import tachiyomi.domain.manga.interactor.SetMangaChapterFlags
-import tachiyomi.domain.manga.interactor.UpdateMangaNotes
-import tachiyomi.domain.manga.repository.MangaRepository
 import tachiyomi.domain.release.interactor.GetApplicationRelease
 import tachiyomi.domain.release.service.ReleaseService
-import tachiyomi.domain.source.interactor.GetSourcesWithNonLibraryManga
-import tachiyomi.domain.source.repository.SourceRepository
-import tachiyomi.domain.source.repository.StubSourceRepository
-import tachiyomi.domain.updates.interactor.GetUpdates
-import tachiyomi.domain.updates.repository.UpdatesRepository
 import uy.kohesive.injekt.api.InjektModule
 import uy.kohesive.injekt.api.InjektRegistrar
 import uy.kohesive.injekt.api.addFactory
@@ -74,69 +15,13 @@ import uy.kohesive.injekt.api.get
 class DomainModule : InjektModule {
 
     override fun InjektRegistrar.registerInjectables() {
-        addSingletonFactory<CategoryRepository> { CategoryRepositoryImpl(get()) }
-        addFactory { GetCategories(get()) }
-        addFactory { ResetCategoryFlags(get(), get()) }
-        addFactory { SetDisplayMode(get()) }
-        addFactory { SetSortModeForCategory(get(), get()) }
-        addFactory { CreateCategoryWithName(get(), get()) }
-        addFactory { RenameCategory(get()) }
-        addFactory { ReorderCategory(get()) }
-        addFactory { UpdateCategory(get()) }
-        addFactory { DeleteCategory(get(), get()) }
-
-        addSingletonFactory<MangaRepository> { MangaRepositoryImpl(get()) }
-        addFactory { GetDuplicateLibraryManga(get()) }
-        addFactory { GetFavorites(get()) }
-        addFactory { GetLibraryManga(get()) }
-        addFactory { GetMangaWithChapters(get(), get()) }
-        addFactory { GetMangaByUrlAndSourceId(get()) }
-        addFactory { GetManga(get()) }
-        addFactory { GetNextChapters(get(), get(), get()) }
-        addFactory { GetUpcomingManga(get()) }
-        addFactory { ResetViewerFlags(get()) }
-        addFactory { SetMangaChapterFlags(get()) }
-        addFactory { FetchInterval(get()) }
-        addFactory { SetMangaDefaultChapterFlags(get(), get(), get()) }
-        addFactory { SetMangaViewerFlags(get()) }
-        addFactory { NetworkToLocalManga(get()) }
-        addFactory { UpdateManga(get(), get()) }
-        addFactory { UpdateMangaNotes(get()) }
-        addFactory { SetMangaCategories(get()) }
-        addFactory { GetExcludedScanlators(get()) }
-        addFactory { SetExcludedScanlators(get()) }
         addSingletonFactory<ReleaseService> { ReleaseServiceImpl(get(), get()) }
         addFactory { GetApplicationRelease(get(), get()) }
 
-        addSingletonFactory<ChapterRepository> { ChapterRepositoryImpl(get()) }
-        addFactory { GetChapter(get()) }
-        addFactory { GetChaptersByMangaId(get()) }
-        addFactory { GetBookmarkedChaptersByMangaId(get()) }
-        addFactory { GetChapterByUrlAndMangaId(get()) }
-        addFactory { UpdateChapter(get()) }
-        addFactory { SetReadStatus(get()) }
-        addFactory { ShouldUpdateDbChapter() }
-        addFactory { SyncChaptersWithSource(get(), get(), get(), get(), get(), get(), get()) }
-        addFactory { GetAvailableScanlators(get()) }
-
-        addSingletonFactory<HistoryRepository> { HistoryRepositoryImpl(get()) }
-        addFactory { GetHistory(get()) }
-        addFactory { UpsertHistory(get()) }
-
-        addSingletonFactory<UpdatesRepository> { UpdatesRepositoryImpl(get()) }
-        addFactory { GetUpdates(get()) }
-
-        addSingletonFactory<SourceRepository> { SourceRepositoryImpl(get(), get()) }
-        addSingletonFactory<StubSourceRepository> { StubSourceRepositoryImpl(get()) }
-        addFactory { GetLanguagesWithSources(get(), get()) }
-        addFactory { GetSourcesWithNonLibraryManga(get()) }
         addFactory { SetMigrateSorting(get()) }
-        addFactory { ToggleLanguage(get()) }
-        addFactory { ToggleSourcePin(get()) }
 
         addFactory { ToggleIncognito(get()) }
         addFactory { GetIncognitoState(get(), get()) }
 
-        addFactory { UpdateMangaFromRemote(get(), get(), get(), get(), get(), get()) }
     }
 }

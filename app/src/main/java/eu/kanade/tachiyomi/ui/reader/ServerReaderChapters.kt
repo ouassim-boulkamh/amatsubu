@@ -82,7 +82,7 @@ fun buildServerReaderChapters(
         }
         .run {
             if (downloadedOnly) {
-                filter { it.id in downloadedChapterIds }
+                filter { it.id in downloadedChapterIds || it.id in localDownloadedChapterIds }
             } else {
                 this
             }

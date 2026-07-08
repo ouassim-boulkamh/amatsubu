@@ -26,6 +26,13 @@ class LibraryPreferences(
         LibrarySort.Serializer::deserialize,
     )
 
+    val categorySortingModes: Preference<Map<Long, LibrarySort>> = preferenceStore.getObjectFromString(
+        "library_category_sorting_modes",
+        emptyMap(),
+        ::serializeCategorySortingModes,
+        ::deserializeCategorySortingModes,
+    )
+
     val randomSortSeed: Preference<Int> = preferenceStore.getInt("library_random_sort_seed", 0)
 
     val portraitColumns: Preference<Int> = preferenceStore.getInt("pref_library_columns_portrait_key", 0)
@@ -253,5 +260,27 @@ class LibraryPreferences(
             LIBRARY_UPDATE_CATEGORIES_PREF_KEY,
             LIBRARY_UPDATE_CATEGORIES_EXCLUDE_PREF_KEY,
         )
+
+        private fun serializeCategorySortingModes(value: Map<Long, LibrarySort>): String {
+            return value.entries.joinToString("|") { (categoryId, sort) ->
+                "$categoryId=${sort.serialize()}"
+            }
+        }
+
+        private fun deserializeCategorySortingModes(serialized: String): Map<Long, LibrarySort> {
+            if (serialized.isEmpty()) return emptyMap()
+            return serialized
+                .split("|")
+                .mapNotNull { entry ->
+                    val categoryId = entry.substringBefore("=", missingDelimiterValue = "").toLongOrNull()
+                    val sort = entry.substringAfter("=", missingDelimiterValue = "")
+                    if (categoryId == null || sort.isEmpty()) {
+                        null
+                    } else {
+                        categoryId to LibrarySort.deserialize(sort)
+                    }
+                }
+                .toMap()
+        }
     }
 }
