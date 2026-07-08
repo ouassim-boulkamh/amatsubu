@@ -75,8 +75,8 @@ android {
     defaultConfig {
         applicationId = "app.amatsubu"
 
-        versionCode = 23
-        versionName = "0.1.0-alpha.1"
+        versionCode = 24
+        versionName = "0.1.0-alpha.2"
 
         buildConfigField("String", "MIHON_BASE_VERSION", "\"0.20.0\"")
         buildConfigField("String", "MIHON_BASE_COMMIT", "\"b8e5f22c0\"")

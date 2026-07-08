@@ -220,7 +220,9 @@ class MainActivity : BaseActivity() {
         val navigator = LocalNavigator.currentOrThrow
 
         LaunchedEffect(Unit) {
-            if (!isDebugBuildType && !preferences.shownOnboardingFlow.get() && navigator.lastItem !is OnboardingScreen) {
+            if (!isDebugBuildType && !preferences.shownOnboardingFlow.get() &&
+                navigator.lastItem !is OnboardingScreen
+            ) {
                 navigator.push(OnboardingScreen())
             }
         }
