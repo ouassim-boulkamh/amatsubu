@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.library
 
+import android.app.Application
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastMap
@@ -10,6 +11,7 @@ import eu.kanade.core.preference.asState
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.presentation.library.components.LibraryToolbarTitle
 import eu.kanade.presentation.manga.DownloadAction
+import eu.kanade.tachiyomi.data.notification.ServerNotificationSyncJob
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyStore
 import eu.kanade.tachiyomi.data.suwayomi.MangaStatus
@@ -457,6 +459,9 @@ class LibraryScreenModel(
             libraryPreferences.lastUpdatedTimestamp.set(System.currentTimeMillis())
             refreshServerLibrary()
             ServerStateSync.requestRefresh()
+            if (started) {
+                ServerNotificationSyncJob.schedulePromptReconciliation(Injekt.get<Application>())
+            }
             started
         } catch (e: Throwable) {
             if (e is CancellationException) throw e

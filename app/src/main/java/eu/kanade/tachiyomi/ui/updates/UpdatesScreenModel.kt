@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.updates
 
+import android.app.Application
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
@@ -12,6 +13,7 @@ import eu.kanade.core.util.insertSeparators
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.updates.UpdatesUiModel
 import eu.kanade.tachiyomi.data.download.model.Download
+import eu.kanade.tachiyomi.data.notification.ServerNotificationSyncJob
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterWithMangaDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
@@ -279,6 +281,9 @@ class UpdatesScreenModel(
                 libraryPreferences.lastUpdatedTimestamp.set(System.currentTimeMillis())
                 serverUpdatesRefreshes.update { it + 1 }
                 ServerStateSync.requestRefresh()
+                if (started) {
+                    ServerNotificationSyncJob.schedulePromptReconciliation(Injekt.get<Application>())
+                }
                 _events.send(Event.LibraryUpdateTriggered(started))
             }.onFailure { error ->
                 logcat(LogPriority.ERROR, error) { "Failed to trigger server library update" }

@@ -4,6 +4,7 @@ import android.content.Context
 import eu.kanade.tachiyomi.data.notification.ServerNotificationCheckpointStore
 import eu.kanade.tachiyomi.data.notification.ServerNotificationReconciler
 import eu.kanade.tachiyomi.data.notification.ServerNotificationRenderer
+import eu.kanade.tachiyomi.data.notification.ServerNotificationSyncJob
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.catch
@@ -14,7 +15,7 @@ import tachiyomi.core.common.util.system.logcat
 import kotlin.coroutines.cancellation.CancellationException
 
 internal class ServerLibraryUpdateNotifier(
-    context: Context,
+    private val context: Context,
     private val clientProvider: SuwayomiClientProvider = SuwayomiClientProvider(),
     private val renderer: ServerNotificationRenderer = ServerNotificationRenderer(context),
     private val checkpoints: ServerNotificationCheckpointStore = ServerNotificationCheckpointStore(),
@@ -23,11 +24,14 @@ internal class ServerLibraryUpdateNotifier(
     fun init(scope: CoroutineScope) {
         clientProvider.liveStatusClient.libraryUpdateStatusFlow()
             .onEach { status ->
-                reconciler.reconcileLibraryUpdate(
+                val result = reconciler.reconcileLibraryUpdate(
                     client = clientProvider.graphQlClient,
                     serverIdentity = clientProvider.baseUrl(),
                     status = status,
                 )
+                if (result.started) {
+                    ServerNotificationSyncJob.schedulePromptReconciliation(context)
+                }
             }
             .catch { error ->
                 if (error is CancellationException) throw error
