@@ -4,8 +4,8 @@ import dev.icerock.moko.resources.StringResource
 import tachiyomi.i18n.MR
 
 data class RestoreOptions(
-    val libraryEntries: Boolean = true,
-    val categories: Boolean = true,
+    val libraryEntries: Boolean = false,
+    val categories: Boolean = false,
     val appSettings: Boolean = false,
     val sourceSettings: Boolean = false,
     val privateSettings: Boolean = false,
@@ -42,10 +42,10 @@ data class RestoreOptions(
         )
 
         fun fromBooleanArray(array: BooleanArray) = RestoreOptions(
-            libraryEntries = array[0],
-            categories = array[1],
-            appSettings = array[2],
-            sourceSettings = array[3],
+            libraryEntries = false,
+            categories = false,
+            appSettings = array.getOrElse(2) { false },
+            sourceSettings = array.getOrElse(3) { false },
             privateSettings = array.getOrElse(4) { false },
         )
     }

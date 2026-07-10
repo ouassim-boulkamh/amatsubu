@@ -15,6 +15,7 @@ import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.notification.ServerNotificationSyncJob
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyStore
 import eu.kanade.tachiyomi.data.suwayomi.MangaStatus
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateEntity
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiCategoryDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterDto
@@ -34,9 +35,14 @@ import eu.kanade.tachiyomi.data.suwayomi.normalizedGenre
 import eu.kanade.tachiyomi.data.suwayomi.oldestPositive
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
 import eu.kanade.tachiyomi.data.suwayomi.serverCoverLastModified
+import eu.kanade.tachiyomi.data.suwayomi.serverLibraryCategoryAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.serverLibraryDownloadAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.serverLibraryMangaRemovalAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.serverLibraryReadAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.serverLibraryUpdateAffectedEntities
 import eu.kanade.tachiyomi.data.suwayomi.syncTrackerProgressAfterReadStateChange
-import eu.kanade.tachiyomi.source.model.SManga
-import eu.kanade.tachiyomi.source.online.HttpSource
+import eu.kanade.tachiyomi.data.suwayomi.toDomainStatus
+import eu.kanade.tachiyomi.data.suwayomi.toDomainUpdateStrategy
 import eu.kanade.tachiyomi.util.removeCovers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,33 +69,32 @@ import tachiyomi.core.common.util.lang.compareToWithCollator
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.category.model.Category
-import tachiyomi.domain.chapter.model.Chapter
-import tachiyomi.domain.library.model.LibraryDisplayMode
-import tachiyomi.domain.library.model.LibraryManga
-import tachiyomi.domain.library.model.LibrarySort
-import tachiyomi.domain.library.model.plus
-import tachiyomi.domain.library.model.sort
-import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.manga.model.Manga
-import tachiyomi.domain.manga.model.applyFilter
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
+import eu.kanade.domain.category.model.Category
+import eu.kanade.domain.chapter.model.Chapter
+import eu.kanade.domain.library.model.LibraryDisplayMode
+import eu.kanade.domain.library.model.LibraryManga
+import eu.kanade.domain.library.model.LibrarySort
+import eu.kanade.domain.library.model.plus
+import eu.kanade.domain.library.model.sort
+import eu.kanade.domain.library.service.LibraryPreferences
+import eu.kanade.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.MangaStatus as DomainMangaStatus
+import eu.kanade.domain.manga.model.applyFilter
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
-import eu.kanade.tachiyomi.data.suwayomi.UpdateStrategy as SuwayomiUpdateStrategy
 
-class LibraryScreenModel(
-    private val preferences: BasePreferences = Injekt.get(),
-    private val libraryPreferences: LibraryPreferences = Injekt.get(),
-    private val coverCache: CoverCache = Injekt.get(),
+internal class LibraryScreenModel(
+    private val application: Application,
+    private val preferences: BasePreferences,
+    private val libraryPreferences: LibraryPreferences,
+    private val coverCache: CoverCache,
+    private val suwayomiProvider: SuwayomiClientProvider,
+    private val json: Json,
+    private val clientDeviceChapterCopyStore: ClientDeviceChapterCopyStore,
 ) : StateScreenModel<LibraryScreenModel.State>(State()) {
 
-    private val suwayomiProvider = SuwayomiClientProvider()
-    private val json = Injekt.get<Json>()
     private val suwayomiClient = suwayomiProvider.graphQlClient
-    private val clientDeviceChapterCopyStore: ClientDeviceChapterCopyStore = Injekt.get()
     private val serverDownloadCounts = mutableMapOf<Long, Int>()
     private val localDownloadCounts = mutableMapOf<Long, Int>()
     private val serverSourceLanguages = mutableMapOf<Long, String>()
@@ -174,8 +179,18 @@ class LibraryScreenModel(
             }
             .launchIn(screenModelScope)
 
-        ServerStateSync.refreshes
-            .onEach { refreshServerLibrary() }
+        ServerStateSync.invalidations
+            .onEach { invalidation ->
+                if (
+                    invalidation.affectsAny(
+                        ServerStateEntity.Library,
+                        ServerStateEntity.Categories,
+                        ServerStateEntity.Downloads,
+                    )
+                ) {
+                    refreshServerLibrary()
+                }
+            }
             .launchIn(screenModelScope)
 
         suwayomiProvider.liveStatusClient.libraryUpdateStatusFlow()
@@ -211,13 +226,11 @@ class LibraryScreenModel(
         preferences: ItemPreferences,
     ): List<LibraryItem> {
         val downloadedOnly = preferences.globalFilterDownloaded
-        val skipOutsideReleasePeriod = preferences.skipOutsideReleasePeriod
         val filterDownloaded = if (downloadedOnly) TriState.ENABLED_IS else preferences.filterDownloaded
         val filterUnread = preferences.filterUnread
         val filterStarted = preferences.filterStarted
         val filterBookmarked = preferences.filterBookmarked
         val filterCompleted = preferences.filterCompleted
-        val filterIntervalCustom = preferences.filterIntervalCustom
 
         val filterFnDownloaded: (LibraryItem) -> Boolean = {
             applyFilter(filterDownloaded) { it.isLocal || it.downloadCount > 0 }
@@ -236,14 +249,8 @@ class LibraryScreenModel(
         }
 
         val filterFnCompleted: (LibraryItem) -> Boolean = {
-            applyFilter(filterCompleted) { it.libraryManga.manga.status.toInt() == SManga.COMPLETED }
-        }
-
-        val filterFnIntervalCustom: (LibraryItem) -> Boolean = {
-            if (skipOutsideReleasePeriod) {
-                applyFilter(filterIntervalCustom) { it.libraryManga.manga.fetchInterval < 0 }
-            } else {
-                true
+            applyFilter(filterCompleted) {
+                DomainMangaStatus.from(it.libraryManga.manga.status) == DomainMangaStatus.COMPLETED
             }
         }
 
@@ -261,7 +268,6 @@ class LibraryScreenModel(
                 filterFnStarted(it) &&
                 filterFnBookmarked(it) &&
                 filterFnCompleted(it) &&
-                filterFnIntervalCustom(it) &&
                 filterFnTracking(it)
         }
     }
@@ -360,7 +366,6 @@ class LibraryScreenModel(
             libraryPreferences.unreadBadge.changes(),
             libraryPreferences.localBadge.changes(),
             libraryPreferences.languageBadge.changes(),
-            libraryPreferences.autoUpdateMangaRestrictions.changes(),
 
             preferences.downloadedOnly.changes(),
             libraryPreferences.filterDownloaded.changes(),
@@ -368,22 +373,19 @@ class LibraryScreenModel(
             libraryPreferences.filterStarted.changes(),
             libraryPreferences.filterBookmarked.changes(),
             libraryPreferences.filterCompleted.changes(),
-            libraryPreferences.filterIntervalCustom.changes(),
-        ) {
+        ) { it: Array<Any?> ->
             ItemPreferences(
                 downloadBadge = it[0] as Boolean,
                 localDownloadBadge = it[1] as Boolean,
                 unreadBadge = it[2] as Boolean,
                 localBadge = it[3] as Boolean,
                 languageBadge = it[4] as Boolean,
-                skipOutsideReleasePeriod = LibraryPreferences.MANGA_OUTSIDE_RELEASE_PERIOD in (it[5] as Set<*>),
-                globalFilterDownloaded = it[6] as Boolean,
-                filterDownloaded = it[7] as TriState,
-                filterUnread = it[8] as TriState,
-                filterStarted = it[9] as TriState,
-                filterBookmarked = it[10] as TriState,
-                filterCompleted = it[11] as TriState,
-                filterIntervalCustom = it[12] as TriState,
+                globalFilterDownloaded = it[5] as Boolean,
+                filterDownloaded = it[6] as TriState,
+                filterUnread = it[7] as TriState,
+                filterStarted = it[8] as TriState,
+                filterBookmarked = it[9] as TriState,
+                filterCompleted = it[10] as TriState,
             )
         }
     }
@@ -455,9 +457,9 @@ class LibraryScreenModel(
                 ?: suwayomiClient.updateLibraryMangas()
             libraryPreferences.lastUpdatedTimestamp.set(System.currentTimeMillis())
             refreshServerLibrary()
-            ServerStateSync.requestRefresh()
+            ServerStateSync.requestRefresh(*serverLibraryUpdateAffectedEntities().toTypedArray())
             if (started) {
-                ServerNotificationSyncJob.schedulePromptReconciliation(Injekt.get<Application>())
+                ServerNotificationSyncJob.schedulePromptReconciliation(application)
             }
             started
         } catch (e: Throwable) {
@@ -764,25 +766,6 @@ class LibraryScreenModel(
         )
     }
 
-    private fun MangaStatus.toDomainStatus(): Long {
-        return when (this) {
-            MangaStatus.UNKNOWN -> SManga.UNKNOWN
-            MangaStatus.ONGOING -> SManga.ONGOING
-            MangaStatus.COMPLETED -> SManga.COMPLETED
-            MangaStatus.LICENSED -> SManga.LICENSED
-            MangaStatus.PUBLISHING_FINISHED -> SManga.PUBLISHING_FINISHED
-            MangaStatus.CANCELLED -> SManga.CANCELLED
-            MangaStatus.ON_HIATUS -> SManga.ON_HIATUS
-        }.toLong()
-    }
-
-    private fun SuwayomiUpdateStrategy.toDomainUpdateStrategy(): eu.kanade.tachiyomi.source.model.UpdateStrategy {
-        return when (this) {
-            SuwayomiUpdateStrategy.ALWAYS_UPDATE -> eu.kanade.tachiyomi.source.model.UpdateStrategy.ALWAYS_UPDATE
-            SuwayomiUpdateStrategy.ONLY_FETCH_ONCE -> eu.kanade.tachiyomi.source.model.UpdateStrategy.ONLY_FETCH_ONCE
-        }
-    }
-
     /**
      * Returns the common categories for the given list of manga.
      *
@@ -895,7 +878,9 @@ class LibraryScreenModel(
                 suwayomiClient.enqueueChapterDownloads(chapterIds)
                 suwayomiClient.startDownloader()
                 refreshServerLibrary()
-                ServerStateSync.requestRefresh()
+                ServerStateSync.requestRefresh(
+                    *serverLibraryDownloadAffectedEntities(mangas.map { it.id.toInt() }).toTypedArray(),
+                )
             }
         } catch (e: Throwable) {
             if (e is CancellationException) throw e
@@ -953,7 +938,9 @@ class LibraryScreenModel(
                     )
                 }
                 refreshServerLibrary()
-                ServerStateSync.requestRefresh()
+                ServerStateSync.requestRefresh(
+                    *serverLibraryReadAffectedEntities(selection.map { it.id.toInt() }).toTypedArray(),
+                )
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
                 logcat(LogPriority.ERROR, e) { "Failed to update server chapter read state from Library" }
@@ -980,7 +967,9 @@ class LibraryScreenModel(
                     )
                 }
                 refreshServerLibrary()
-                ServerStateSync.requestRefresh()
+                ServerStateSync.requestRefresh(
+                    *serverLibraryMangaRemovalAffectedEntities(mangas.map { it.id.toInt() }).toTypedArray(),
+                )
             }
 
             if (deleteChapters) {
@@ -993,7 +982,9 @@ class LibraryScreenModel(
                     }
                 }
                 refreshServerLibrary()
-                ServerStateSync.requestRefresh()
+                ServerStateSync.requestRefresh(
+                    *serverLibraryDownloadAffectedEntities(mangas.map { it.id.toInt() }).toTypedArray(),
+                )
             }
         }
     }
@@ -1013,7 +1004,9 @@ class LibraryScreenModel(
                 removeCategoryIds = removeCategories.map { it.toInt() },
             )
             refreshServerLibrary()
-            ServerStateSync.requestRefresh()
+            ServerStateSync.requestRefresh(
+                *serverLibraryCategoryAffectedEntities(mangaList.map { it.id.toInt() }).toTypedArray(),
+            )
         }
     }
 
@@ -1174,7 +1167,6 @@ class LibraryScreenModel(
         val unreadBadge: Boolean,
         val localBadge: Boolean,
         val languageBadge: Boolean,
-        val skipOutsideReleasePeriod: Boolean,
 
         val globalFilterDownloaded: Boolean,
         val filterDownloaded: TriState,
@@ -1182,7 +1174,6 @@ class LibraryScreenModel(
         val filterStarted: TriState,
         val filterBookmarked: TriState,
         val filterCompleted: TriState,
-        val filterIntervalCustom: TriState,
     ) {
         val hasActiveFilters = listOf(
             filterDownloaded,
@@ -1190,7 +1181,6 @@ class LibraryScreenModel(
             filterStarted,
             filterBookmarked,
             filterCompleted,
-            filterIntervalCustom,
         ).any { it != TriState.DISABLED }
     }
 

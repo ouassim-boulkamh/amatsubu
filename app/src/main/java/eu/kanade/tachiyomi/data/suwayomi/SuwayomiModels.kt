@@ -828,6 +828,37 @@ data class SetMangaMetaPayload(
 )
 
 @Serializable
+data class GlobalMetaData(
+    val meta: SuwayomiGlobalMetaDto,
+)
+
+@Serializable
+data class SetGlobalMetaData(
+    val setGlobalMeta: SetGlobalMetaPayload,
+)
+
+@Serializable
+data class SetGlobalMetaPayload(
+    val meta: SuwayomiGlobalMetaDto,
+)
+
+@Serializable
+data class DeleteGlobalMetaData(
+    val deleteGlobalMeta: DeleteGlobalMetaPayload? = null,
+)
+
+@Serializable
+data class DeleteGlobalMetaPayload(
+    val meta: SuwayomiGlobalMetaDto? = null,
+)
+
+@Serializable
+data class SuwayomiGlobalMetaDto(
+    val key: String,
+    val value: String,
+)
+
+@Serializable
 data class SuwayomiMangaMetaDto(
     val key: String,
     val mangaId: Int,
@@ -982,6 +1013,18 @@ data class EmptyMutationData(
 data class EmptyMutationPayload(
     @SerialName("__typename")
     val typename: String? = null,
+)
+
+@Serializable
+data class ClearCachedImagesData(
+    val clearCachedImages: SuwayomiClearCachedImagesDto,
+)
+
+@Serializable
+data class SuwayomiClearCachedImagesDto(
+    val cachedPages: Boolean? = null,
+    val cachedThumbnails: Boolean? = null,
+    val downloadedThumbnails: Boolean? = null,
 )
 
 @Serializable

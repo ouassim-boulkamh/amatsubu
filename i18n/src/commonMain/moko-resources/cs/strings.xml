@@ -236,8 +236,6 @@
     <string name="pref_reader_navigation">Navigování</string>
     <string name="pager_viewer">Stránkovač</string>
     <string name="disabled">Zakázáno</string>
-    <string name="pref_create_backup_summ">Lze použít k obnovení aktuální knihovny</string>
-    <string name="pref_restore_backup_summ">Obnovit knihovnu ze záložního souboru</string>
     <string name="login_title">Přihlásit se do %1$s</string>
     <string name="show_title">Název zdroje</string>
     <string name="show_chapter_number">Číslo kapitoly</string>
@@ -336,7 +334,6 @@
     <string name="creating_backup_error">Zálohování selhalo</string>
     <string name="backup_in_progress">Zálohování již probíhá</string>
     <string name="restore_duration">%1$02d min, %2$02d s</string>
-    <string name="backup_restore_content_full">Budeš poté muset doinstalovat jakékoliv chybějící rozšíření a přihlásit se do sledovacích služeb pro jejich použití.</string>
     <string name="backup_restore_missing_trackers">Sledovače, ve kterých nejsi přihlášený/á:</string>
     <string name="backup_restore_missing_sources">Chybějící zdroje:</string>
     <string name="invalid_backup_file_missing_manga">Záloha neobsahuje žádné položky knihovny.</string>

@@ -217,9 +217,7 @@
     <string name="double_tap_anim_speed_normal">Bình thường</string>
     <string name="double_tap_anim_speed_fast">Nhanh</string>
     <string name="pref_create_backup">Tạo bản sao lưu</string>
-    <string name="pref_create_backup_summ">Có thể sử dụng để khôi phục thư viện hiện tại</string>
     <string name="pref_restore_backup">Khôi phục sao lưu</string>
-    <string name="pref_restore_backup_summ">Khôi phục thư viện từ tập tin sao lưu</string>
     <string name="pref_backup_interval">Lịch sao lưu</string>
     <string name="backup_created">Sao lưu đã được tạo</string>
     <string name="restore_completed">Khôi phục hoàn tất</string>
@@ -412,7 +410,6 @@
     <string name="restore_in_progress">Đang trong quá trình phục hồi</string>
     <string name="creating_backup_error">Lưu trữ thất bại</string>
     <string name="restore_duration">%1$02d phút, %2$02d giây</string>
-    <string name="backup_restore_content_full">Bạn sẽ cần cài đặt bất kỳ tiện ích mở rộng nào bị thiếu rồi đăng nhập vào các dịch vụ theo dõi để sử dụng chúng.</string>
     <string name="backup_restore_missing_trackers">Bộ theo dõi chưa được đăng nhập vào :</string>
     <string name="backup_restore_missing_sources">Nguồn không tìm thấy :</string>
     <string name="pref_category_auto_download">Tự động tải xuống</string>

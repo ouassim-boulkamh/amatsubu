@@ -43,7 +43,6 @@ import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import coil3.compose.AsyncImage
 import eu.kanade.domain.source.interactor.SetMigrateSorting
-import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.browse.ExtensionScreen
 import eu.kanade.presentation.browse.ExtensionUiModel
 import eu.kanade.presentation.browse.ExtensionsState
@@ -62,8 +61,9 @@ import eu.kanade.presentation.components.TabbedScreen
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.suwayomi.FetchSourceMangaType
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateEntity
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateInvalidation
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
-import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiExtensionDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiExtensionStoreDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiGraphQlClient
@@ -74,18 +74,14 @@ import eu.kanade.tachiyomi.data.suwayomi.hasNsfwContent
 import eu.kanade.tachiyomi.data.suwayomi.isLocalFolderSource
 import eu.kanade.tachiyomi.data.suwayomi.isSuwayomiServerUnavailable
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
+import eu.kanade.tachiyomi.data.suwayomi.serverBrowseRefreshAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.serverExtensionActionAffectedEntities
 import eu.kanade.tachiyomi.data.suwayomi.sourceNodes
 import eu.kanade.tachiyomi.data.suwayomi.webUrl
-import eu.kanade.tachiyomi.extension.model.Extension
-import eu.kanade.tachiyomi.extension.model.InstallStep
-import eu.kanade.tachiyomi.source.ConfigurableSource
-import eu.kanade.tachiyomi.source.PreferenceScreen
-import eu.kanade.tachiyomi.source.model.FilterList
-import eu.kanade.tachiyomi.source.model.MangasPage
-import eu.kanade.tachiyomi.source.model.Page
-import eu.kanade.tachiyomi.source.model.SChapter
-import eu.kanade.tachiyomi.source.model.SManga
-import eu.kanade.tachiyomi.source.model.SMangaUpdate
+import eu.kanade.tachiyomi.di.appDependencies
+import eu.kanade.domain.extension.model.Extension
+import eu.kanade.domain.extension.model.InstallStep
+import eu.kanade.tachiyomi.ui.ServerForegroundRefreshEffect
 import eu.kanade.tachiyomi.ui.browse.migration.manga.MigrateMangaScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.webview.WebViewScreen
@@ -94,23 +90,22 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import logcat.LogPriority
-import mihon.domain.extension.model.ExtensionStore
+import eu.kanade.domain.extension.model.ExtensionStore
 import tachiyomi.core.common.preference.getAndSet
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.source.model.Pin
-import tachiyomi.domain.source.model.Pins
-import tachiyomi.domain.source.model.Source
+import eu.kanade.domain.source.model.Pin
+import eu.kanade.domain.source.model.Pins
+import eu.kanade.domain.source.model.Source
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.PullRefresh
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import java.util.TreeMap
 import kotlin.math.absoluteValue
 import tachiyomi.core.common.i18n.stringResource as contextStringResource
@@ -144,9 +139,12 @@ data object BrowseTab : Tab {
         val context = LocalContext.current
         val lifecycleOwner = LocalLifecycleOwner.current
         val scope = rememberCoroutineScope()
-        val provider = remember { SuwayomiClientProvider() }
+        val provider = remember(context) { context.appDependencies.suwayomiClientProvider }
         var isSyncing by remember { mutableStateOf(false) }
-        var serverRefreshVersion by remember { mutableIntStateOf(0) }
+        var sourcesRefreshVersion by remember { mutableIntStateOf(0) }
+        var extensionsRefreshVersion by remember { mutableIntStateOf(0) }
+        var migrationRefreshVersion by remember { mutableIntStateOf(0) }
+        val state = rememberPagerState { BrowsePageCount }
         val syncServerState: (SnackbarHostState) -> Unit = { snackbarHostState ->
             if (!isSyncing) {
                 scope.launch {
@@ -155,7 +153,7 @@ data object BrowseTab : Tab {
                         withIOContext {
                             provider.graphQlClient.testConnection()
                         }
-                        ServerStateSync.requestRefresh()
+                        ServerStateSync.requestRefresh(*serverBrowseRefreshAffectedEntities().toTypedArray())
                     }
                     isSyncing = false
                     result.onSuccess {
@@ -174,12 +172,28 @@ data object BrowseTab : Tab {
         }
 
         val tabs = listOf(
-            serverSourcesTab(serverRefreshVersion, isSyncing, syncServerState),
-            serverExtensionsTab(serverRefreshVersion, isSyncing, syncServerState),
-            serverMigrateSourceTab(serverRefreshVersion, isSyncing, syncServerState),
+            serverSourcesTab(
+                serverRefreshVersion = sourcesRefreshVersion,
+                isActive = state.currentPage == 0,
+                isSyncing = isSyncing,
+                onForegroundRefresh = { sourcesRefreshVersion++ },
+                onSyncServerState = syncServerState,
+            ),
+            serverExtensionsTab(
+                serverRefreshVersion = extensionsRefreshVersion,
+                isActive = state.currentPage == 1,
+                isSyncing = isSyncing,
+                onForegroundRefresh = { extensionsRefreshVersion++ },
+                onSyncServerState = syncServerState,
+            ),
+            serverMigrateSourceTab(
+                serverRefreshVersion = migrationRefreshVersion,
+                isActive = state.currentPage == 2,
+                isSyncing = isSyncing,
+                onForegroundRefresh = { migrationRefreshVersion++ },
+                onSyncServerState = syncServerState,
+            ),
         )
-
-        val state = rememberPagerState { tabs.size }
 
         TabbedScreen(
             titleRes = MR.strings.browse,
@@ -192,13 +206,21 @@ data object BrowseTab : Tab {
         }
 
         LaunchedEffect(Unit) {
-            ServerStateSync.refreshes.collectLatest { serverRefreshVersion++ }
+            ServerStateSync.invalidations
+                .filter(ServerStateInvalidation::affectsBrowse)
+                .collectLatest {
+                    sourcesRefreshVersion++
+                    extensionsRefreshVersion++
+                    migrationRefreshVersion++
+                }
         }
 
         DisposableEffect(lifecycleOwner) {
             val observer = LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
-                    serverRefreshVersion++
+                    sourcesRefreshVersion++
+                    extensionsRefreshVersion++
+                    migrationRefreshVersion++
                 }
             }
             lifecycleOwner.lifecycle.addObserver(observer)
@@ -213,10 +235,20 @@ data object BrowseTab : Tab {
     }
 }
 
+private fun ServerStateInvalidation.affectsBrowse(): Boolean {
+    return affectsAny(
+        ServerStateEntity.Sources,
+        ServerStateEntity.Extensions,
+        ServerStateEntity.ExtensionStores,
+    )
+}
+
 @Composable
 private fun serverSourcesTab(
     serverRefreshVersion: Int,
+    isActive: Boolean,
     isSyncing: Boolean,
+    onForegroundRefresh: () -> Unit,
     onSyncServerState: (SnackbarHostState) -> Unit,
 ): TabContent {
     val navigator = LocalNavigator.currentOrThrow
@@ -235,6 +267,7 @@ private fun serverSourcesTab(
             ),
         ),
         content = { contentPadding, snackbarHostState ->
+            ServerForegroundRefreshEffect(enabled = isActive, onRefresh = onForegroundRefresh)
             ServerSourcesContent(
                 contentPadding = contentPadding,
                 snackbarHostState = snackbarHostState,
@@ -249,7 +282,9 @@ private fun serverSourcesTab(
 @Composable
 private fun serverExtensionsTab(
     serverRefreshVersion: Int,
+    isActive: Boolean,
     isSyncing: Boolean,
+    onForegroundRefresh: () -> Unit,
     onSyncServerState: (SnackbarHostState) -> Unit,
 ): TabContent {
     val navigator = LocalNavigator.currentOrThrow
@@ -262,6 +297,7 @@ private fun serverExtensionsTab(
             ),
         ),
         content = { contentPadding, snackbarHostState ->
+            ServerForegroundRefreshEffect(enabled = isActive, onRefresh = onForegroundRefresh)
             ServerExtensionsContent(
                 contentPadding = contentPadding,
                 snackbarHostState = snackbarHostState,
@@ -276,20 +312,24 @@ private fun serverExtensionsTab(
 @Composable
 private fun serverMigrateSourceTab(
     serverRefreshVersion: Int,
+    isActive: Boolean,
     isSyncing: Boolean,
+    onForegroundRefresh: () -> Unit,
     onSyncServerState: (SnackbarHostState) -> Unit,
 ): TabContent {
     val uriHandler = LocalUriHandler.current
     val navigator = LocalNavigator.currentOrThrow
-    val sourcePreferences = remember { Injekt.get<SourcePreferences>() }
+    val context = LocalContext.current
+    val sourcePreferences = remember(context) { context.appDependencies.sourcePreferences }
     var sortingMode by remember {
         androidx.compose.runtime.mutableStateOf(sourcePreferences.migrationSortingMode.get())
     }
     var sortingDirection by remember {
         androidx.compose.runtime.mutableStateOf(sourcePreferences.migrationSortingDirection.get())
     }
-    val provider = remember { SuwayomiClientProvider() }
+    val provider = remember(context) { context.appDependencies.suwayomiClientProvider }
     val baseUrl = remember { runCatching { provider.baseUrl() }.getOrNull() }
+    ServerForegroundRefreshEffect(enabled = isActive, onRefresh = onForegroundRefresh)
     val state by produceState<ServerMigrationSourcesState>(
         initialValue = ServerMigrationSourcesState.Loading,
         key1 = sortingMode,
@@ -422,12 +462,12 @@ private fun ServerExtensionsContent(
     val scope = rememberCoroutineScope()
     val loadingActions = remember { mutableStateMapOf<String, InstallStep>() }
     var reloadVersion by remember { mutableIntStateOf(0) }
-    val sourcePreferences = remember { Injekt.get<SourcePreferences>() }
+    val sourcePreferences = remember(context) { context.appDependencies.sourcePreferences }
     val enabledLanguages by sourcePreferences.enabledLanguages.changes()
         .collectAsState(sourcePreferences.enabledLanguages.get())
     val showNsfwSources by sourcePreferences.showNsfwSource.changes()
         .collectAsState(sourcePreferences.showNsfwSource.get())
-    val provider = remember { SuwayomiClientProvider() }
+    val provider = remember(context) { context.appDependencies.suwayomiClientProvider }
     val baseUrl = remember { runCatching { provider.baseUrl() }.getOrNull() }
     val state by produceState<ServerExtensionsState>(
         initialValue = ServerExtensionsState.Loading,
@@ -494,7 +534,7 @@ private fun ServerExtensionsContent(
                                 )
                             }
                         }.onSuccess {
-                            ServerStateSync.requestRefresh()
+                            ServerStateSync.requestRefresh(*serverExtensionActionAffectedEntities().toTypedArray())
                             reloadVersion++
                             loadingActions.remove(pkgName)
                         }.onFailure {
@@ -653,43 +693,15 @@ internal fun SuwayomiExtensionStoreDto.toExtensionStore(): ExtensionStore {
     )
 }
 
-internal fun SuwayomiSourceDto.toExtensionSource(): eu.kanade.tachiyomi.source.Source {
-    return if (isConfigurable) {
-        ConfigurableServerExtensionSource(this)
-    } else {
-        ServerExtensionSource(this)
-    }
-}
-
-internal open class ServerExtensionSource(
-    private val source: SuwayomiSourceDto,
-) : eu.kanade.tachiyomi.source.Source {
-    override val id: Long = source.domainId()
-    override val name: String = source.name
-    override val lang: String = source.lang
-    override val supportsLatest: Boolean = source.supportsLatest
-
-    override suspend fun getPopularManga(page: Int): MangasPage = throw UnsupportedOperationException()
-    override suspend fun getLatestUpdates(page: Int): MangasPage = throw UnsupportedOperationException()
-    override suspend fun getSearchManga(page: Int, query: String, filters: FilterList): MangasPage =
-        throw UnsupportedOperationException()
-
-    override suspend fun getMangaUpdate(
-        manga: SManga,
-        chapters: List<SChapter>,
-        fetchDetails: Boolean,
-        fetchChapters: Boolean,
-    ): SMangaUpdate = throw UnsupportedOperationException()
-
-    override suspend fun getPageList(chapter: SChapter): List<Page> = throw UnsupportedOperationException()
-
-    override fun toString(): String = if (lang.isEmpty()) name else "$name (${lang.uppercase()})"
-}
-
-internal class ConfigurableServerExtensionSource(
-    source: SuwayomiSourceDto,
-) : ServerExtensionSource(source), ConfigurableSource {
-    override fun setupPreferenceScreen(screen: PreferenceScreen) = Unit
+internal fun SuwayomiSourceDto.toExtensionSource(): Extension.Installed.Source {
+    return Extension.Installed.Source(
+        id = domainId(),
+        lang = lang,
+        name = name,
+        baseUrl = webUrl().orEmpty(),
+        supportsLatest = supportsLatest,
+        isConfigurable = isConfigurable,
+    )
 }
 
 @Composable
@@ -701,8 +713,9 @@ private fun ServerSourcesContent(
     onSyncServerState: () -> Unit,
 ) {
     val navigator = LocalNavigator.current
+    val context = LocalContext.current
     val errorMessage = stringResource(MR.strings.server_sources_load_error)
-    val sourcePreferences = remember { Injekt.get<SourcePreferences>() }
+    val sourcePreferences = remember(context) { context.appDependencies.sourcePreferences }
     val enabledLanguages by sourcePreferences.enabledLanguages.changes()
         .collectAsState(sourcePreferences.enabledLanguages.get())
     val disabledSources by sourcePreferences.disabledSources.changes()
@@ -714,7 +727,7 @@ private fun ServerSourcesContent(
     val showNsfwSources by sourcePreferences.showNsfwSource.changes()
         .collectAsState(sourcePreferences.showNsfwSource.get())
     var dialogSource by remember { androidx.compose.runtime.mutableStateOf<Source?>(null) }
-    val provider = remember { SuwayomiClientProvider() }
+    val provider = remember(context) { context.appDependencies.suwayomiClientProvider }
     val baseUrl = remember { runCatching { provider.baseUrl() }.getOrNull() }
     val state by produceState<ServerSourcesState>(
         initialValue = ServerSourcesState.Loading,
@@ -867,9 +880,6 @@ private data class ServerMigrationSourcesResult(
     val sourceIconUrlsByDomainId: Map<Long, String?>,
 )
 
-internal fun suwayomiClient(): SuwayomiGraphQlClient {
-    return SuwayomiClientProvider().graphQlClient
-}
 
 private fun serverMigrationComparator(
     mode: SetMigrateSorting.Mode,
@@ -944,3 +954,5 @@ private fun List<SuwayomiSourceDto>.toSourceUiModels(
 private fun SuwayomiSourceDto.domainId(): Long {
     return id.toLongOrNull() ?: id.hashCode().absoluteValue.toLong()
 }
+
+private const val BrowsePageCount = 3

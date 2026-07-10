@@ -22,6 +22,7 @@ import eu.kanade.tachiyomi.data.suwayomi.SUWAYOMI_TIMEOUT_MIN_SECONDS
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiPreferences.Companion.AUTH_BASIC
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiPreferences.Companion.AUTH_NONE
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiPreferences.Companion.AUTH_TOKEN
 import eu.kanade.tachiyomi.data.suwayomi.isValidSuwayomiConnectionSettings
 import eu.kanade.tachiyomi.data.suwayomi.isValidSuwayomiServerPort
 import eu.kanade.tachiyomi.data.suwayomi.isValidSuwayomiServerUrl
@@ -36,9 +37,10 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
 import tachiyomi.presentation.core.util.secondaryItemAlpha
 
-internal class ServerStep : OnboardingStep {
+internal class ServerStep(
+    private val provider: SuwayomiClientProvider,
+) : OnboardingStep {
 
-    private val provider = SuwayomiClientProvider()
     private val preferences = provider.preferences
     private val client = provider.graphQlClient
 
@@ -137,11 +139,12 @@ internal class ServerStep : OnboardingStep {
                 entries = mapOf(
                     AUTH_NONE to stringResource(MR.strings.pref_server_auth_none),
                     AUTH_BASIC to stringResource(MR.strings.pref_server_auth_basic),
+                    AUTH_TOKEN to "Token",
                 ),
                 onValueChange = { preferences.authType.set(it) },
             )
 
-            if (authType == AUTH_BASIC) {
+            if (authType == AUTH_BASIC || authType == AUTH_TOKEN) {
                 EditTextPreferenceWidget(
                     title = stringResource(MR.strings.username),
                     subtitle = "%s",
@@ -183,7 +186,13 @@ internal class ServerStep : OnboardingStep {
                 onClick = {
                     scope.launch {
                         testState = ConnectionTestState.Running
-                        testState = runCatching { client.testConnection() }
+                        testState = runCatching {
+                            if (authType == AUTH_TOKEN) {
+                                provider.tokenAuth.login(username, password)
+                                preferences.clearTokenLoginPassword()
+                            }
+                            client.testConnection()
+                        }
                             .fold(
                                 onSuccess = { ConnectionTestState.Success(it.successMessage()) },
                                 onFailure = { ConnectionTestState.Failure(it.userMessage()) },
@@ -200,6 +209,7 @@ internal class ServerStep : OnboardingStep {
     private fun authTypeLabel(authType: String): String {
         return when (authType) {
             AUTH_BASIC -> stringResource(MR.strings.pref_server_auth_basic)
+            AUTH_TOKEN -> "Token"
             else -> stringResource(MR.strings.pref_server_auth_none)
         }
     }

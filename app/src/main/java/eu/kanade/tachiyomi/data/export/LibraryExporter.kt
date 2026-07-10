@@ -4,7 +4,7 @@ import android.content.Context
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import tachiyomi.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.Manga
 
 object LibraryExporter {
 

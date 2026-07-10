@@ -6,13 +6,20 @@ import android.net.Uri
 import android.os.Build
 import androidx.core.net.toUri
 import androidx.work.CoroutineWorker
+import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.ForegroundInfo
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import eu.kanade.tachiyomi.data.backup.BackupNotifier
+import eu.kanade.tachiyomi.data.backup.BackupDecoder
+import eu.kanade.tachiyomi.data.backup.restore.restorers.PreferenceRestorer
 import eu.kanade.tachiyomi.data.notification.Notifications
+import eu.kanade.tachiyomi.data.suwayomi.EnqueueBoundServerIdentity
+import eu.kanade.tachiyomi.data.suwayomi.EnqueueBoundServerIdentityCheck
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.isRunning
 import eu.kanade.tachiyomi.util.system.setForegroundSafely
@@ -41,7 +48,17 @@ class BackupRestoreJob(private val context: Context, workerParams: WorkerParamet
         setForegroundSafely()
 
         return try {
-            BackupRestorer(context, notifier, isSync).restore(uri, options)
+            val dependencies = context.appDependencies
+            BackupRestorer(
+                context = context,
+                notifier = notifier,
+                isSync = isSync,
+                decoder = BackupDecoder(context, dependencies.protoBuf),
+                preferenceStore = dependencies.preferenceStore,
+                preferenceRestorer = PreferenceRestorer(context, dependencies.preferenceStore),
+                mangaMetadataStore = dependencies.clientMangaMetadataStore,
+                currentServerKey = dependencies.suwayomiClientProvider::serverKey,
+            ).restore(uri, options)
             Result.success()
         } catch (e: Exception) {
             if (e is CancellationException) {
@@ -115,8 +132,30 @@ class ServerBackupRestoreJob(private val context: Context, workerParams: WorkerP
 
         setForegroundSafely()
 
+        val provider = context.appDependencies.suwayomiClientProvider
+        when (val identityCheck = EnqueueBoundServerIdentity.check(inputData, provider.serverKey())) {
+            is EnqueueBoundServerIdentityCheck.Matched -> Unit
+            EnqueueBoundServerIdentityCheck.Missing -> {
+                val message = "Server backup restore job missing enqueue-bound server identity"
+                logcat(LogPriority.ERROR) { message }
+                notifier.showRestoreError(message)
+                context.cancelNotification(Notifications.ID_RESTORE_PROGRESS)
+                return Result.failure()
+            }
+            is EnqueueBoundServerIdentityCheck.Mismatched -> {
+                val message = "Server changed since restore was queued. Start the restore again."
+                logcat(LogPriority.ERROR) {
+                    "Server backup restore job server identity mismatch " +
+                        "enqueued=${identityCheck.enqueuedServerKey} current=${identityCheck.currentServerKey}"
+                }
+                notifier.showRestoreError(message)
+                context.cancelNotification(Notifications.ID_RESTORE_PROGRESS)
+                return Result.failure()
+            }
+        }
+
         return try {
-            ServerBackupRestorer(context, notifier, isSync).restore(uri, options)
+            ServerBackupRestorer(context, notifier, isSync, provider).restore(uri, options)
             Result.success()
         } catch (e: Exception) {
             if (e is CancellationException) {
@@ -155,10 +194,11 @@ class ServerBackupRestoreJob(private val context: Context, workerParams: WorkerP
             options: RestoreOptions,
             sync: Boolean = false,
         ) {
-            val inputData = workDataOf(
-                LOCATION_URI_KEY to uri.toString(),
-                SYNC_KEY to sync,
-                OPTIONS_KEY to options.asBooleanArray(),
+            val inputData = buildServerBackupRestoreInputData(
+                locationUri = uri.toString(),
+                options = options,
+                sync = sync,
+                serverKey = context.appDependencies.suwayomiClientProvider.serverKey(),
             )
             val request = OneTimeWorkRequestBuilder<ServerBackupRestoreJob>()
                 .addTag(TAG_SERVER)
@@ -171,6 +211,22 @@ class ServerBackupRestoreJob(private val context: Context, workerParams: WorkerP
             context.workManager.cancelUniqueWork(TAG_SERVER)
         }
     }
+}
+
+internal fun buildServerBackupRestoreInputData(
+    locationUri: String,
+    options: RestoreOptions,
+    sync: Boolean,
+    serverKey: String,
+): Data {
+    return EnqueueBoundServerIdentity.put(
+        Data.Builder(),
+        serverKey,
+    )
+        .putString(LOCATION_URI_KEY, locationUri)
+        .putBoolean(SYNC_KEY, sync)
+        .putBooleanArray(OPTIONS_KEY, options.asBooleanArray())
+        .build()
 }
 
 private const val TAG_CLIENT = "BackupRestore"

@@ -33,8 +33,11 @@ import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.data.backup.ServerBackupFileValidator
 import eu.kanade.tachiyomi.data.backup.restore.RestoreOptions
 import eu.kanade.tachiyomi.data.backup.restore.ServerBackupRestoreJob
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.util.system.DeviceUtil
 import kotlinx.coroutines.flow.update
+import kotlinx.serialization.json.Json
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.LazyColumnWithAction
@@ -51,7 +54,10 @@ class ServerRestoreBackupScreen(
     override fun Content() {
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
-        val model = rememberScreenModel { RestoreBackupScreenModel(context, uri) }
+        val dependencies = context.appDependencies
+        val model = rememberScreenModel {
+            RestoreBackupScreenModel(context, uri, dependencies.json, dependencies.suwayomiClientProvider)
+        }
         val state by model.state.collectAsState()
 
         Scaffold(
@@ -154,6 +160,8 @@ class ServerRestoreBackupScreen(
 private class RestoreBackupScreenModel(
     private val context: Context,
     private val uri: String,
+    private val json: Json,
+    private val suwayomiClientProvider: SuwayomiClientProvider,
 ) : StateScreenModel<RestoreBackupScreenModel.State>(State()) {
 
     init {
@@ -171,7 +179,7 @@ private class RestoreBackupScreenModel(
     private fun validate(uri: Uri) {
         screenModelScope.launchIO {
             val results = try {
-                ServerBackupFileValidator(context).validateOnServer(uri)
+                ServerBackupFileValidator(context, json, suwayomiClientProvider).validateOnServer(uri)
             } catch (e: Exception) {
                 setError(
                     error = InvalidRestore(uri, e.message.toString()),

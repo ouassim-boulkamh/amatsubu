@@ -17,6 +17,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import eu.kanade.tachiyomi.di.appDependencies
 import soup.compose.material.motion.animation.materialSharedAxisX
 import soup.compose.material.motion.animation.rememberSlideDistance
 import tachiyomi.i18n.MR
@@ -30,13 +32,14 @@ fun OnboardingScreen(
     onRestoreBackup: () -> Unit,
 ) {
     val slideDistance = rememberSlideDistance()
+    val dependencies = LocalContext.current.appDependencies
 
     var currentStep by rememberSaveable { mutableIntStateOf(0) }
     val steps = remember {
         listOf(
             ThemeStep(),
             StorageStep(),
-            ServerStep(),
+            ServerStep(dependencies.suwayomiClientProvider),
             PermissionStep(),
             GuidesStep(onRestoreBackup = onRestoreBackup),
         )

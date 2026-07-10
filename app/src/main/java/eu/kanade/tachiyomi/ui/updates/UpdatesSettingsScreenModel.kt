@@ -4,12 +4,10 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.preference.getAndSet
-import tachiyomi.domain.updates.service.UpdatesPreferences
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
+import eu.kanade.domain.updates.service.UpdatesPreferences
 
 class UpdatesSettingsScreenModel(
-    val updatesPreferences: UpdatesPreferences = Injekt.get(),
+    val updatesPreferences: UpdatesPreferences,
 ) : ScreenModel {
 
     fun toggleFilter(preference: (UpdatesPreferences) -> Preference<TriState>) {

@@ -40,6 +40,7 @@ import eu.kanade.presentation.manga.components.LibraryBottomActionMenu
 import eu.kanade.presentation.more.onboarding.GETTING_STARTED_URL
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.ui.browse.ServerGlobalSearchScreen
 import eu.kanade.tachiyomi.ui.browse.migration.search.ServerMigrateSearchScreen
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
@@ -55,9 +56,9 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.launchIO
-import tachiyomi.domain.category.model.Category
-import tachiyomi.domain.library.model.LibraryManga
-import tachiyomi.domain.manga.model.Manga
+import eu.kanade.domain.category.model.Category
+import eu.kanade.domain.library.model.LibraryManga
+import eu.kanade.domain.manga.model.Manga
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
@@ -91,9 +92,26 @@ data object LibraryTab : Tab {
         val scope = rememberCoroutineScope()
         val haptic = LocalHapticFeedback.current
         val lifecycleOwner = LocalLifecycleOwner.current
+        val dependencies = context.appDependencies
 
-        val screenModel = rememberScreenModel { LibraryScreenModel() }
-        val settingsScreenModel = rememberScreenModel { LibrarySettingsScreenModel() }
+        val screenModel = rememberScreenModel {
+            LibraryScreenModel(
+                application = dependencies.application,
+                preferences = dependencies.basePreferences,
+                libraryPreferences = dependencies.libraryPreferences,
+                coverCache = dependencies.coverCache,
+                suwayomiProvider = dependencies.suwayomiClientProvider,
+                json = dependencies.json,
+                clientDeviceChapterCopyStore = dependencies.clientDeviceChapterCopyStore,
+            )
+        }
+        val settingsScreenModel = rememberScreenModel {
+            LibrarySettingsScreenModel(
+                preferences = dependencies.basePreferences,
+                libraryPreferences = dependencies.libraryPreferences,
+                suwayomiProvider = dependencies.suwayomiClientProvider,
+            )
+        }
         val state by screenModel.state.collectAsState()
         val isOfflineSnapshot = state.libraryData.staleSnapshot != null
 

@@ -43,6 +43,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -51,22 +52,18 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
-import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.SearchToolbar
 import eu.kanade.presentation.manga.components.MangaCover
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.data.suwayomi.FetchSourceMangaType
-import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaDto
-import eu.kanade.tachiyomi.data.suwayomi.SuwayomiSortSelectionDto
-import eu.kanade.tachiyomi.data.suwayomi.SuwayomiSourceFilterChange
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiSourceFilterDto
-import eu.kanade.tachiyomi.data.suwayomi.SuwayomiTriState
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
-import eu.kanade.tachiyomi.source.model.Filter
-import eu.kanade.tachiyomi.source.model.FilterList
+import eu.kanade.tachiyomi.di.appDependencies
+import eu.kanade.tachiyomi.ui.ServerForegroundRefreshEffect
+import eu.kanade.tachiyomi.ui.browse.source.browse.SourceFilterList
 import eu.kanade.tachiyomi.ui.browse.source.browse.SourceFilterDialog
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import kotlinx.coroutines.launch
@@ -76,8 +73,6 @@ import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 data class ServerSourceMangaScreen(
     private val sourceId: String,
@@ -92,9 +87,10 @@ data class ServerSourceMangaScreen(
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val context = LocalContext.current
         val lifecycleOwner = LocalLifecycleOwner.current
         val scope = rememberCoroutineScope()
-        val provider = remember { SuwayomiClientProvider() }
+        val provider = remember(context) { context.appDependencies.suwayomiClientProvider }
         val baseUrl = remember { provider.baseUrl() }
         var sourceType by remember { mutableStateOf(FetchSourceMangaType.valueOf(initialTypeName)) }
         var toolbarQuery by remember { mutableStateOf<String?>(initialQuery) }
@@ -105,11 +101,11 @@ data class ServerSourceMangaScreen(
         var errorMessage by remember { mutableStateOf<String?>(null) }
         var mangas by remember { mutableStateOf<List<SuwayomiMangaDto>>(emptyList()) }
         var filterDtos by remember { mutableStateOf<List<SuwayomiSourceFilterDto>>(emptyList()) }
-        var filters by remember { mutableStateOf(FilterList()) }
+        var filters by remember { mutableStateOf(SourceFilterList()) }
         var filtersLoading by remember { mutableStateOf(false) }
         var filtersError by remember { mutableStateOf<String?>(null) }
         var showFilterSheet by remember { mutableStateOf(false) }
-        val sourcePreferences = remember { Injekt.get<SourcePreferences>() }
+        val sourcePreferences = remember(context) { context.appDependencies.sourcePreferences }
         val hideInLibraryItems = remember { sourcePreferences.hideInLibraryItems.get() }
         val visibleMangas = remember(mangas) {
             if (hideInLibraryItems) {
@@ -164,7 +160,7 @@ data class ServerSourceMangaScreen(
         }
 
         fun resetFilters() {
-            filters = filterDtos.toFilterList()
+            filters = filterDtos.toSourceFilterList()
             page = 1
             hasNextPage = true
             mangas = emptyList()
@@ -190,7 +186,7 @@ data class ServerSourceMangaScreen(
                     }
                 }.onSuccess { result ->
                     filterDtos = result
-                    filters = result.toFilterList()
+                    filters = result.toSourceFilterList()
                 }.onFailure { error ->
                     filtersError = error.message ?: error.toString()
                 }
@@ -200,6 +196,10 @@ data class ServerSourceMangaScreen(
 
         LaunchedEffect(Unit) {
             loadFilters()
+            loadPage(reset = true)
+        }
+
+        ServerForegroundRefreshEffect {
             loadPage(reset = true)
         }
 
@@ -403,136 +403,6 @@ data class ServerSourceMangaScreen(
         }
     }
 }
-
-private fun List<SuwayomiSourceFilterDto>.toFilterList(): FilterList {
-    return FilterList(mapIndexedNotNull { index, dto -> dto.toFilter(index) })
-}
-
-private fun SuwayomiSourceFilterDto.toFilter(position: Int): Filter<*>? {
-    return when (type) {
-        "CheckBoxFilter" -> ServerCheckBoxFilter(position, name, defaultBoolean ?: false)
-        "HeaderFilter" -> Filter.Header(name)
-        "SeparatorFilter" -> Filter.Separator(name)
-        "SelectFilter" -> ServerSelectFilter(position, name, values.toTypedArray(), defaultInt ?: 0)
-        "SortFilter" -> ServerSortFilter(
-            position = position,
-            name = name,
-            values = values.toTypedArray(),
-            state = defaultSort?.let { Filter.Sort.Selection(it.index, it.ascending) },
-        )
-        "TextFilter" -> ServerTextFilter(position, name, defaultString.orEmpty())
-        "TriStateFilter" -> ServerTriStateFilter(position, name, defaultTriState.toFilterState())
-        "GroupFilter" -> ServerGroupFilter(
-            position = position,
-            name = name,
-            state = filters.mapIndexedNotNull { childIndex, child -> child.toFilter(childIndex) },
-        )
-        else -> null
-    }
-}
-
-private fun List<SuwayomiSourceFilterDto>.toFilterChanges(filters: FilterList): List<SuwayomiSourceFilterChange> {
-    return flatMapIndexed { index, dto ->
-        val filter = filters.getOrNull(index) ?: return@flatMapIndexed emptyList()
-        dto.toFilterChanges(index, filter)
-    }
-}
-
-private fun SuwayomiSourceFilterDto.toFilterChanges(
-    position: Int,
-    filter: Filter<*>,
-): List<SuwayomiSourceFilterChange> {
-    return when {
-        this.type == "CheckBoxFilter" && filter is ServerCheckBoxFilter &&
-            filter.state != (defaultBoolean ?: false) -> {
-            listOf(SuwayomiSourceFilterChange(position = position, checkBoxState = filter.state))
-        }
-        this.type == "SelectFilter" && filter is ServerSelectFilter &&
-            filter.state != (defaultInt ?: 0) -> {
-            listOf(SuwayomiSourceFilterChange(position = position, selectState = filter.state))
-        }
-        this.type == "SortFilter" && filter is ServerSortFilter &&
-            filter.state != defaultSort?.let { Filter.Sort.Selection(it.index, it.ascending) } -> {
-            listOf(
-                SuwayomiSourceFilterChange(
-                    position = position,
-                    sortState = filter.state?.let { SuwayomiSortSelectionDto(it.index, it.ascending) },
-                ),
-            )
-        }
-        this.type == "TextFilter" && filter is ServerTextFilter &&
-            filter.state != defaultString.orEmpty() -> {
-            listOf(SuwayomiSourceFilterChange(position = position, textState = filter.state))
-        }
-        this.type == "TriStateFilter" && filter is ServerTriStateFilter &&
-            filter.state != defaultTriState.toFilterState() -> {
-            listOf(SuwayomiSourceFilterChange(position = position, triState = filter.state.toSuwayomiTriState()))
-        }
-        this.type == "GroupFilter" && filter is ServerGroupFilter -> {
-            filters.mapIndexedNotNull { childIndex, childDto ->
-                val childFilter = filter.state.getOrNull(childIndex) ?: return@mapIndexedNotNull null
-                childDto.toFilterChanges(childIndex, childFilter)
-            }.flatten().map { childChange ->
-                SuwayomiSourceFilterChange(position = position, groupChange = childChange)
-            }
-        }
-        else -> emptyList()
-    }
-}
-
-private fun SuwayomiTriState?.toFilterState(): Int {
-    return when (this) {
-        SuwayomiTriState.INCLUDE -> Filter.TriState.STATE_INCLUDE
-        SuwayomiTriState.EXCLUDE -> Filter.TriState.STATE_EXCLUDE
-        SuwayomiTriState.IGNORE, null -> Filter.TriState.STATE_IGNORE
-    }
-}
-
-private fun Int.toSuwayomiTriState(): SuwayomiTriState {
-    return when (this) {
-        Filter.TriState.STATE_INCLUDE -> SuwayomiTriState.INCLUDE
-        Filter.TriState.STATE_EXCLUDE -> SuwayomiTriState.EXCLUDE
-        else -> SuwayomiTriState.IGNORE
-    }
-}
-
-private class ServerCheckBoxFilter(
-    val position: Int,
-    name: String,
-    state: Boolean,
-) : Filter.CheckBox(name, state)
-
-private class ServerSelectFilter(
-    val position: Int,
-    name: String,
-    values: Array<String>,
-    state: Int,
-) : Filter.Select<String>(name, values, state)
-
-private class ServerSortFilter(
-    val position: Int,
-    name: String,
-    values: Array<String>,
-    state: Filter.Sort.Selection?,
-) : Filter.Sort(name, values, state)
-
-private class ServerTextFilter(
-    val position: Int,
-    name: String,
-    state: String,
-) : Filter.Text(name, state)
-
-private class ServerTriStateFilter(
-    val position: Int,
-    name: String,
-    state: Int,
-) : Filter.TriState(name, state)
-
-private class ServerGroupFilter(
-    val position: Int,
-    name: String,
-    state: List<Filter<*>>,
-) : Filter.Group<Filter<*>>(name, state)
 
 @Composable
 private fun ServerSourceMangaItem(

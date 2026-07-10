@@ -4,8 +4,8 @@ import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyFreshness
 import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyStatus
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopy
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyPage
-import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.ui.reader.loader.ClientDeviceChapterCopyPageLoader
+import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -40,7 +40,7 @@ class ClientDeviceChapterCopyPageLoaderTest {
 
         loader.loadPage(pages[0])
 
-        assertEquals(Page.State.Ready, pages[0].status)
+        assertEquals(ReaderPage.State.Ready, pages[0].status)
         assertEquals("first", pages[0].stream!!.invoke().bufferedReader().use { it.readText() })
     }
 
@@ -53,7 +53,7 @@ class ClientDeviceChapterCopyPageLoaderTest {
         loader.loadPage(page)
         loader.retryPage(page)
 
-        assertEquals(Page.State.Queue, page.status)
+        assertEquals(ReaderPage.State.Queue, page.status)
         assertNull(page.stream)
     }
 

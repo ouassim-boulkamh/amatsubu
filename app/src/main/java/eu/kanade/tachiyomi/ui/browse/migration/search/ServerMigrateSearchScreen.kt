@@ -33,12 +33,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.components.SearchToolbar
 import eu.kanade.presentation.manga.components.MangaCover
 import eu.kanade.presentation.util.Screen
@@ -49,6 +49,7 @@ import eu.kanade.tachiyomi.data.suwayomi.SuwayomiSourceDto
 import eu.kanade.tachiyomi.data.suwayomi.hasNsfwContent
 import eu.kanade.tachiyomi.data.suwayomi.isLocalFolderSource
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.ui.browse.ServerSourceMangaScreen
 import eu.kanade.tachiyomi.ui.browse.migration.toMigrationManga
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
@@ -56,14 +57,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import mihon.feature.migration.dialog.MigrateMangaDialog
+import eu.kanade.presentation.migration.MigrateMangaDialog
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import kotlin.math.absoluteValue
 
 data class ServerMigrateSearchScreen(
@@ -75,10 +74,11 @@ data class ServerMigrateSearchScreen(
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val context = LocalContext.current
         val scope = rememberCoroutineScope()
-        val provider = remember { SuwayomiClientProvider() }
+        val provider = remember(context) { context.appDependencies.suwayomiClientProvider }
         val baseUrl = remember { provider.baseUrl() }
-        val sourcePreferences = remember { Injekt.get<SourcePreferences>() }
+        val sourcePreferences = remember(context) { context.appDependencies.sourcePreferences }
         val queue = remember(currentMangaId, currentMangaIds) {
             currentMangaIds.ifEmpty { listOf(currentMangaId) }
         }

@@ -1,0 +1,50 @@
+mutation FetchExtensionList {
+  fetchExtensions(input: {}) {
+    extensions {
+      ...AmatsubuExtension
+    }
+    extensionStores {
+      ...AmatsubuExtensionStore
+    }
+  }
+}
+
+query ExtensionStores {
+  extensionStores {
+    nodes {
+      ...AmatsubuExtensionStore
+    }
+  }
+}
+
+mutation AddExtensionStore($input: AddExtensionStoreInput!) {
+  addExtensionStore(input: $input) {
+    extensionStore {
+      ...AmatsubuExtensionStore
+    }
+  }
+}
+
+mutation RemoveExtensionStore($input: RemoveExtensionStoreInput!) {
+  removeExtensionStore(input: $input) {
+    extensionStore {
+      ...AmatsubuExtensionStore
+    }
+  }
+}
+
+mutation UpdateExtension($input: UpdateExtensionInput!) {
+  updateExtension(input: $input) {
+    extension {
+      ...AmatsubuExtension
+    }
+  }
+}
+
+mutation UpdateExtensions($input: UpdateExtensionsInput!) {
+  updateExtensions(input: $input) {
+    extensions {
+      ...AmatsubuExtension
+    }
+  }
+}

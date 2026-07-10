@@ -15,6 +15,7 @@ import androidx.work.WorkerParameters
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiExtensionDto
 import eu.kanade.tachiyomi.data.suwayomi.isSuwayomiServerUnavailable
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.util.system.workManager
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
@@ -26,15 +27,16 @@ internal class ServerNotificationSyncJob(
     workerParams: WorkerParameters,
 ) : CoroutineWorker(context, workerParams) {
 
-    private val clientProvider = SuwayomiClientProvider()
-    private val renderer = ServerNotificationRenderer(context)
-    private val checkpoints = ServerNotificationCheckpointStore()
+    private val dependencies = context.appDependencies
+    private val clientProvider = dependencies.suwayomiClientProvider
+    private val renderer = ServerNotificationRenderer(context, dependencies.securityPreferences)
+    private val checkpoints = ServerNotificationCheckpointStore(dependencies.preferenceStore)
     private val reconciler = ServerNotificationReconciler(renderer, checkpoints)
 
     override suspend fun doWork(): Result {
         return try {
             logcat(LogPriority.DEBUG) { "Server notification sync worker started" }
-            val serverIdentity = clientProvider.baseUrl()
+            val serverIdentity = clientProvider.serverIdentity().notificationCheckpointKey
             val client = clientProvider.graphQlClient
             val libraryUpdateStatus = client.getLibraryUpdateStatus()
             val jobs = libraryUpdateStatus.jobsInfo
@@ -115,7 +117,8 @@ internal class ServerNotificationSyncJob(
         fun schedule(context: Context) {
             val notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
             val hasActiveServerJob = runCatching {
-                ServerNotificationCheckpointStore().hasActiveServerJob(SuwayomiClientProvider().baseUrl())
+                ServerNotificationCheckpointStore(context.appDependencies.preferenceStore)
+                    .hasActiveServerJob(context.appDependencies.suwayomiClientProvider.serverIdentity().notificationCheckpointKey)
             }.getOrDefault(false)
 
             if (!notificationsEnabled && !hasActiveServerJob) {

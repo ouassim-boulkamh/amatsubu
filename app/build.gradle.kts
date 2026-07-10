@@ -8,6 +8,7 @@ import java.util.Properties
 
 plugins {
     alias(mihonx.plugins.android.application)
+    alias(libs.plugins.apollo)
     alias(mihonx.plugins.compose)
     alias(mihonx.plugins.spotless)
 
@@ -210,7 +211,6 @@ dependencies {
     implementation(projects.i18n)
     implementation(projects.core.common)
     implementation(projects.coreMetadata)
-    implementation(projects.sourceApi)
     implementation(projects.data)
     implementation(projects.domain)
     implementation(projects.presentationCore)
@@ -261,6 +261,7 @@ dependencies {
     // Networking
     implementation(libs.bundles.okhttp)
     implementation(libs.okio)
+    implementation(libs.apollo.runtime)
     implementation(libs.conscrypt) // TLS 1.3 support for Android < 10
 
     // Data serialization (JSON, protobuf, xml)
@@ -275,9 +276,6 @@ dependencies {
 
     // Preferences
     implementation(libs.androidx.preference)
-
-    // Dependency injection
-    implementation(libs.injekt)
 
     // Image loading
     implementation(libs.bundles.coil)
@@ -311,6 +309,7 @@ dependencies {
 
     // Tests
     testImplementation(libs.bundles.test)
+    testImplementation(libs.sqldelight.sqliteDriver)
     testRuntimeOnly(libs.junit.platform.launcher)
 
     // For detecting memory leaks; see https://square.github.io/leakcanary/
@@ -318,6 +317,14 @@ dependencies {
     implementation(libs.leakCanary.plumber)
 
     testImplementation(libs.kotlinx.coroutines.test)
+}
+
+apollo {
+    service("suwayomi") {
+        packageName.set("eu.kanade.tachiyomi.data.suwayomi.generated")
+        schemaFile.set(file("src/main/graphql/suwayomi/schema.graphqls"))
+        srcDir("src/main/graphql/suwayomi")
+    }
 }
 
 androidComponents {

@@ -124,9 +124,7 @@
     <string name="disabled">बंद करें</string>
     <string name="services">सेवाएं</string>
     <string name="pref_create_backup">बैकअप बनाये</string>
-    <string name="pref_create_backup_summ">वर्तमान पुस्तकालय को पुनर्स्थापित करने के लिए उपयोग किया जा सकता है</string>
     <string name="pref_restore_backup">बैकअप पुनर्स्थापित करे</string>
-    <string name="pref_restore_backup_summ">बैकअप फ़ाइल से लाइब्रेरी पुनर्स्थापित करें</string>
     <string name="pref_backup_interval">बैकअप फ़्रीक्वेंसी</string>
     <string name="backup_created">बैकअप बनाया गया है</string>
     <string name="restore_completed">पुनर्स्थापना पूर्ण हुआ</string>
@@ -429,7 +427,6 @@
     <string name="action_order_by_upload_date">अपलोड तिथि से</string>
     <string name="action_display_show_number_of_items">वस्तुओं की संख्या दिखाएं</string>
     <string name="action_filter_tracked">ट्रैक किए गए</string>
-    <string name="backup_restore_content_full">आपको किसी भी गायब एक्सटेंशनों को स्थापित करने की आवश्यकता हो सकती है और उन्हें उपयोग करने के लिए बाद में ट्रैकिंग सेवाओं में लॉग इन करना पड़ सकता है।</string>
     <string name="pref_dual_page_invert_summary">यदि स्प्लिट वाइड पेजों का प्लेसमेंट पढ़ने की दिशा से मेल नहीं खाता है</string>
     <string name="pref_dual_page_invert">स्प्लिट पेज प्लेसमेंट को उल्टा करें</string>
     <string name="pref_dual_page_split">चौड़े पृष्ठ को दो भागों में बांट दे</string>

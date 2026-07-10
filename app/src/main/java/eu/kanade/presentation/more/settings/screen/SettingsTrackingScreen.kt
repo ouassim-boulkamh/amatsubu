@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import eu.kanade.tachiyomi.di.appDependencies
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,8 +58,6 @@ import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 object SettingsTrackingScreen : SearchableSettings {
 
@@ -92,7 +91,7 @@ object SettingsTrackingScreen : SearchableSettings {
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
         val lifecycleOwner = LocalLifecycleOwner.current
-        val client = remember { SuwayomiClientProvider().graphQlClient }
+        val client = remember(context) { context.appDependencies.suwayomiClientProvider.graphQlClient }
 
         var trackers by remember { mutableStateOf<List<SuwayomiTrackerDto>>(emptyList()) }
         var loading by remember { mutableStateOf(true) }

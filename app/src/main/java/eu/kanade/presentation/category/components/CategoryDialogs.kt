@@ -31,7 +31,7 @@ import eu.kanade.presentation.category.visualName
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiCategoryFlag
 import kotlinx.coroutines.delay
 import tachiyomi.core.common.preference.CheckboxState
-import tachiyomi.domain.category.model.Category
+import eu.kanade.domain.category.model.Category
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource

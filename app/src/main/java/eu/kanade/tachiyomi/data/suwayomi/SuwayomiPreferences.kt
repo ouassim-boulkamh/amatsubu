@@ -1,9 +1,14 @@
 package eu.kanade.tachiyomi.data.suwayomi
 
 import okhttp3.Credentials
+import okhttp3.Authenticator
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
+import kotlinx.coroutines.runBlocking
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import java.io.IOException
@@ -13,8 +18,9 @@ import java.net.URI
 import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
 
-class SuwayomiPreferences(
+internal class SuwayomiPreferences(
     preferenceStore: PreferenceStore,
+    private val tokenStore: SuwayomiTokenStore? = null,
 ) {
     val serverUrl = preferenceStore.getString("amatsubu_server_url", "http://127.0.0.1:4567")
     val useServerPort = preferenceStore.getBoolean("amatsubu_server_port_enabled", false)
@@ -54,7 +60,15 @@ class SuwayomiPreferences(
 
     fun graphQlEndpoint(): String = "${baseUrl()}/api/graphql"
 
-    fun httpClient(baseClient: OkHttpClient): OkHttpClient {
+    /** Passwords are only used to obtain a token and must not survive a token-auth login. */
+    fun clearTokenLoginPassword() {
+        if (authType.get() == AUTH_TOKEN) password.set("")
+    }
+
+    fun httpClient(
+        baseClient: OkHttpClient,
+        refreshToken: (suspend () -> String?)? = null,
+    ): OkHttpClient {
         val timeout = timeoutSeconds.get().coerceAtLeast(1).toLong()
         return baseClient.newBuilder()
             .apply {
@@ -78,6 +92,28 @@ class SuwayomiPreferences(
                         chain.proceed(request)
                     }
                 }
+                if (authType.get() == AUTH_TOKEN) {
+                    addInterceptor { chain ->
+                        val configuredBaseUrl = runCatching { baseUrl() }.getOrNull()
+                        val token = configuredBaseUrl?.let {
+                            tokenStore?.read(SuwayomiServerIdentity.fromBaseUrl(it).serverKey)?.accessToken
+                        }
+                        val request = if (
+                            configuredBaseUrl != null &&
+                            token != null &&
+                            shouldAuthorizeSuwayomiRequest(configuredBaseUrl, chain.request().url)
+                        ) {
+                            chain.request().newBuilder().header("Authorization", "Bearer $token").build()
+                        } else {
+                            chain.request()
+                        }
+                        chain.proceed(request)
+                    }
+                    if (refreshToken != null) {
+                        authenticator(TokenAuthenticator(::baseUrl, refreshToken))
+                        addInterceptor(TokenGraphQlResponseInterceptor(refreshToken))
+                    }
+                }
             }
             .build()
     }
@@ -85,6 +121,66 @@ class SuwayomiPreferences(
     companion object {
         const val AUTH_NONE = "none"
         const val AUTH_BASIC = "basic"
+        const val AUTH_TOKEN = "token"
+    }
+}
+
+/**
+ * Suwayomi reports an expired Bearer token as a GraphQL error in a successful
+ * HTTP response, so OkHttp's [Authenticator] is not invoked for that case.
+ */
+private class TokenGraphQlResponseInterceptor(
+    private val refreshToken: suspend () -> String?,
+) : okhttp3.Interceptor {
+    override fun intercept(chain: okhttp3.Interceptor.Chain): Response {
+        val request = chain.request()
+        val response = chain.proceed(request)
+        if (!request.isGraphQlPost()) return response
+        val body = response.body ?: return response
+        val payload = body.string()
+        val responseWithReadableBody = response.newBuilder()
+            .body(payload.toResponseBody(body.contentType()))
+            .build()
+        if (!unauthorizedGraphQlError.containsMatchIn(payload)) return responseWithReadableBody
+
+        val accessToken = runBlocking { refreshToken() } ?: return responseWithReadableBody
+        responseWithReadableBody.close()
+        return chain.proceed(
+            request.newBuilder()
+                .header("Authorization", "Bearer $accessToken")
+                .build(),
+        )
+    }
+
+    private fun Request.isGraphQlPost(): Boolean {
+        return method == "POST" && url.encodedPath.trimEnd('/').endsWith("/api/graphql")
+    }
+
+    private companion object {
+        val unauthorizedGraphQlError = Regex("\\\"message\\\"\\s*:\\s*\\\"[^\\\"]*unauthorized", RegexOption.IGNORE_CASE)
+    }
+}
+
+private class TokenAuthenticator(
+    private val baseUrl: () -> String,
+    private val refreshToken: suspend () -> String?,
+) : Authenticator {
+    override fun authenticate(route: okhttp3.Route?, response: Response): Request? {
+        if (responseCount(response) >= 2) return null
+        val configuredBaseUrl = runCatching(baseUrl).getOrNull() ?: return null
+        if (!shouldAuthorizeSuwayomiRequest(configuredBaseUrl, response.request.url)) return null
+        val accessToken = runBlocking { refreshToken() } ?: return null
+        return response.request.newBuilder().header("Authorization", "Bearer $accessToken").build()
+    }
+
+    private fun responseCount(response: Response): Int {
+        var count = 1
+        var prior = response.priorResponse
+        while (prior != null) {
+            count++
+            prior = prior.priorResponse
+        }
+        return count
     }
 }
 

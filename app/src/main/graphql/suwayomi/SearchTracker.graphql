@@ -1,0 +1,7 @@
+query SearchTracker($input: SearchTrackerInput!) {
+  searchTracker(input: $input) {
+    trackSearches {
+      ...AmatsubuTrackSearch
+    }
+  }
+}

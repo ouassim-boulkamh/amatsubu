@@ -1,8 +1,8 @@
 package eu.kanade.tachiyomi.data.suwayomi
 
-import tachiyomi.domain.chapter.model.Chapter
-import tachiyomi.domain.manga.interactor.FetchIntervalCalculator
-import tachiyomi.domain.manga.model.Manga
+import eu.kanade.domain.chapter.model.Chapter
+import eu.kanade.domain.manga.interactor.FetchIntervalCalculator
+import eu.kanade.domain.manga.model.Manga
 import java.time.ZonedDateTime
 import kotlin.time.Duration.Companion.seconds
 

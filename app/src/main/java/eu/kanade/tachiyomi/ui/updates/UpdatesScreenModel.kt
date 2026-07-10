@@ -15,6 +15,7 @@ import eu.kanade.presentation.updates.UpdatesUiModel
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.data.notification.ServerNotificationSyncJob
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateEntity
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterWithMangaDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiDownloadStatusDto
@@ -22,7 +23,12 @@ import eu.kanade.tachiyomi.data.suwayomi.SuwayomiLibraryUpdateStatusDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaDto
 import eu.kanade.tachiyomi.data.suwayomi.isSuwayomiServerUnavailable
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
+import eu.kanade.tachiyomi.data.suwayomi.serverLibraryUpdateAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.serverUpdatesBookmarkAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.serverUpdatesDownloadAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.serverUpdatesReadAffectedEntities
 import eu.kanade.tachiyomi.data.suwayomi.syncTrackerProgressAfterReadStateChange
+import eu.kanade.tachiyomi.di.AppDependencies
 import eu.kanade.tachiyomi.util.lang.toLocalDate
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -46,23 +52,30 @@ import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.manga.model.MangaCover
-import tachiyomi.domain.manga.model.applyFilter
-import tachiyomi.domain.updates.model.UpdatesWithRelations
-import tachiyomi.domain.updates.service.UpdatesPreferences
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
+import eu.kanade.domain.library.service.LibraryPreferences
+import eu.kanade.domain.manga.model.MangaCover
+import eu.kanade.domain.manga.model.applyFilter
+import eu.kanade.domain.updates.model.UpdatesWithRelations
+import eu.kanade.domain.updates.service.UpdatesPreferences
 import kotlin.coroutines.cancellation.CancellationException
 
-class UpdatesScreenModel(
-    private val libraryPreferences: LibraryPreferences = Injekt.get(),
-    private val updatesPreferences: UpdatesPreferences = Injekt.get(),
+class UpdatesScreenModel private constructor(
+    private val application: Application,
+    private val libraryPreferences: LibraryPreferences,
+    private val updatesPreferences: UpdatesPreferences,
+    private val suwayomiProvider: SuwayomiClientProvider,
+    private val json: Json,
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
 ) : StateScreenModel<UpdatesScreenModel.State>(State()) {
 
-    private val suwayomiProvider = SuwayomiClientProvider()
-    private val json = Injekt.get<Json>()
+    internal constructor(dependencies: AppDependencies) : this(
+        application = dependencies.application,
+        libraryPreferences = dependencies.libraryPreferences,
+        updatesPreferences = dependencies.updatesPreferences,
+        suwayomiProvider = dependencies.suwayomiClientProvider,
+        json = dependencies.json,
+    )
+
     private val suwayomiClient = suwayomiProvider.graphQlClient
     private val serverUpdatesRefreshes = MutableStateFlow(0)
     private val serverDownloadRefreshes = MutableStateFlow(0)
@@ -117,10 +130,14 @@ class UpdatesScreenModel(
             }
             .launchIn(screenModelScope)
 
-        ServerStateSync.refreshes
-            .onEach {
-                serverUpdatesRefreshes.update { it + 1 }
-                serverDownloadRefreshes.update { it + 1 }
+        ServerStateSync.invalidations
+            .onEach { invalidation ->
+                if (invalidation.affectsAny(ServerStateEntity.Updates)) {
+                    serverUpdatesRefreshes.update { it + 1 }
+                }
+                if (invalidation.affectsAny(ServerStateEntity.Downloads)) {
+                    serverDownloadRefreshes.update { it + 1 }
+                }
             }
             .launchIn(screenModelScope)
 
@@ -280,9 +297,9 @@ class UpdatesScreenModel(
             }.onSuccess { started ->
                 libraryPreferences.lastUpdatedTimestamp.set(System.currentTimeMillis())
                 serverUpdatesRefreshes.update { it + 1 }
-                ServerStateSync.requestRefresh()
+                ServerStateSync.requestRefresh(*serverLibraryUpdateAffectedEntities().toTypedArray())
                 if (started) {
-                    ServerNotificationSyncJob.schedulePromptReconciliation(Injekt.get<Application>())
+                    ServerNotificationSyncJob.schedulePromptReconciliation(application)
                 }
                 _events.send(Event.LibraryUpdateTriggered(started))
             }.onFailure { error ->
@@ -299,7 +316,7 @@ class UpdatesScreenModel(
                 suwayomiClient.stopLibraryUpdate()
             }.onSuccess {
                 serverUpdatesRefreshes.update { it + 1 }
-                ServerStateSync.requestRefresh()
+                ServerStateSync.requestRefresh(*serverLibraryUpdateAffectedEntities().toTypedArray())
                 _events.send(Event.LibraryUpdateStopped)
             }.onFailure { error ->
                 if (error is CancellationException) throw error
@@ -321,7 +338,7 @@ class UpdatesScreenModel(
                 }
                 ChapterDownloadAction.CANCEL -> {
                     val chapterIds = items.map { it.update.chapterId.toInt() }
-                    runServerDownloadAction {
+                    runServerDownloadAction(items.serverUpdateDownloadAffectedEntities()) {
                         suwayomiClient.dequeueChapterDownloads(chapterIds)
                     }
                 }
@@ -340,7 +357,7 @@ class UpdatesScreenModel(
     private suspend fun enqueueDownloads(items: List<UpdatesItem>, startDownloader: Boolean = false) {
         val chapterIds = items.map { it.update.chapterId.toInt() }
         if (chapterIds.isEmpty()) return
-        runServerDownloadAction {
+        runServerDownloadAction(items.serverUpdateDownloadAffectedEntities()) {
             suwayomiClient.enqueueChapterDownloads(chapterIds)
             if (startDownloader) {
                 suwayomiClient.startDownloader()
@@ -355,14 +372,15 @@ class UpdatesScreenModel(
      */
     fun markUpdatesRead(updates: List<UpdatesItem>, read: Boolean) {
         screenModelScope.launchIO {
+            val changedMangaIds = updates
+                .filterNot { it.update.read == read }
+                .map { it.update.mangaId.toInt() }
+                .distinct()
             runCatching {
                 val chapterIds = updates
                     .filterNot { it.update.read == read }
                     .map { it.update.chapterId.toInt() }
                 suwayomiClient.updateChaptersRead(chapterIds, read)
-                val changedMangaIds = updates
-                    .filterNot { it.update.read == read }
-                    .map { it.update.mangaId.toInt() }
                 syncTrackerProgressAfterReadStateChange(
                     read = read,
                     changedMangaIds = changedMangaIds,
@@ -373,7 +391,9 @@ class UpdatesScreenModel(
                 )
             }.onSuccess {
                 serverUpdatesRefreshes.update { it + 1 }
-                ServerStateSync.requestRefresh()
+                ServerStateSync.requestRefresh(
+                    *serverUpdatesReadAffectedEntities(changedMangaIds).toTypedArray(),
+                )
             }.onFailure { error ->
                 logcat(LogPriority.ERROR, error) { "Failed to update server chapter read state from Updates" }
                 _events.send(if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError)
@@ -395,7 +415,10 @@ class UpdatesScreenModel(
                 suwayomiClient.updateChaptersBookmark(chapterIds, bookmark)
             }.onSuccess {
                 serverUpdatesRefreshes.update { it + 1 }
-                ServerStateSync.requestRefresh()
+                ServerStateSync.requestRefresh(
+                    *serverUpdatesBookmarkAffectedEntities(updates.map { it.update.mangaId.toInt() }.distinct())
+                        .toTypedArray(),
+                )
             }.onFailure { error ->
                 logcat(LogPriority.ERROR, error) { "Failed to update server chapter bookmark state from Updates" }
                 _events.send(if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError)
@@ -411,25 +434,32 @@ class UpdatesScreenModel(
      */
     fun deleteChapters(updatesItem: List<UpdatesItem>) {
         screenModelScope.launchNonCancellable {
-            runServerDownloadAction {
+            runServerDownloadAction(updatesItem.serverUpdateDownloadAffectedEntities()) {
                 suwayomiClient.deleteDownloadedChapters(updatesItem.map { it.update.chapterId.toInt() })
             }
         }
         toggleAllSelection(false)
     }
 
-    private suspend fun runServerDownloadAction(action: suspend () -> Unit) {
+    private suspend fun runServerDownloadAction(
+        affected: Set<ServerStateEntity>,
+        action: suspend () -> Unit,
+    ) {
         runCatching {
             action()
         }.onSuccess {
             serverUpdatesRefreshes.update { it + 1 }
             serverDownloadRefreshes.update { it + 1 }
-            ServerStateSync.requestRefresh()
+            ServerStateSync.requestRefresh(*affected.toTypedArray())
         }.onFailure { error ->
             if (error is CancellationException) throw error
             logcat(LogPriority.ERROR, error) { "Failed to update server download state from Updates" }
             _events.send(if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError)
         }
+    }
+
+    private fun List<UpdatesItem>.serverUpdateDownloadAffectedEntities(): Set<ServerStateEntity> {
+        return serverUpdatesDownloadAffectedEntities(map { it.update.mangaId.toInt() }.distinct())
     }
 
     private fun String.toDownloadState(): Download.State {

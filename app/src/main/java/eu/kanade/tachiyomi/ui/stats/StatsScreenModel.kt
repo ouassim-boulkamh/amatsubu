@@ -6,6 +6,8 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.presentation.more.stats.StatsScreenState
 import eu.kanade.presentation.more.stats.data.StatsData
 import eu.kanade.tachiyomi.data.suwayomi.MangaStatus
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateEntity
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateInvalidation
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiCategoryFlag
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
@@ -13,13 +15,19 @@ import eu.kanade.tachiyomi.data.suwayomi.SuwayomiServerSettingsDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiStatsMangaDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiStatsTrackRecordDto
 import eu.kanade.tachiyomi.data.suwayomi.UpdateStrategy
+import eu.kanade.tachiyomi.di.AppDependencies
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.update
 import tachiyomi.core.common.util.lang.launchIO
 
-class StatsScreenModel : StateScreenModel<StatsScreenState>(StatsScreenState.Loading) {
+class StatsScreenModel private constructor(
+    private val suwayomiProvider: SuwayomiClientProvider,
+) : StateScreenModel<StatsScreenState>(StatsScreenState.Loading) {
 
-    private val suwayomiClient = SuwayomiClientProvider().graphQlClient
+    internal constructor(dependencies: AppDependencies) : this(dependencies.suwayomiClientProvider)
+
+    private val suwayomiClient = suwayomiProvider.graphQlClient
 
     init {
         screenModelScope.launchIO {
@@ -27,9 +35,11 @@ class StatsScreenModel : StateScreenModel<StatsScreenState>(StatsScreenState.Loa
         }
 
         screenModelScope.launchIO {
-            ServerStateSync.refreshes.collectLatest {
-                refreshStats()
-            }
+            ServerStateSync.invalidations
+                .filter(ServerStateInvalidation::affectsStats)
+                .collectLatest {
+                    refreshStats()
+                }
         }
     }
 
@@ -138,5 +148,20 @@ class StatsScreenModel : StateScreenModel<StatsScreenState>(StatsScreenState.Loa
 
     private companion object {
         private const val LOCAL_SOURCE_ID = "0"
+    }
+}
+
+private fun ServerStateInvalidation.affectsStats(): Boolean {
+    return affectsAny(
+        ServerStateEntity.Library,
+        ServerStateEntity.Categories,
+        ServerStateEntity.Downloads,
+        ServerStateEntity.Updates,
+        ServerStateEntity.History,
+        ServerStateEntity.ServerSettings,
+    ) || affected.any { entity ->
+        entity is ServerStateEntity.Manga ||
+            entity is ServerStateEntity.Chapters ||
+            entity is ServerStateEntity.Trackers
     }
 }

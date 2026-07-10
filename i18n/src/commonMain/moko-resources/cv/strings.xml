@@ -367,10 +367,8 @@
     <string name="backup_choice">Мӗн йантӑлав тӑвасшӑн?</string>
     <string name="backup_in_progress">Йантӑлав пурнӑҫланать ӗнтӗ</string>
     <string name="restore_completed">Тавӑрни вӗҫленнӗ</string>
-    <string name="pref_create_backup_summ">Хальхи вулавăша тавӑрма усӑ курма пулать</string>
     <string name="invalid_backup_file_missing_manga">Йантӑлавра манкасем ҫук.</string>
     <string name="backup_created">Йантӑлав тӑвӑннӑ</string>
-    <string name="pref_restore_backup_summ">Вулавӑша йантӑлавран тавӑр</string>
     <string name="pref_restore_backup">Йантӑлав тавӑр</string>
     <string name="pref_create_backup">Йантӑлав ту</string>
     <string name="whats_new">Мӗн ҫӗнни</string>

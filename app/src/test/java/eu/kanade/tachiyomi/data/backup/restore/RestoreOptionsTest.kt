@@ -28,6 +28,14 @@ class RestoreOptionsTest {
     }
 
     @Test
+    fun `client restore defaults keep legacy server owned sections disabled`() {
+        val options = RestoreOptions()
+
+        assertFalse(options.libraryEntries)
+        assertFalse(options.categories)
+    }
+
+    @Test
     fun `restore options keep backwards compatible boolean array decoding`() {
         val options = RestoreOptions.fromBooleanArray(
             booleanArrayOf(
@@ -38,6 +46,8 @@ class RestoreOptionsTest {
             ),
         )
 
+        assertFalse(options.libraryEntries)
+        assertFalse(options.categories)
         assertTrue(options.appSettings)
         assertFalse(options.sourceSettings)
         assertFalse(options.privateSettings)

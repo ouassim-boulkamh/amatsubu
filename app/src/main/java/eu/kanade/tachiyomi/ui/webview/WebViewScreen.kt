@@ -8,6 +8,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.util.AssistContentScreen
 import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.webview.WebViewScreenContent
+import eu.kanade.tachiyomi.di.appDependencies
 
 class WebViewScreen(
     private val url: String,
@@ -23,7 +24,9 @@ class WebViewScreen(
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val context = LocalContext.current
-        val screenModel = rememberScreenModel { WebViewScreenModel(sourceId) }
+        val screenModel = rememberScreenModel {
+            WebViewScreenModel(sourceId, context.appDependencies.networkHelper)
+        }
 
         WebViewScreenContent(
             onNavigateUp = { navigator.pop() },

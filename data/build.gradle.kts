@@ -28,7 +28,6 @@ kotlin {
 }
 
 dependencies {
-    implementation(projects.sourceApi)
     implementation(projects.domain)
     implementation(projects.core.common)
 

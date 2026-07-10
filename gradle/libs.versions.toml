@@ -1,5 +1,6 @@
 [versions]
 aboutLibraries = "14.2.1"
+apollo = "4.4.3"
 android-desugar = "2.1.5"
 android-gradle = "9.2.1"
 androidx-activity-compose = "1.13.0"
@@ -34,7 +35,6 @@ directionalViewPager = "1.0.0"
 diskLruCache = "2.0.2"
 google-services = "4.5.0"
 image-decoder = "e03b81e18a"
-injekt = "91edab2317"
 jsoup = "1.22.2"
 junit = "6.1.1"
 kotest-assertions = "6.2.1"
@@ -68,6 +68,7 @@ xmlutil = "1.0.0"
 
 [libraries]
 aboutLibraries-compose = { module = "com.mikepenz:aboutlibraries-compose-m3", version.ref = "aboutLibraries" }
+apollo-runtime = { module = "com.apollographql.apollo:apollo-runtime", version.ref = "apollo" }
 android-desugar = { module = "com.android.tools:desugar_jdk_libs", version.ref = "android-desugar" }
 android-gradle = { module = "com.android.tools.build:gradle", version.ref = "android-gradle" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity-compose" }
@@ -117,7 +118,6 @@ conscrypt = { module = "org.conscrypt:conscrypt-android", version.ref = "conscry
 directionalViewPager = { module = "com.github.tachiyomiorg:DirectionalViewPager", version.ref = "directionalViewPager" }
 diskLruCache = { module = "com.jakewharton:disklrucache", version.ref = "diskLruCache" }
 image-decoder = { module = "com.github.mihonapp:image-decoder", version.ref = "image-decoder" }
-injekt = { module = "com.github.mihonapp:injekt", version.ref = "injekt" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
@@ -158,6 +158,7 @@ sqldelight-androidxDriver = { module = "com.github.mihon.sqldelight-androidx-dri
 sqldelight-androidxPaging = { module = "app.cash.sqldelight:androidx-paging3-extensions", version.ref = "sqldelight" }
 sqldelight-async = { module = "app.cash.sqldelight:async-extensions", version.ref = "sqldelight" }
 sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
+sqldelight-sqliteDriver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
 sqldelight-sqliteDialect338 = { module = "app.cash.sqldelight:sqlite-3-38-dialect", version.ref = "sqldelight" }
 stringSimilarity = { module = "com.aallam.similarity:string-similarity-kotlin", version.ref = "stringSimilarity" }
 subsamplingScaleImageView = { module = "com.github.tachiyomiorg:subsampling-scale-image-view", version.ref = "subsamplingScaleImageView" }
@@ -173,6 +174,7 @@ xmlutil-serialization = { module = "io.github.pdvrieze.xmlutil:serialization", v
 
 [plugins]
 aboutLibraries = { id = "com.mikepenz.aboutlibraries.plugin.android", version.ref = "aboutLibraries" }
+apollo = { id = "com.apollographql.apollo", version.ref = "apollo" }
 android-application = { id = "com.android.application", version.ref = "android-gradle" }
 android-test = { id = "com.android.test", version.ref = "android-gradle" }
 android-kmp-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "android-gradle" }

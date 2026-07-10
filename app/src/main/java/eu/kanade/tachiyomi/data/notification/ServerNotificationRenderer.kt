@@ -19,12 +19,10 @@ import eu.kanade.tachiyomi.util.system.notify
 import tachiyomi.core.common.i18n.pluralStringResource
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 internal class ServerNotificationRenderer(
     private val context: Context,
-    private val securityPreferences: SecurityPreferences = Injekt.get(),
+    private val securityPreferences: SecurityPreferences,
 ) {
     fun showLibraryProgress(jobs: SuwayomiUpdaterJobsInfoDto) {
         val total = jobs.totalJobs.coerceAtLeast(0)

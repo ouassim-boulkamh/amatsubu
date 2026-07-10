@@ -145,9 +145,7 @@
     <string name="disabled">Deactivat</string>
     <string name="services">Servicii de urmărire</string>
     <string name="pref_create_backup">Crează copie de rezervă</string>
-    <string name="pref_create_backup_summ">Poate fii folosit pentru a restaura biblioteca curentă</string>
     <string name="pref_restore_backup">Restaurează un backup</string>
-    <string name="pref_restore_backup_summ">Restaurează biblioteca din fișierul de backup</string>
     <string name="pref_backup_interval">Frecvența de creare a backupurilor automate</string>
     <string name="backup_created">Backup creat</string>
     <string name="restore_completed">Restaurare completă</string>
@@ -437,7 +435,6 @@
     <string name="l_nav">În formă de L</string>
     <string name="action_sort_chapter_fetch_date">Data obținerii capitolului</string>
     <string name="action_filter_tracked">Urmărit</string>
-    <string name="backup_restore_content_full">Este posibil să fie necesar să instalați extensiile lipsă și să vă conectați ulterior la serviciile de urmărire pentru a le utiliza.</string>
     <string name="pref_category_auto_download">Descărcare automată</string>
     <string name="nav_zone_right">Dreapta</string>
     <string name="nav_zone_left">Stânga</string>

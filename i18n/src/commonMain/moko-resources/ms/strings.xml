@@ -123,9 +123,7 @@
     <string name="disabled">Dinyahkan</string>
     <string name="services">Penjejak</string>
     <string name="pref_create_backup">Buat sandaran</string>
-    <string name="pref_create_backup_summ">Boleh digunakan untuk memulihkan pustaka semasa</string>
     <string name="pref_restore_backup">Pulihkan sandaran</string>
-    <string name="pref_restore_backup_summ">Pulihkan pustaka daripada fail sandaran</string>
     <string name="pref_backup_interval">Kekerapan sandaran automatik</string>
     <string name="backup_created">Sandaran dicipta</string>
     <string name="restore_completed">Pemulihan selesai</string>
@@ -430,7 +428,6 @@
     <string name="pref_dual_page_split">Memisah muka surat lebar</string>
     <string name="pref_dual_page_invert_summary">Jika kedudukan memisah muka surat lebar tidak sama dengan arah membaca</string>
     <string name="pref_dual_page_invert">Songsangkan kedudukan memisah muka surat</string>
-    <string name="backup_restore_content_full">Anda perlu memasang sambungan yang hilang dan log masuk ke penjejakan untuk menggunakannya.</string>
     <string name="nav_zone_prev">Sebelumnya</string>
     <string name="pref_show_navigation_mode_summary">Tunjukkan seketika apabila pembaca dibuka</string>
     <string name="nav_zone_right">Kanan</string>

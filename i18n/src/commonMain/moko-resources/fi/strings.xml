@@ -183,8 +183,6 @@
     <string name="pref_remove_after_marked_as_read">Manuaalisesti luetuksi merkitsemisen jälkeen</string>
     <string name="disabled">Pois käytöstä</string>
     <string name="services">Seurantapalvelut</string>
-    <string name="pref_create_backup_summ">Voidaan käyttää nykyisen kirjaston palauttamiseen</string>
-    <string name="pref_restore_backup_summ">Palauta kirjasto varmuuskopiointi-tiedostosta</string>
     <string name="pref_backup_interval">Varmuuskopioinnin tiheys</string>
     <string name="backup_created">Varmuuskopio luotu</string>
     <string name="restore_completed">Palautus valmis</string>
@@ -430,9 +428,6 @@
     <string name="pref_dual_page_split">Jaa leveät sivut</string>
     <string name="pref_dual_page_invert_summary">Jos jaettujen leveiden sivujen sijoittelu ei vastaa lukusuuntaa</string>
     <string name="pref_dual_page_invert">Käännä jaettujen sivujen sijoittelu</string>
-    <string name="backup_restore_content_full">Varmuuskopiotiedoston tiedot palautetaan.
-\n
-\nSinun on asennattava puuttuvat laajennukset ja kirjauduttava seurantapalveluihin jälkeenpäin käyttääksesi niitä.</string>
     <string name="nav_zone_right">Oikea</string>
     <string name="nav_zone_left">Vasen</string>
     <string name="nav_zone_next">Seuraava</string>

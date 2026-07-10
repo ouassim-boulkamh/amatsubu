@@ -5,7 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.lifecycle.lifecycleScope
-import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.util.system.toast
@@ -36,7 +36,7 @@ class SuwayomiTrackLoginActivity : BaseActivity() {
 
         lifecycleScope.launch {
             try {
-                SuwayomiClientProvider().graphQlClient.loginTrackerOAuth(trackerId, callbackUri.toString())
+                appDependencies.suwayomiClientProvider.graphQlClient.loginTrackerOAuth(trackerId, callbackUri.toString())
                 toast(MR.strings.login_success)
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e

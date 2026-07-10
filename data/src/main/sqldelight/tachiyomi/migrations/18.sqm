@@ -1,0 +1,12 @@
+CREATE TABLE client_manga_metadata(
+    server_key TEXT NOT NULL,
+    source_id INTEGER NOT NULL,
+    manga_id INTEGER NOT NULL,
+    notes TEXT NOT NULL,
+    memo TEXT NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY(server_key, source_id, manga_id)
+);
+
+CREATE INDEX client_manga_metadata_server_manga_index
+ON client_manga_metadata(server_key, manga_id);

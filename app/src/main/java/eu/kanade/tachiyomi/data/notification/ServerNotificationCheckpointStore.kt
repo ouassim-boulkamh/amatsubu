@@ -2,22 +2,20 @@ package eu.kanade.tachiyomi.data.notification
 
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiDownloadDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiExtensionDto
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiServerIdentity
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiSyncStatusDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiUpdaterJobsInfoDto
 import eu.kanade.tachiyomi.data.suwayomi.currentVersionCode
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 internal class ServerNotificationCheckpointStore(
-    preferenceStore: PreferenceStore = Injekt.get(),
+    preferenceStore: PreferenceStore,
 ) {
     private val serverIdentity = preferenceStore.getString(key("server_identity"), "")
     private val libraryUpdateRunning = preferenceStore.getBoolean(key("library_update_running"), false)
     private val libraryUpdateStartedAt = preferenceStore.getLong(key("library_update_started_at"), 0L)
     private val libraryUpdateFinishedAt = preferenceStore.getLong(key("library_update_finished_at"), 0L)
-    private val notifiedChapterIds = preferenceStore.getString(key("notified_chapter_ids"), "")
     private val downloadQueueVisible = preferenceStore.getBoolean(key("download_queue_visible"), false)
     private val downloadQueueState = preferenceStore.getString(key("download_queue_state"), "")
     private val notifiedDownloadErrorIds = preferenceStore.getString(key("notified_download_error_ids"), "")
@@ -55,22 +53,6 @@ internal class ServerNotificationCheckpointStore(
             startedAt = startedAt,
             finishedAt = finishedAt,
             completed = wasRunning && !isRunning,
-        )
-    }
-
-    fun filterUnnotifiedChapterIds(chapterIds: Collection<Int>): Set<Int> {
-        val alreadyNotified = notifiedChapterIds.get().decodeIdSet()
-        return chapterIds
-            .map(Int::toString)
-            .filterNot(alreadyNotified::contains)
-            .mapNotNull(String::toIntOrNull)
-            .toSet()
-    }
-
-    fun markChaptersNotified(chapterIds: Collection<Int>) {
-        if (chapterIds.isEmpty()) return
-        notifiedChapterIds.set(
-            (notifiedChapterIds.get().decodeIdSet() + chapterIds.map(Int::toString)).trimmed().encodeIdSet(),
         )
     }
 
@@ -182,7 +164,6 @@ internal class ServerNotificationCheckpointStore(
             libraryUpdateRunning,
             libraryUpdateStartedAt,
             libraryUpdateFinishedAt,
-            notifiedChapterIds,
             downloadQueueVisible,
             downloadQueueState,
             notifiedDownloadErrorIds,
@@ -193,14 +174,13 @@ internal class ServerNotificationCheckpointStore(
     }
 
     private fun ensureServerIdentity(currentServerIdentity: String) {
-        val current = currentServerIdentity.trim().trimEnd('/')
+        val current = SuwayomiServerIdentity.notificationCheckpointKey(currentServerIdentity)
         if (serverIdentity.get() == current) return
 
         serverIdentity.set(current)
         libraryUpdateRunning.set(false)
         libraryUpdateStartedAt.set(0L)
         libraryUpdateFinishedAt.set(0L)
-        notifiedChapterIds.set("")
         downloadQueueVisible.set(false)
         downloadQueueState.set("")
         notifiedDownloadErrorIds.set("")

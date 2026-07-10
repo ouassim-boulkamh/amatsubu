@@ -61,9 +61,9 @@ import eu.kanade.presentation.components.TabbedDialogPaddings
 import eu.kanade.presentation.manga.components.MangaCover
 import eu.kanade.presentation.more.settings.LocalPreferenceMinHeight
 import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
-import eu.kanade.tachiyomi.source.model.SManga
-import tachiyomi.domain.manga.model.Manga
-import tachiyomi.domain.manga.model.MangaWithChapterCount
+import eu.kanade.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.MangaStatus
+import eu.kanade.domain.manga.model.MangaWithChapterCount
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.Badge
 import tachiyomi.presentation.core.components.BadgeGroup
@@ -239,22 +239,22 @@ private fun DuplicateMangaListItem(
         }
 
         MangaDetailRow(
-            text = when (manga.status) {
-                SManga.ONGOING.toLong() -> stringResource(MR.strings.ongoing)
-                SManga.COMPLETED.toLong() -> stringResource(MR.strings.completed)
-                SManga.LICENSED.toLong() -> stringResource(MR.strings.licensed)
-                SManga.PUBLISHING_FINISHED.toLong() -> stringResource(MR.strings.publishing_finished)
-                SManga.CANCELLED.toLong() -> stringResource(MR.strings.cancelled)
-                SManga.ON_HIATUS.toLong() -> stringResource(MR.strings.on_hiatus)
+            text = when (MangaStatus.from(manga.status)) {
+                MangaStatus.ONGOING -> stringResource(MR.strings.ongoing)
+                MangaStatus.COMPLETED -> stringResource(MR.strings.completed)
+                MangaStatus.LICENSED -> stringResource(MR.strings.licensed)
+                MangaStatus.PUBLISHING_FINISHED -> stringResource(MR.strings.publishing_finished)
+                MangaStatus.CANCELLED -> stringResource(MR.strings.cancelled)
+                MangaStatus.ON_HIATUS -> stringResource(MR.strings.on_hiatus)
                 else -> stringResource(MR.strings.unknown)
             },
-            iconImageVector = when (manga.status) {
-                SManga.ONGOING.toLong() -> Icons.Outlined.Schedule
-                SManga.COMPLETED.toLong() -> Icons.Outlined.DoneAll
-                SManga.LICENSED.toLong() -> Icons.Outlined.AttachMoney
-                SManga.PUBLISHING_FINISHED.toLong() -> Icons.Outlined.Done
-                SManga.CANCELLED.toLong() -> Icons.Outlined.Close
-                SManga.ON_HIATUS.toLong() -> Icons.Outlined.Pause
+            iconImageVector = when (MangaStatus.from(manga.status)) {
+                MangaStatus.ONGOING -> Icons.Outlined.Schedule
+                MangaStatus.COMPLETED -> Icons.Outlined.DoneAll
+                MangaStatus.LICENSED -> Icons.Outlined.AttachMoney
+                MangaStatus.PUBLISHING_FINISHED -> Icons.Outlined.Done
+                MangaStatus.CANCELLED -> Icons.Outlined.Close
+                MangaStatus.ON_HIATUS -> Icons.Outlined.Pause
                 else -> Icons.Outlined.Block
             },
         )

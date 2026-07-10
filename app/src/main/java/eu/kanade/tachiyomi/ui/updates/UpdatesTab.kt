@@ -21,6 +21,7 @@ import eu.kanade.presentation.updates.UpdatesFilterDialog
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
@@ -55,8 +56,13 @@ data object UpdatesTab : Tab {
     override fun Content() {
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
-        val screenModel = rememberScreenModel { UpdatesScreenModel() }
-        val settingsScreenModel = rememberScreenModel { UpdatesSettingsScreenModel() }
+        val dependencies = context.appDependencies
+        val screenModel = rememberScreenModel {
+            UpdatesScreenModel(dependencies)
+        }
+        val settingsScreenModel = rememberScreenModel {
+            UpdatesSettingsScreenModel(dependencies.updatesPreferences)
+        }
         val state by screenModel.state.collectAsState()
 
         UpdateScreen(

@@ -7,6 +7,7 @@ import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.core.security.SecurityPreferences
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.notification.Notifications
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.util.storage.getUriCompat
 import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.getAppIconBitmap
@@ -16,13 +17,13 @@ import tachiyomi.core.common.i18n.pluralStringResource
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.storage.displayablePath
 import tachiyomi.i18n.MR
-import uy.kohesive.injekt.injectLazy
 import java.io.File
 import java.util.concurrent.TimeUnit
 
 class BackupNotifier(private val context: Context) {
 
-    private val preferences: SecurityPreferences by injectLazy()
+    private val preferences: SecurityPreferences
+        get() = context.appDependencies.securityPreferences
     private val notificationIcon by lazy { context.getAppIconBitmap() }
 
     private val progressNotificationBuilder = context.notificationBuilder(

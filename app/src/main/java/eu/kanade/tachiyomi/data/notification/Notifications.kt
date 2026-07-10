@@ -20,6 +20,7 @@ object Notifications {
      */
     const val CHANNEL_COMMON = "common_channel"
     const val ID_DOWNLOAD_IMAGE = 2
+    const val ID_NOTIFICATION_ACTION_ERROR = -3
     const val CHANNEL_DOWNLOAD_PROGRESS = "server_download_progress_channel"
     const val CHANNEL_DOWNLOAD_ERROR = "server_download_error_channel"
     const val ID_DOWNLOAD_PROGRESS = -201

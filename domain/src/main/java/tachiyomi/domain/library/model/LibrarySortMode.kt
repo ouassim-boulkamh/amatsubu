@@ -1,6 +1,6 @@
-package tachiyomi.domain.library.model
+package eu.kanade.domain.library.model
 
-import tachiyomi.domain.category.model.Category
+import eu.kanade.domain.category.model.Category
 
 data class LibrarySort(
     val type: Type,

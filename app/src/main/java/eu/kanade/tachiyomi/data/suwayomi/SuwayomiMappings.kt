@@ -1,38 +1,15 @@
 package eu.kanade.tachiyomi.data.suwayomi
 
-import eu.kanade.tachiyomi.source.model.Page
-import eu.kanade.tachiyomi.source.model.SChapter
-import eu.kanade.tachiyomi.source.model.SManga
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import eu.kanade.domain.manga.model.MangaStatus as DomainMangaStatus
+import eu.kanade.domain.manga.model.UpdateStrategy as DomainUpdateStrategy
 import kotlin.time.Duration.Companion.seconds
-import eu.kanade.tachiyomi.source.model.UpdateStrategy as LocalUpdateStrategy
 
 internal const val SUWAYOMI_MANGA_REAL_URL_META_KEY = "amatsubu.suwayomi.realUrl"
+internal const val SERVER_MANGA_NOTES_META_KEY = "amatsubu.notes"
 
-internal fun SuwayomiMangaDto.toSManga(baseUrl: String): SManga {
-    return SManga.create().also {
-        it.url = mangaUrl(id)
-        it.title = title
-        it.artist = artist
-        it.author = author
-        it.description = description
-        it.genre = normalizedGenre()?.joinToString(", ")
-        it.status = status.toSMangaStatus()
-        it.thumbnail_url = thumbnailUrl?.let { thumbnail -> resolveServerUrl(baseUrl, thumbnail) }
-        it.update_strategy = when (updateStrategy) {
-            UpdateStrategy.ALWAYS_UPDATE -> LocalUpdateStrategy.ALWAYS_UPDATE
-            UpdateStrategy.ONLY_FETCH_ONCE -> LocalUpdateStrategy.ONLY_FETCH_ONCE
-        }
-        it.initialized = initialized
-        it.memo = buildJsonObject {
-            put("amatsubu.suwayomi.mangaId", id)
-            put("amatsubu.suwayomi.sourceId", sourceId)
-            put("amatsubu.suwayomi.url", url)
-            realUrl?.let { put(SUWAYOMI_MANGA_REAL_URL_META_KEY, it) }
-        }
-    }
+internal fun SuwayomiMangaDto.serverNotes(): String {
+    return meta.firstOrNull { it.key == SERVER_MANGA_NOTES_META_KEY }?.value.orEmpty()
 }
 
 internal fun SuwayomiMangaDto.normalizedGenre(): List<String>? {
@@ -43,6 +20,29 @@ internal fun SuwayomiMangaDto.normalizedGenre(): List<String>? {
         .takeIf { it.isNotEmpty() }
 }
 
+internal fun UpdateStrategy.toDomainUpdateStrategy(): DomainUpdateStrategy {
+    return when (this) {
+        UpdateStrategy.ALWAYS_UPDATE -> DomainUpdateStrategy.ALWAYS_UPDATE
+        UpdateStrategy.ONLY_FETCH_ONCE -> DomainUpdateStrategy.ONLY_FETCH_ONCE
+    }
+}
+
+internal fun MangaStatus.toDomainMangaStatus(): DomainMangaStatus {
+    return when (this) {
+        MangaStatus.UNKNOWN -> DomainMangaStatus.UNKNOWN
+        MangaStatus.ONGOING -> DomainMangaStatus.ONGOING
+        MangaStatus.COMPLETED -> DomainMangaStatus.COMPLETED
+        MangaStatus.LICENSED -> DomainMangaStatus.LICENSED
+        MangaStatus.PUBLISHING_FINISHED -> DomainMangaStatus.PUBLISHING_FINISHED
+        MangaStatus.CANCELLED -> DomainMangaStatus.CANCELLED
+        MangaStatus.ON_HIATUS -> DomainMangaStatus.ON_HIATUS
+    }
+}
+
+internal fun MangaStatus.toDomainStatus(): Long {
+    return toDomainMangaStatus().value
+}
+
 internal fun SuwayomiMangaDto.serverCoverLastModified(): Long {
     return listOfNotNull(
         lastFetchedAt,
@@ -51,30 +51,18 @@ internal fun SuwayomiMangaDto.serverCoverLastModified(): Long {
     ).maxOrNull()?.seconds?.inWholeMilliseconds ?: 0L
 }
 
-internal fun SuwayomiChapterDto.toSChapter(): SChapter {
-    return SChapter.create().also {
-        it.url = chapterUrl(id)
-        it.name = name
-        it.chapter_number = chapterNumber
-        it.scanlator = scanlator
-        it.date_upload = uploadDate
-        it.memo = buildJsonObject {
-            put("amatsubu.suwayomi.chapterId", id)
-            put("amatsubu.suwayomi.mangaId", mangaId)
-            put("amatsubu.suwayomi.isBookmarked", isBookmarked)
-            put("amatsubu.suwayomi.isRead", isRead)
-            put("amatsubu.suwayomi.lastPageRead", lastPageRead)
-            put("amatsubu.suwayomi.url", url)
-        }
+internal fun List<String>.toSuwayomiPageAssets(baseUrl: String): List<SuwayomiPageAsset> {
+    return mapIndexed { index, pageUrl ->
+        val imageUrl = resolveServerUrl(baseUrl, pageUrl)
+        SuwayomiPageAsset(index = index, url = pageUrl, imageUrl = imageUrl)
     }
 }
 
-internal fun List<String>.toPages(baseUrl: String): List<Page> {
-    return mapIndexed { index, pageUrl ->
-        val imageUrl = resolveServerUrl(baseUrl, pageUrl)
-        Page(index = index, url = imageUrl, imageUrl = imageUrl)
-    }
-}
+internal data class SuwayomiPageAsset(
+    val index: Int,
+    val url: String,
+    val imageUrl: String,
+)
 
 internal fun mangaUrl(id: Int): String = "$MANGA_URL_PREFIX$id"
 
@@ -95,18 +83,6 @@ internal fun resolveServerUrl(baseUrl: String, value: String): String {
     val normalizedBase = baseUrl.trimEnd('/')
     val normalizedValue = value.trimStart('/')
     return "$normalizedBase/$normalizedValue"
-}
-
-private fun MangaStatus.toSMangaStatus(): Int {
-    return when (this) {
-        MangaStatus.UNKNOWN -> SManga.UNKNOWN
-        MangaStatus.ONGOING -> SManga.ONGOING
-        MangaStatus.COMPLETED -> SManga.COMPLETED
-        MangaStatus.LICENSED -> SManga.LICENSED
-        MangaStatus.PUBLISHING_FINISHED -> SManga.PUBLISHING_FINISHED
-        MangaStatus.CANCELLED -> SManga.CANCELLED
-        MangaStatus.ON_HIATUS -> SManga.ON_HIATUS
-    }
 }
 
 private const val MANGA_URL_PREFIX = "suwayomi://manga/"

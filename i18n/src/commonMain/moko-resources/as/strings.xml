@@ -49,7 +49,6 @@
     <string name="pref_webtoon_side_padding">পৰ্দা পৰিসৰ</string>
     <string name="pref_hide_threshold">স্ক্ৰ\'ল কৰিলে মেনু লুকুৱাবৰ সংবেদনশীলতা</string>
     <string name="pref_webtoon_disable_zoom_out">জুম আউট বন্ধ কৰক</string>
-    <string name="pref_restore_backup_summ">বেকআপ ফাইলৰ পৰা গ্ৰন্থাগাৰ পুনৰুদ্ধাৰ কৰক</string>
     <string name="action_create">সৃষ্টি কৰক</string>
     <string name="invalid_backup_file_missing_manga">বেকআপত কোনো গ্ৰন্থাগাৰ প্ৰৱিষ্ট নাই।</string>
     <string name="restore_completed">পুনৰুদ্ধাৰ সম্পূৰ্ণ</string>
@@ -453,14 +452,12 @@
     <string name="pref_restore_backup">বেকআপ পুনৰুদ্ধাৰ কৰক</string>
     <string name="pref_backup_interval">স্বয়ংক্ৰিয় বেকআপৰ সঁত্ৰণ</string>
     <string name="backup_created">বেকআপ সৃষ্টি কৰা হৈছে</string>
-    <string name="pref_create_backup_summ">বৰ্তমান গ্ৰন্থাগাৰ পুনৰুদ্ধাৰ কৰিবলৈ ব্যৱহৃত হ\'ব</string>
     <string name="invalid_backup_file">অবৈধ বেকআপ ফাইল:</string>
     <string name="invalid_backup_file_error">সম্পূৰ্ণ ত্ৰুটি:</string>
     <string name="invalid_backup_file_json">JSON বেকআপ সমৰ্থিত নহয়</string>
     <string name="invalid_backup_file_unknown">বেকআপ ফাইলৰ ত্ৰুটি</string>
     <string name="backup_restore_missing_sources">অপেক্ষিত উৎসসমূহ:</string>
     <string name="backup_restore_missing_trackers">ট্ৰেকাৰসমূহ লগইন হোৱা নাই:</string>
-    <string name="backup_restore_content_full">আপোনাৰ গ্ৰন্থাগাৰ ব্যৱহাৰ কৰিবলৈ যিকোনো অনুপস্থিত এক্সটেনচনসমূহ ইনষ্টল কৰিবলৈ আৰু তাৰপিছত ট্ৰেকিং সেৱাসমূহত লগইন কৰিবলৈ লাগিব।</string>
     <string name="backup_in_progress">বেকআপ ইতিমধ্যে চলিত আছে</string>
     <string name="backup_choice">আপুনি কি বেকআপ কৰিব বিচাৰে?</string>
     <string name="app_settings">এপ্পৰ ছেটিংছ</string>

@@ -5,8 +5,8 @@ import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaDto
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
-import tachiyomi.domain.category.model.Category
-import tachiyomi.domain.library.model.LibraryManga
+import eu.kanade.domain.category.model.Category
+import eu.kanade.domain.library.model.LibraryManga
 import kotlin.time.Duration.Companion.seconds
 
 internal const val SERVER_EXCLUDED_SCANLATORS_META_KEY = "amatsubu.excludedScanlators"

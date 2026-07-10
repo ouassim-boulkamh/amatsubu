@@ -1,0 +1,84 @@
+CREATE TABLE server_reader_intent_pending(
+    server_key TEXT NOT NULL,
+    manga_id INTEGER NOT NULL,
+    chapter_id INTEGER NOT NULL,
+    intent_type TEXT NOT NULL,
+    baseline_is_read INTEGER NOT NULL,
+    baseline_last_page_read INTEGER NOT NULL,
+    baseline_is_bookmarked INTEGER NOT NULL,
+    desired_is_read INTEGER,
+    desired_last_page_read INTEGER,
+    desired_is_bookmarked INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY(server_key, manga_id, chapter_id, intent_type)
+);
+
+CREATE INDEX server_reader_intent_pending_server_manga_index
+ON server_reader_intent_pending(server_key, manga_id);
+
+CREATE INDEX server_reader_intent_pending_server_updated_index
+ON server_reader_intent_pending(server_key, updated_at);
+
+upsertPendingReaderIntent:
+INSERT INTO server_reader_intent_pending(
+    server_key,
+    manga_id,
+    chapter_id,
+    intent_type,
+    baseline_is_read,
+    baseline_last_page_read,
+    baseline_is_bookmarked,
+    desired_is_read,
+    desired_last_page_read,
+    desired_is_bookmarked,
+    created_at,
+    updated_at
+)
+VALUES (
+    :serverKey,
+    :mangaId,
+    :chapterId,
+    :intentType,
+    :baselineIsRead,
+    :baselineLastPageRead,
+    :baselineIsBookmarked,
+    :desiredIsRead,
+    :desiredLastPageRead,
+    :desiredIsBookmarked,
+    :createdAt,
+    :updatedAt
+)
+ON CONFLICT(server_key, manga_id, chapter_id, intent_type) DO UPDATE SET
+    baseline_is_read = excluded.baseline_is_read,
+    baseline_last_page_read = excluded.baseline_last_page_read,
+    baseline_is_bookmarked = excluded.baseline_is_bookmarked,
+    desired_is_read = excluded.desired_is_read,
+    desired_last_page_read = excluded.desired_last_page_read,
+    desired_is_bookmarked = excluded.desired_is_bookmarked,
+    updated_at = excluded.updated_at;
+
+getPendingReaderIntentsForServer:
+SELECT *
+FROM server_reader_intent_pending
+WHERE server_key = :serverKey
+ORDER BY updated_at;
+
+getPendingReaderIntentsForManga:
+SELECT *
+FROM server_reader_intent_pending
+WHERE server_key = :serverKey
+AND manga_id = :mangaId
+ORDER BY updated_at;
+
+countPendingReaderIntents:
+SELECT count(*)
+FROM server_reader_intent_pending
+WHERE server_key = :serverKey;
+
+deletePendingReaderIntent:
+DELETE FROM server_reader_intent_pending
+WHERE server_key = :serverKey
+AND manga_id = :mangaId
+AND chapter_id = :chapterId
+AND intent_type = :intentType;

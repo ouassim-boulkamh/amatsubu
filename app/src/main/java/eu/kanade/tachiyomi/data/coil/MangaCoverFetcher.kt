@@ -27,9 +27,8 @@ import okio.buffer
 import okio.sink
 import okio.source
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.manga.model.Manga
-import tachiyomi.domain.manga.model.MangaCover
-import uy.kohesive.injekt.injectLazy
+import eu.kanade.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.MangaCover
 import java.io.File
 import java.io.IOException
 
@@ -302,10 +301,8 @@ class MangaCoverFetcher(
 
     class MangaFactory(
         private val callFactoryLazy: Lazy<Call.Factory>,
+        private val coverCache: CoverCache,
     ) : Fetcher.Factory<Manga> {
-
-        private val coverCache: CoverCache by injectLazy()
-
         override fun create(data: Manga, options: Options, imageLoader: ImageLoader): Fetcher {
             return MangaCoverFetcher(
                 url = data.thumbnailUrl,
@@ -323,10 +320,8 @@ class MangaCoverFetcher(
 
     class MangaCoverFactory(
         private val callFactoryLazy: Lazy<Call.Factory>,
+        private val coverCache: CoverCache,
     ) : Fetcher.Factory<MangaCover> {
-
-        private val coverCache: CoverCache by injectLazy()
-
         override fun create(data: MangaCover, options: Options, imageLoader: ImageLoader): Fetcher {
             return MangaCoverFetcher(
                 url = data.url,

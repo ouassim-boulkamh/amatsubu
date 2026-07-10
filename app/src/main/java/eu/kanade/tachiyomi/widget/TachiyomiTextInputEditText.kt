@@ -7,6 +7,7 @@ import androidx.core.view.inputmethod.EditorInfoCompat
 import com.google.android.material.textfield.TextInputEditText
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.tachiyomi.R
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.widget.TachiyomiTextInputEditText.Companion.setIncognito
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,8 +15,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 /**
  * A custom [TextInputEditText] that sets [EditorInfoCompat.IME_FLAG_NO_PERSONALIZED_LEARNING] to imeOptions
@@ -34,7 +33,7 @@ class TachiyomiTextInputEditText @JvmOverloads constructor(
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-        setIncognito(scope!!)
+        setIncognito(scope!!, context.appDependencies.basePreferences)
     }
 
     override fun onDetachedFromWindow() {
@@ -48,8 +47,11 @@ class TachiyomiTextInputEditText @JvmOverloads constructor(
          * Sets Flow to this [EditText] that sets [EditorInfoCompat.IME_FLAG_NO_PERSONALIZED_LEARNING] to imeOptions
          * if [BasePreferences.incognitoMode] is true. Some IMEs may not respect this flag.
          */
-        fun EditText.setIncognito(viewScope: CoroutineScope) {
-            Injekt.get<BasePreferences>().incognitoMode.changes()
+        fun EditText.setIncognito(
+            viewScope: CoroutineScope,
+            basePreferences: BasePreferences,
+        ) {
+            basePreferences.incognitoMode.changes()
                 .onEach {
                     imeOptions = if (it) {
                         imeOptions or EditorInfoCompat.IME_FLAG_NO_PERSONALIZED_LEARNING

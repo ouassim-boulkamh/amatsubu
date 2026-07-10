@@ -10,9 +10,9 @@ import eu.kanade.tachiyomi.data.suwayomi.UpdateStrategy
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import tachiyomi.domain.category.model.Category
-import tachiyomi.domain.library.model.LibraryManga
-import tachiyomi.domain.manga.model.Manga
+import eu.kanade.domain.category.model.Category
+import eu.kanade.domain.library.model.LibraryManga
+import eu.kanade.domain.manga.model.Manga
 
 class ServerLibraryDerivedStateTest {
 

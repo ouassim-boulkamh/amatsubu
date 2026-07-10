@@ -130,7 +130,6 @@
     <string name="services">트래킹 서비스</string>
     <string name="pref_create_backup">백업 생성</string>
     <string name="pref_restore_backup">백업 복원</string>
-    <string name="pref_restore_backup_summ">백업 파일에서 서재 복원</string>
     <string name="pref_backup_interval">백업 주기</string>
     <string name="backup_created">백업 생성됨</string>
     <string name="restore_completed">복원 완료</string>
@@ -212,7 +211,6 @@
     <string name="action_display_download_badge">다운로드한 챕터</string>
     <string name="pref_update_only_non_completed">연재가 끝났을 때 항목 건너뛰기</string>
     <string name="default_category_summary">항상 물어보기</string>
-    <string name="pref_create_backup_summ">현재 서재를 나중에 복구하는 데 사용 가능</string>
     <string name="pref_reader_navigation">네비게이션</string>
     <string name="pref_page_transitions">페이지 전환 효과 표시</string>
     <string name="pref_reader_theme">배경 색상</string>
@@ -500,7 +498,6 @@
     <string name="tracking_guide">트래커 가이드</string>
     <string name="enhanced_services">향상된 트래킹 서비스</string>
     <string name="enhanced_tracking_info">특정 소스에 대해 향상된 기능을 제공합니다. 서재에 항목이 추가될 시 자동으로 트래킹 됩니다.</string>
-    <string name="backup_restore_content_full">복구 완료 후 없어진 소스를 다시 설치하고 트래킹 서비스에 로그인 해야 합니다.</string>
     <string name="backup_info">백업 파일은 복사하여 다른 장소에 나눠 보관하세요. 백업 파일에는 비밀번호 등의 민감한 정보가 포함될 수 있습니다. 백업 파일 공유시 주의하세요.</string>
     <string name="pref_disable_battery_optimization_summary">백그라운드 서재 업데이트와 라이브러리 업데이트를 도울 수 있습니다</string>
     <string name="pref_verbose_logging">자세한 로그</string>

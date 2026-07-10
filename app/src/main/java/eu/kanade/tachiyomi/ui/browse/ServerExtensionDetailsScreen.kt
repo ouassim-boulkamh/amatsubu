@@ -10,10 +10,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
-import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.browse.ExtensionDetailsScreen
 import eu.kanade.presentation.browse.ExtensionDetailsState
 import eu.kanade.presentation.browse.ExtensionSourceItem
@@ -23,9 +23,10 @@ import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiExtensionDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiSourceDto
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
+import eu.kanade.tachiyomi.data.suwayomi.serverExtensionActionAffectedEntities
 import eu.kanade.tachiyomi.data.suwayomi.sourceNodes
 import eu.kanade.tachiyomi.data.suwayomi.webUrl
-import eu.kanade.tachiyomi.network.NetworkHelper
+import eu.kanade.tachiyomi.di.appDependencies
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import tachiyomi.core.common.preference.getAndSet
@@ -36,8 +37,6 @@ import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import kotlin.math.absoluteValue
 
 data class ServerExtensionDetailsScreen(
@@ -47,14 +46,16 @@ data class ServerExtensionDetailsScreen(
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val context = LocalContext.current
         val scope = rememberCoroutineScope()
-        val sourcePreferences = remember { Injekt.get<SourcePreferences>() }
-        val network = remember { Injekt.get<NetworkHelper>() }
+        val dependencies = remember(context) { context.appDependencies }
+        val sourcePreferences = dependencies.sourcePreferences
+        val network = dependencies.networkHelper
         val disabledSources by sourcePreferences.disabledSources.changes()
             .collectAsState(sourcePreferences.disabledSources.get())
         val incognitoExtensions by sourcePreferences.incognitoExtensions.changes()
             .collectAsState(sourcePreferences.incognitoExtensions.get())
-        val provider = remember { SuwayomiClientProvider() }
+        val provider = remember(context) { context.appDependencies.suwayomiClientProvider }
         val baseUrl = remember { provider.baseUrl() }
         var reloadVersion by remember { mutableIntStateOf(0) }
         val state by produceState<ServerExtensionDetailsState>(
@@ -76,7 +77,7 @@ data class ServerExtensionDetailsScreen(
                     } else {
                         ServerExtensionDetailsState.Success(
                             extension = extension,
-                            mihonState = extension.toMihonDetailsState(
+                            detailsState = extension.toExtensionDetailsState(
                                 disabledSources = disabledSources,
                                 incognitoExtensions = incognitoExtensions,
                             ),
@@ -114,7 +115,7 @@ data class ServerExtensionDetailsScreen(
                 val sourcesById = extensionSources.associateBy { it.domainId() }
                 ExtensionDetailsScreen(
                     navigateUp = navigator::pop,
-                    state = current.mihonState,
+                    state = current.detailsState,
                     onClickSourcePreferences = { sourceId ->
                         sourcesById[sourceId]?.let { source ->
                             navigator.push(
@@ -151,7 +152,7 @@ data class ServerExtensionDetailsScreen(
                                     provider.graphQlClient.updateExtension(pkgName = pkgName, uninstall = true)
                                 }
                             }.onSuccess {
-                                ServerStateSync.requestRefresh()
+                                ServerStateSync.requestRefresh(*serverExtensionActionAffectedEntities().toTypedArray())
                                 navigator.pop()
                             }
                         }
@@ -206,7 +207,7 @@ private fun ServerExtensionDetailsScaffold(
     }
 }
 
-private fun SuwayomiExtensionDto.toMihonDetailsState(
+private fun SuwayomiExtensionDto.toExtensionDetailsState(
     disabledSources: Set<String>,
     incognitoExtensions: Set<String>,
 ): ExtensionDetailsState {
@@ -230,7 +231,7 @@ private sealed interface ServerExtensionDetailsState {
     data object Empty : ServerExtensionDetailsState
     data class Success(
         val extension: SuwayomiExtensionDto,
-        val mihonState: ExtensionDetailsState,
+        val detailsState: ExtensionDetailsState,
     ) : ServerExtensionDetailsState
     data class Error(val throwable: Throwable) : ServerExtensionDetailsState
 }

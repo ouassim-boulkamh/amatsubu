@@ -1,0 +1,19 @@
+query TrackerList {
+  trackers {
+    nodes {
+      id
+      name
+      icon
+      isLoggedIn
+      authUrl
+      supportsTrackDeletion
+      supportsReadingDates
+      supportsPrivateTracking
+      statuses {
+        value
+        name
+      }
+      scores
+    }
+  }
+}

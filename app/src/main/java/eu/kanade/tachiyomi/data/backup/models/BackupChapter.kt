@@ -6,7 +6,7 @@ import kotlinx.serialization.protobuf.ProtoNumber
 import mihon.core.common.extensions.EMPTY
 import mihon.core.common.extensions.JsonObjectEmptyBytes
 import tachiyomi.data.MemoColumnAdapter
-import tachiyomi.domain.chapter.model.Chapter
+import eu.kanade.domain.chapter.model.Chapter
 
 @Serializable
 class BackupChapter(
@@ -28,7 +28,7 @@ class BackupChapter(
     @ProtoNumber(12) var version: Long = 0,
     @ProtoNumber(13) var memo: ByteArray = JsonObjectEmptyBytes,
 ) {
-    fun toChapterImpl(): Chapter {
+    fun toDomainChapter(): Chapter {
         return Chapter.create().copy(
             url = this@BackupChapter.url,
             name = this@BackupChapter.name,

@@ -1,19 +1,20 @@
 package eu.kanade.domain.chapter.model
 
+import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.manga.model.downloadedFilter
 import eu.kanade.domain.manga.model.localDownloadedFilter
 import eu.kanade.tachiyomi.ui.manga.ChapterList
-import tachiyomi.domain.chapter.service.getChapterSort
-import tachiyomi.domain.manga.model.Manga
-import tachiyomi.domain.manga.model.applyFilter
+import eu.kanade.domain.chapter.service.getChapterSort
+import eu.kanade.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.applyFilter
 
 /**
  * Applies the view filters to the list of chapters obtained from the database.
  * @return an observable of the list of chapters filtered and sorted.
  */
-fun List<ChapterList.Item>.applyFilters(manga: Manga): Sequence<ChapterList.Item> {
+fun List<ChapterList.Item>.applyFilters(manga: Manga, basePreferences: BasePreferences): Sequence<ChapterList.Item> {
     val unreadFilter = manga.unreadFilter
-    val downloadedFilter = manga.downloadedFilter
+    val downloadedFilter = manga.downloadedFilter(basePreferences)
     val localDownloadedFilter = manga.localDownloadedFilter
     val bookmarkedFilter = manga.bookmarkedFilter
     return asSequence()

@@ -33,7 +33,7 @@ import eu.kanade.domain.manga.model.localDownloadedFilter
 import eu.kanade.presentation.components.TabbedDialog
 import eu.kanade.presentation.components.TabbedDialogPaddings
 import tachiyomi.core.common.preference.TriState
-import tachiyomi.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.Manga
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.LabeledCheckbox
 import tachiyomi.presentation.core.components.RadioItem
@@ -41,12 +41,11 @@ import tachiyomi.presentation.core.components.SortItem
 import tachiyomi.presentation.core.components.TriStateItem
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.theme.active
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 @Composable
 fun ChapterSettingsDialog(
     onDismissRequest: () -> Unit,
+    basePreferences: BasePreferences,
     manga: Manga? = null,
     onDownloadFilterChanged: (TriState) -> Unit,
     onLocalDownloadFilterChanged: (TriState) -> Unit,
@@ -67,7 +66,7 @@ fun ChapterSettingsDialog(
         )
     }
 
-    val downloadedOnly = remember { Injekt.get<BasePreferences>().downloadedOnly.get() }
+    val downloadedOnly = remember(basePreferences) { basePreferences.downloadedOnly.get() }
 
     TabbedDialog(
         onDismissRequest = onDismissRequest,
@@ -101,7 +100,7 @@ fun ChapterSettingsDialog(
             when (page) {
                 0 -> {
                     FilterPage(
-                        downloadFilter = manga?.downloadedFilter ?: TriState.DISABLED,
+                        downloadFilter = manga?.downloadedFilter(basePreferences) ?: TriState.DISABLED,
                         onDownloadFilterChanged = onDownloadFilterChanged
                             .takeUnless { downloadedOnly },
                         localDownloadFilter = manga?.localDownloadedFilter ?: TriState.DISABLED,

@@ -23,6 +23,7 @@ import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.screen.debug.DebugInfoScreen
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiGraphQlClient
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.network.NetworkPreferences
 import eu.kanade.tachiyomi.network.PREF_DOH_360
@@ -54,8 +55,6 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import java.io.File
 import tachiyomi.core.common.i18n.stringResource as contextStringResource
 
@@ -70,10 +69,12 @@ object SettingsAdvancedScreen : SearchableSettings {
         val scope = rememberCoroutineScope()
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
+        val dependencies = context.appDependencies
 
-        val basePreferences = remember { Injekt.get<BasePreferences>() }
-        val networkPreferences = remember { Injekt.get<NetworkPreferences>() }
-        val suwayomiClient = remember { SuwayomiClientProvider().graphQlClient }
+        val basePreferences = remember(dependencies) { dependencies.basePreferences }
+        val networkPreferences = remember(dependencies) { dependencies.networkPreferences }
+        val networkHelper = remember(dependencies) { dependencies.networkHelper }
+        val suwayomiClient = remember(dependencies) { dependencies.suwayomiClientProvider.graphQlClient }
 
         return listOf(
             Preference.PreferenceItem.TextPreference(
@@ -112,7 +113,10 @@ object SettingsAdvancedScreen : SearchableSettings {
                 },
             ),
             getBackgroundActivityGroup(),
-            getNetworkGroup(networkPreferences = networkPreferences),
+            getNetworkGroup(
+                networkPreferences = networkPreferences,
+                networkHelper = networkHelper,
+            ),
             getLibraryGroup(
                 suwayomiClient = suwayomiClient,
             ),
@@ -162,9 +166,9 @@ object SettingsAdvancedScreen : SearchableSettings {
     @Composable
     private fun getNetworkGroup(
         networkPreferences: NetworkPreferences,
+        networkHelper: NetworkHelper,
     ): Preference.PreferenceGroup {
         val context = LocalContext.current
-        val networkHelper = remember { Injekt.get<NetworkHelper>() }
 
         val userAgentPref = networkPreferences.defaultUserAgent
         val userAgent by userAgentPref.collectAsState()

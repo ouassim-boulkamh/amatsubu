@@ -77,8 +77,10 @@ fun MangaNotesTextArea(
             onUpdate(richTextState.toMarkdown())
         }
     }
-    LaunchedEffect(Unit) {
+    LaunchedEffect(state.notes) {
         richTextState.setMarkdown(state.notes)
+    }
+    LaunchedEffect(Unit) {
         richTextState.config.unorderedListIndent = 4
         richTextState.config.orderedListIndent = 20
     }

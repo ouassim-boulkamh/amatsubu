@@ -5,7 +5,6 @@ import eu.kanade.tachiyomi.data.suwayomi.SuwayomiGraphQlClient
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.awaitSuccess
-import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.util.storage.saveTo
@@ -17,7 +16,7 @@ internal class SuwayomiPageLoader(
     private val chapter: ReaderChapter,
     private val client: SuwayomiGraphQlClient,
     private val baseUrl: () -> String,
-    private val httpClient: OkHttpClient = SuwayomiClientProvider().httpClient,
+    private val httpClient: OkHttpClient,
     private val pageCacheDir: File = createReaderPageCacheDir(),
 ) : PageLoader() {
 
@@ -25,7 +24,7 @@ internal class SuwayomiPageLoader(
     private val cachedPageFiles = mutableMapOf<Int, File>()
 
     override suspend fun getPages(): List<ReaderPage> = withIOContext {
-        client.getChapterPages(chapter.chapter.id!!.toInt())
+        client.getChapterPages(chapter.chapter.id.toInt())
             .mapIndexed { index, pageUrl ->
                 ReaderPage(
                     index = index,
@@ -38,23 +37,23 @@ internal class SuwayomiPageLoader(
     override suspend fun loadPage(page: ReaderPage) = withIOContext {
         try {
             val imageUrl = page.imageUrl ?: error("No page URL")
-            page.status = Page.State.DownloadImage
+            page.status = ReaderPage.State.DownloadImage
             val cachedPageFile = createCachedPageFile(page)
             httpClient.newCall(GET(imageUrl))
                 .awaitSuccess()
                 .use { it.body.source().saveTo(cachedPageFile) }
             cachedPageFiles[page.index] = cachedPageFile
             page.stream = { cachedPageFile.inputStream() }
-            page.status = Page.State.Ready
+            page.status = ReaderPage.State.Ready
         } catch (e: Throwable) {
-            page.status = Page.State.Error(e)
+            page.status = ReaderPage.State.Error(e)
         }
     }
 
     override fun retryPage(page: ReaderPage) {
         page.stream = null
         cachedPageFiles.remove(page.index)?.delete()
-        page.status = Page.State.Queue
+        page.status = ReaderPage.State.Queue
     }
 
     override fun recycle() {

@@ -22,8 +22,6 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.allowRgb565
 import coil3.request.crossfade
 import coil3.util.DebugLogger
-import dev.mihon.injekt.patchInjekt
-import eu.kanade.domain.DomainModule
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.domain.ui.model.setAppCompatDelegateThemeMode
@@ -36,13 +34,14 @@ import eu.kanade.tachiyomi.data.coil.MangaKeyer
 import eu.kanade.tachiyomi.data.coil.TachiyomiImageDecoder
 import eu.kanade.tachiyomi.data.library.ServerLibraryUpdateNotifier
 import eu.kanade.tachiyomi.data.notification.Notifications
+import eu.kanade.tachiyomi.data.notification.ServerNotificationCheckpointStore
+import eu.kanade.tachiyomi.data.notification.ServerNotificationRenderer
 import eu.kanade.tachiyomi.data.notification.ServerNotificationSyncJob
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiPreferences
-import eu.kanade.tachiyomi.di.AppModule
-import eu.kanade.tachiyomi.di.PreferenceModule
-import eu.kanade.tachiyomi.network.NetworkHelper
-import eu.kanade.tachiyomi.network.NetworkPreferences
+import eu.kanade.tachiyomi.di.AppDependencies
+import eu.kanade.tachiyomi.di.createAppDependencies
 import eu.kanade.tachiyomi.ui.base.delegate.SecureActivityDelegate
+import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.util.system.DeviceUtil
 import eu.kanade.tachiyomi.util.system.GLUtil
 import eu.kanade.tachiyomi.util.system.WebViewUtil
@@ -55,26 +54,25 @@ import kotlinx.coroutines.flow.onEach
 import logcat.AndroidLogcatLogger
 import logcat.LogPriority
 import logcat.LogcatLogger
-import mihon.core.migration.Migrator
-import mihon.core.migration.migrations.migrations
+import eu.kanade.amatsubu.migration.MigrationContext
+import eu.kanade.amatsubu.migration.Migrator
+import eu.kanade.amatsubu.migration.migrations.migrations
 import org.conscrypt.Conscrypt
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.Preference
-import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.util.system.ImageUtil
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.widget.WidgetManager
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
-import uy.kohesive.injekt.injectLazy
+import tachiyomi.presentation.widget.UpdatesWidgetDependenciesProvider
 import java.security.Security
 
-class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factory {
+class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factory, UpdatesWidgetDependenciesProvider {
 
-    private val basePreferences: BasePreferences by injectLazy()
-    private val networkPreferences: NetworkPreferences by injectLazy()
+    internal lateinit var dependencies: AppDependencies
+        private set
 
+    private lateinit var basePreferences: BasePreferences
     private val disableIncognitoReceiver = DisableIncognitoReceiver()
     private val isMainProcess: Boolean
         get() = Build.VERSION.SDK_INT < Build.VERSION_CODES.P || packageName == getProcessName()
@@ -82,8 +80,6 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     @SuppressLint("LaunchActivityFromNotification")
     override fun onCreate() {
         super<Application>.onCreate()
-        patchInjekt()
-
         GlobalExceptionHandler.initialize(applicationContext, CrashActivity::class.java)
 
         // TLS 1.3 support for Android < 10
@@ -97,9 +93,8 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             if (packageName != process) WebView.setDataDirectorySuffix(process)
         }
 
-        Injekt.importModule(PreferenceModule(this))
-        Injekt.importModule(AppModule(this))
-        Injekt.importModule(DomainModule())
+        dependencies = createAppDependencies(this)
+        basePreferences = dependencies.basePreferences
 
         setupNotificationChannels()
 
@@ -144,18 +139,23 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             .onEach { ImageUtil.hardwareBitmapThreshold = it }
             .launchIn(scope)
 
-        setAppCompatDelegateThemeMode(Injekt.get<UiPreferences>().themeMode.get())
+        setAppCompatDelegateThemeMode(dependencies.uiPreferences.themeMode.get())
 
         // Updates widget update
-        WidgetManager(Injekt.get(), Injekt.get()).apply { init(scope) }
-        ServerLibraryUpdateNotifier(this).init(scope)
+        WidgetManager(dependencies.updatesWidgetDataSource, dependencies.securityPreferences).apply { init(scope) }
+        ServerLibraryUpdateNotifier(
+            context = this,
+            clientProvider = dependencies.suwayomiClientProvider,
+            renderer = ServerNotificationRenderer(this, dependencies.securityPreferences),
+            checkpoints = ServerNotificationCheckpointStore(dependencies.preferenceStore),
+        ).init(scope)
         if (isMainProcess) {
             ServerNotificationSyncJob.schedule(this)
         }
 
         if (!LogcatLogger.isInstalled) {
             val minLogPriority = when {
-                networkPreferences.verboseLogging.get() -> LogPriority.VERBOSE
+                dependencies.networkPreferences.verboseLogging.get() -> LogPriority.VERBOSE
                 BuildConfig.DEBUG -> LogPriority.DEBUG
                 else -> LogPriority.INFO
             }
@@ -167,13 +167,19 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     }
 
     private fun initializeMigrator() {
-        val preferenceStore = Injekt.get<PreferenceStore>()
+        val preferenceStore = dependencies.preferenceStore
         val preference = preferenceStore.getInt(Preference.appStateKey("last_version_code"), 0)
         logcat { "Migration from ${preference.get()} to ${BuildConfig.VERSION_CODE}" }
         Migrator.initialize(
             old = preference.get(),
             new = BuildConfig.VERSION_CODE,
             migrations = migrations,
+            migrationContext = MigrationContext(
+                dryrun = false,
+                application = this,
+                basePreferences = dependencies.basePreferences,
+                libraryPreferences = dependencies.libraryPreferences,
+            ),
             onMigrationComplete = {
                 logcat { "Updating last version to ${BuildConfig.VERSION_CODE}" }
                 preference.set(BuildConfig.VERSION_CODE)
@@ -184,8 +190,8 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     override fun newImageLoader(context: Context): ImageLoader {
         return ImageLoader.Builder(this).apply {
             val callFactoryLazy = lazy {
-                SuwayomiPreferences(Injekt.get<PreferenceStore>())
-                    .httpClient(Injekt.get<NetworkHelper>().client)
+                SuwayomiPreferences(dependencies.preferenceStore)
+                    .httpClient(dependencies.networkHelper.client)
             }
             components {
                 // NetworkFetcher.Factory
@@ -194,11 +200,11 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
                 add(TachiyomiImageDecoder.Factory())
                 // Fetcher.Factory
                 add(BufferedSourceFetcher.Factory())
-                add(MangaCoverFetcher.MangaCoverFactory(callFactoryLazy))
-                add(MangaCoverFetcher.MangaFactory(callFactoryLazy))
+                add(MangaCoverFetcher.MangaCoverFactory(callFactoryLazy, dependencies.coverCache))
+                add(MangaCoverFetcher.MangaFactory(callFactoryLazy, dependencies.coverCache))
                 // Keyer
-                add(MangaCoverKeyer())
-                add(MangaKeyer())
+                add(MangaCoverKeyer(dependencies.coverCache))
+                add(MangaKeyer(dependencies.coverCache))
             }
 
             memoryCache(
@@ -209,7 +215,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
             crossfade((300 * this@App.animatorDurationScale).toInt())
             allowRgb565(DeviceUtil.isLowRamDevice(this@App))
-            if (networkPreferences.verboseLogging.get()) logger(DebugLogger())
+            if (dependencies.networkPreferences.verboseLogging.get()) logger(DebugLogger())
 
             // Coil spawns a new thread for every image load by default
             fetcherCoroutineContext(Dispatchers.IO.limitedParallelism(8))
@@ -219,12 +225,16 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     }
 
     override fun onStart(owner: LifecycleOwner) {
-        SecureActivityDelegate.onApplicationStart()
+        SecureActivityDelegate.onApplicationStart(dependencies.securityPreferences)
     }
 
     override fun onStop(owner: LifecycleOwner) {
-        SecureActivityDelegate.onApplicationStopped()
+        SecureActivityDelegate.onApplicationStopped(dependencies.securityPreferences)
     }
+
+    override fun updatesWidgetDataSource() = dependencies.updatesWidgetDataSource
+
+    override fun isWidgetLocked(): Boolean = dependencies.securityPreferences.useAuthenticator.get()
 
     override fun getPackageName(): String {
         try {

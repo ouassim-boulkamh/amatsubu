@@ -1,0 +1,52 @@
+fragment AmatsubuExtensionStore on ExtensionStoreType {
+  name
+  badgeLabel
+  signingKey
+  contactWebsite
+  contactDiscord
+  indexUrl
+  isLegacy
+  extensionListUrl
+}
+
+fragment AmatsubuExtensionSource on SourceType {
+  baseUrl
+  contentWarning
+  displayName
+  homeUrl
+  iconUrl
+  id
+  isConfigurable
+  isNsfw
+  lang
+  name
+  supportsLatest
+}
+
+fragment AmatsubuExtension on ExtensionType {
+  apkName
+  apkUrl
+  contentWarning
+  extensionLib
+  hasUpdate
+  iconUrl
+  isInstalled
+  isNsfw
+  isObsolete
+  lang
+  name
+  pkgName
+  repo
+  storeIndexUrl
+  versionCode
+  versionCodeLong
+  versionName
+  extensionStore {
+    ...AmatsubuExtensionStore
+  }
+  source {
+    nodes {
+      ...AmatsubuExtensionSource
+    }
+  }
+}

@@ -5,20 +5,29 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.core.app.NotificationCompat
 import androidx.core.net.toUri
+import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.backup.restore.ServerBackupRestoreJob
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
-import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiGraphQlClient
+import eu.kanade.tachiyomi.data.suwayomi.serverNotificationDownloadAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.serverNotificationLibraryUpdateAffectedEntities
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.getParcelableExtraCompat
+import eu.kanade.tachiyomi.util.system.notificationBuilder
 import eu.kanade.tachiyomi.util.system.notificationManager
+import eu.kanade.tachiyomi.util.system.notify
 import eu.kanade.tachiyomi.util.system.toShareIntent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import logcat.LogPriority
+import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.i18n.MR
+import kotlin.coroutines.cancellation.CancellationException
 import eu.kanade.tachiyomi.BuildConfig.APPLICATION_ID as ID
 
 /**
@@ -46,18 +55,10 @@ class NotificationReceiver : BroadcastReceiver() {
                     "application/x-protobuf+gzip",
                 )
             ACTION_CANCEL_RESTORE -> cancelRestore(context)
-            ACTION_STOP_LIBRARY_UPDATE -> runServerMutation("stop Suwayomi library update") {
-                it.stopLibraryUpdate()
-            }
-            ACTION_START_DOWNLOADER -> runServerMutation("start Suwayomi downloader") {
-                it.startDownloader()
-            }
-            ACTION_STOP_DOWNLOADER -> runServerMutation("stop Suwayomi downloader") {
-                it.stopDownloader()
-            }
-            ACTION_CLEAR_DOWNLOADER -> runServerMutation("clear Suwayomi downloader") {
-                it.clearDownloader()
-            }
+            ACTION_STOP_LIBRARY_UPDATE -> runServerMutation(context, ServerNotificationAction.StopLibraryUpdate)
+            ACTION_START_DOWNLOADER -> runServerMutation(context, ServerNotificationAction.StartDownloader)
+            ACTION_STOP_DOWNLOADER -> runServerMutation(context, ServerNotificationAction.StopDownloader)
+            ACTION_CLEAR_DOWNLOADER -> runServerMutation(context, ServerNotificationAction.ClearDownloader)
         }
     }
 
@@ -99,21 +100,45 @@ class NotificationReceiver : BroadcastReceiver() {
         ServerBackupRestoreJob.stop(context)
     }
 
-    private fun runServerMutation(
-        actionDescription: String,
-        mutation: suspend (SuwayomiGraphQlClient) -> Unit,
-    ) {
+    private fun runServerMutation(context: Context, action: ServerNotificationAction) {
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                mutation(SuwayomiClientProvider().graphQlClient)
-                ServerStateSync.requestRefresh()
+                action.mutate(context.appDependencies.suwayomiClientProvider.graphQlClient)
+                context.cancelNotification(Notifications.ID_NOTIFICATION_ACTION_ERROR)
+                ServerStateSync.requestRefresh(*action.affectedEntities().toTypedArray())
+                ServerNotificationSyncJob.schedulePromptReconciliation(context)
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
-                logcat(LogPriority.ERROR, error) { "Failed to $actionDescription from notification action" }
+                logcat(LogPriority.ERROR, error) { "Failed to ${action.logDescription} from notification action" }
+                showServerActionFailure(context, action)
             } finally {
                 pendingResult.finish()
             }
         }
+    }
+
+    private fun showServerActionFailure(context: Context, action: ServerNotificationAction) {
+        val actionLabel = context.stringResource(action.label)
+        val text = context.stringResource(MR.strings.notification_action_failed_details, actionLabel)
+        val notification = context.notificationBuilder(action.failureChannel) {
+            setContentTitle(context.stringResource(MR.strings.notification_action_failed))
+            setContentText(text)
+            setSmallIcon(R.drawable.ic_warning_white_24dp)
+            setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            setContentIntent(action.failureContentIntent(context))
+            setAutoCancel(true)
+            setOnlyAlertOnce(false)
+            setCategory(NotificationCompat.CATEGORY_ERROR)
+            addAction(
+                R.drawable.ic_refresh_24dp,
+                context.stringResource(MR.strings.action_retry),
+                serverActionPendingBroadcast(context, action),
+            )
+        }.build()
+
+        context.notify(Notifications.ID_NOTIFICATION_ACTION_ERROR, notification)
     }
 
     companion object {
@@ -139,6 +164,21 @@ class NotificationReceiver : BroadcastReceiver() {
         private const val REQUEST_START_DOWNLOADER = -2010
         private const val REQUEST_STOP_DOWNLOADER = -2011
         private const val REQUEST_CLEAR_DOWNLOADER = -2012
+
+        private fun serverActionPendingBroadcast(
+            context: Context,
+            action: ServerNotificationAction,
+        ): PendingIntent {
+            val intent = Intent(context, NotificationReceiver::class.java).apply {
+                this.action = action.broadcastAction
+            }
+            return PendingIntent.getBroadcast(
+                context,
+                action.requestCode,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        }
 
         /**
          * Returns [PendingIntent] that starts a service which dismissed the notification
@@ -273,51 +313,74 @@ class NotificationReceiver : BroadcastReceiver() {
         }
 
         internal fun stopLibraryUpdatePendingBroadcast(context: Context): PendingIntent {
-            val intent = Intent(context, NotificationReceiver::class.java).apply {
-                action = ACTION_STOP_LIBRARY_UPDATE
-            }
-            return PendingIntent.getBroadcast(
-                context,
-                REQUEST_STOP_LIBRARY_UPDATE,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            )
+            return serverActionPendingBroadcast(context, ServerNotificationAction.StopLibraryUpdate)
         }
 
         internal fun startDownloaderPendingBroadcast(context: Context): PendingIntent {
-            val intent = Intent(context, NotificationReceiver::class.java).apply {
-                action = ACTION_START_DOWNLOADER
-            }
-            return PendingIntent.getBroadcast(
-                context,
-                REQUEST_START_DOWNLOADER,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            )
+            return serverActionPendingBroadcast(context, ServerNotificationAction.StartDownloader)
         }
 
         internal fun stopDownloaderPendingBroadcast(context: Context): PendingIntent {
-            val intent = Intent(context, NotificationReceiver::class.java).apply {
-                action = ACTION_STOP_DOWNLOADER
-            }
-            return PendingIntent.getBroadcast(
-                context,
-                REQUEST_STOP_DOWNLOADER,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            )
+            return serverActionPendingBroadcast(context, ServerNotificationAction.StopDownloader)
         }
 
         internal fun clearDownloaderPendingBroadcast(context: Context): PendingIntent {
-            val intent = Intent(context, NotificationReceiver::class.java).apply {
-                action = ACTION_CLEAR_DOWNLOADER
-            }
-            return PendingIntent.getBroadcast(
-                context,
-                REQUEST_CLEAR_DOWNLOADER,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            )
+            return serverActionPendingBroadcast(context, ServerNotificationAction.ClearDownloader)
         }
+    }
+
+    private sealed class ServerNotificationAction(
+        val broadcastAction: String,
+        val requestCode: Int,
+        val label: dev.icerock.moko.resources.StringResource,
+        val logDescription: String,
+        val failureChannel: String,
+        val failureContentIntent: (Context) -> PendingIntent,
+        val mutate: suspend (SuwayomiGraphQlClient) -> Unit,
+        val affectedEntities: () -> Set<eu.kanade.tachiyomi.data.suwayomi.ServerStateEntity>,
+    ) {
+        data object StopLibraryUpdate : ServerNotificationAction(
+            broadcastAction = ACTION_STOP_LIBRARY_UPDATE,
+            requestCode = REQUEST_STOP_LIBRARY_UPDATE,
+            label = MR.strings.action_stop_library_update,
+            logDescription = "stop Suwayomi library update",
+            failureChannel = Notifications.CHANNEL_LIBRARY_ERROR,
+            failureContentIntent = NotificationHandler::openUpdatesPendingActivity,
+            mutate = SuwayomiGraphQlClient::stopLibraryUpdate,
+            affectedEntities = ::serverNotificationLibraryUpdateAffectedEntities,
+        )
+
+        data object StartDownloader : ServerNotificationAction(
+            broadcastAction = ACTION_START_DOWNLOADER,
+            requestCode = REQUEST_START_DOWNLOADER,
+            label = MR.strings.action_resume,
+            logDescription = "start Suwayomi downloader",
+            failureChannel = Notifications.CHANNEL_DOWNLOAD_ERROR,
+            failureContentIntent = NotificationHandler::openDownloadsPendingActivity,
+            mutate = SuwayomiGraphQlClient::startDownloader,
+            affectedEntities = ::serverNotificationDownloadAffectedEntities,
+        )
+
+        data object StopDownloader : ServerNotificationAction(
+            broadcastAction = ACTION_STOP_DOWNLOADER,
+            requestCode = REQUEST_STOP_DOWNLOADER,
+            label = MR.strings.action_pause,
+            logDescription = "stop Suwayomi downloader",
+            failureChannel = Notifications.CHANNEL_DOWNLOAD_ERROR,
+            failureContentIntent = NotificationHandler::openDownloadsPendingActivity,
+            mutate = SuwayomiGraphQlClient::stopDownloader,
+            affectedEntities = ::serverNotificationDownloadAffectedEntities,
+        )
+
+        data object ClearDownloader : ServerNotificationAction(
+            broadcastAction = ACTION_CLEAR_DOWNLOADER,
+            requestCode = REQUEST_CLEAR_DOWNLOADER,
+            label = MR.strings.action_cancel_all,
+            logDescription = "clear Suwayomi downloader",
+            failureChannel = Notifications.CHANNEL_DOWNLOAD_ERROR,
+            failureContentIntent = NotificationHandler::openDownloadsPendingActivity,
+            mutate = SuwayomiGraphQlClient::clearDownloader,
+            affectedEntities = ::serverNotificationDownloadAffectedEntities,
+        )
     }
 }

@@ -1,0 +1,7 @@
+mutation FetchTrack($input: FetchTrackInput!) {
+  fetchTrack(input: $input) {
+    trackRecord {
+      ...AmatsubuTrackRecord
+    }
+  }
+}

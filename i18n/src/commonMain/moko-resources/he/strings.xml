@@ -196,9 +196,7 @@
     <string name="restore_completed">השחזור הושלם</string>
     <string name="backup_created">גיבוי נוצר</string>
     <string name="pref_backup_interval">תדירות גיבוי</string>
-    <string name="pref_restore_backup_summ">שחזר ספרייה מקובץ גיבוי</string>
     <string name="pref_restore_backup">שחזור גיבוי</string>
-    <string name="pref_create_backup_summ">ניתן לשימוש על מנת לשחזר את הספרייה הנוכחית</string>
     <string name="pref_create_backup">צור גיבוי</string>
     <string name="services">שירותים</string>
     <string name="pref_remove_after_marked_as_read">אחרי שמסומן ידנית כנקרא</string>
@@ -434,9 +432,6 @@
     <string name="no_pinned_sources">אין מקורות נעוצים</string>
     <string name="chapter_not_found">פרק לא נמצא</string>
     <string name="pref_category_for_this_series">לסדרה הזאת</string>
-    <string name="backup_restore_content_full">מידע מקובץ הגיבוי ישוחזר.
-\n
-\nלאחר מכן צריך להתקין הרחבות חסרות ולהתחבר לשירותי המעקב כדי להשתמש בהם.</string>
     <string name="restore_miui_warning">יכול להיות שהגיבוי/השחזור לא יעבדו כמו שצריך אם אופטמיזציית MIUI מנועה.</string>
     <string name="creating_backup_error">הגיבוי נכשל</string>
     <string name="restoring_backup_error">שחזור הגיבוי נכשל</string>

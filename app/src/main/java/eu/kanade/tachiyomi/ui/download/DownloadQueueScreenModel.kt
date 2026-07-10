@@ -2,9 +2,14 @@ package eu.kanade.tachiyomi.ui.download
 
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
+import eu.kanade.tachiyomi.data.suwayomi.AcceptedMutationRefetchResult
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateEntity
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiDownloadDto
+import eu.kanade.tachiyomi.data.suwayomi.runAcceptedMutationWithRefetch
+import eu.kanade.tachiyomi.data.suwayomi.serverDownloadQueueAffectedEntities
+import eu.kanade.tachiyomi.di.AppDependencies
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,9 +21,12 @@ import logcat.LogPriority
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.system.logcat
 
-class DownloadQueueScreenModel : ScreenModel {
+class DownloadQueueScreenModel private constructor(
+    private val suwayomiProvider: SuwayomiClientProvider,
+) : ScreenModel {
 
-    private val suwayomiProvider = SuwayomiClientProvider()
+    internal constructor(dependencies: AppDependencies) : this(dependencies.suwayomiClientProvider)
+
     private val suwayomiClient = suwayomiProvider.graphQlClient
 
     private val _state = MutableStateFlow(State())
@@ -39,8 +47,12 @@ class DownloadQueueScreenModel : ScreenModel {
                     }
                 }
         }
-        ServerStateSync.refreshes
-            .onEach { refresh(showLoading = false) }
+        ServerStateSync.invalidations
+            .onEach { invalidation ->
+                if (invalidation.affectsAny(ServerStateEntity.Downloads)) {
+                    refresh(showLoading = false)
+                }
+            }
             .launchIn(screenModelScope)
     }
 
@@ -161,24 +173,41 @@ class DownloadQueueScreenModel : ScreenModel {
 
     private fun runMutation(action: suspend () -> Unit) {
         screenModelScope.launchIO {
-            runCatching {
-                action()
-                suwayomiClient.getDownloadStatus()
-            }.onSuccess { status ->
-                _state.update {
-                    it.copy(
-                        error = null,
-                        downloaderState = status.state,
-                        downloads = status.queue.sortedBy(SuwayomiDownloadDto::position),
-                    )
+            when (
+                val result = runAcceptedMutationWithRefetch(
+                    mutation = action,
+                    refetch = { suwayomiClient.getDownloadStatus() },
+                )
+            ) {
+                is AcceptedMutationRefetchResult.AcceptedFresh -> {
+                    val status = result.value
+                    _state.update {
+                        it.copy(
+                            error = null,
+                            downloaderState = status.state,
+                            downloads = status.queue.sortedBy(SuwayomiDownloadDto::position),
+                        )
+                    }
+                    ServerStateSync.requestRefresh(*serverDownloadQueueAffectedEntities().toTypedArray())
                 }
-                ServerStateSync.requestRefresh()
-            }.onFailure { error ->
-                if (error is CancellationException) throw error
-                logcat(LogPriority.ERROR, error) { "Failed to update Suwayomi download queue" }
-                _state.update { it.copy(error = error.message ?: error::class.simpleName.orEmpty()) }
+                is AcceptedMutationRefetchResult.AcceptedRefreshFailed -> {
+                    val error = result.error
+                    logcat(LogPriority.ERROR, error) { "Suwayomi accepted download queue mutation but status refresh failed" }
+                    _state.update { it.copy(error = acceptedRefreshFailureMessage(error)) }
+                    ServerStateSync.requestRefresh(*serverDownloadQueueAffectedEntities().toTypedArray())
+                }
+                is AcceptedMutationRefetchResult.MutationFailed -> {
+                    val error = result.error
+                    logcat(LogPriority.ERROR, error) { "Failed to update Suwayomi download queue" }
+                    _state.update { it.copy(error = error.message ?: error::class.simpleName.orEmpty()) }
+                }
             }
         }
+    }
+
+    private fun acceptedRefreshFailureMessage(error: Throwable): String {
+        val detail = error.message ?: error::class.simpleName.orEmpty()
+        return "Server accepted the change, but refresh failed: $detail"
     }
 
     data class State(

@@ -351,7 +351,6 @@
     <string name="tapping_inverted_horizontal">Horizontal</string>
     <string name="nav_zone_left">Esquerda</string>
     <string name="pref_landscape_zoom">Ampliar a imaxe en horizontal</string>
-    <string name="backup_restore_content_full">Pode ser que debas instalar as extensións que falten e iniciar sesión nos servizos de seguimento para usalos.</string>
     <string name="label_data">Datos</string>
     <string name="pref_reset_viewer_flags_success">Restableceuse a configuración do lector</string>
     <string name="logout_title">Pechar a sesión en %1$s?</string>
@@ -465,8 +464,6 @@
     <string name="pref_remove_exclude_categories">Categorías excluídas</string>
     <string name="pref_high">Alta</string>
     <string name="save_chapter_as_cbz">Gardar como arquivo CBZ</string>
-    <string name="pref_create_backup_summ">Pode usarse para restaurar a biblioteca actual</string>
-    <string name="pref_restore_backup_summ">Restaurar a biblioteca dende unha copia de seguridade</string>
     <string name="backup_created">Creouse a copia de seguridade</string>
     <string name="restoring_backup_error">Fallou a restauración da copia de seguridade</string>
     <string name="backup_restore_missing_trackers">Servizos de seguimento sen conectar:</string>

@@ -24,6 +24,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -36,6 +37,7 @@ import cafe.adriel.voyager.navigator.tab.TabNavigator
 import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.util.isTabletUi
 import eu.kanade.tachiyomi.ui.browse.BrowseTab
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
 import eu.kanade.tachiyomi.ui.history.HistoryTab
 import eu.kanade.tachiyomi.ui.library.LibraryTab
@@ -49,14 +51,12 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import soup.compose.material.motion.animation.materialFadeThroughIn
 import soup.compose.material.motion.animation.materialFadeThroughOut
-import tachiyomi.domain.library.service.LibraryPreferences
+import eu.kanade.domain.library.service.LibraryPreferences
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.NavigationBar
 import tachiyomi.presentation.core.components.material.NavigationRail
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.pluralStringResource
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 object HomeScreen : Screen() {
 
@@ -81,6 +81,7 @@ object HomeScreen : Screen() {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val libraryPreferences = LocalContext.current.appDependencies.libraryPreferences
         TabNavigator(
             tab = LibraryTab,
             key = TabNavigatorKey,
@@ -92,7 +93,7 @@ object HomeScreen : Screen() {
                         if (isTabletUi()) {
                             NavigationRail {
                                 TABS.fastForEach {
-                                    NavigationRailItem(it)
+                                    NavigationRailItem(it, libraryPreferences)
                                 }
                             }
                         }
@@ -109,7 +110,7 @@ object HomeScreen : Screen() {
                             ) {
                                 NavigationBar {
                                     TABS.fastForEach {
-                                        NavigationBarItem(it)
+                                        NavigationBarItem(it, libraryPreferences)
                                     }
                                 }
                             }
@@ -177,7 +178,10 @@ object HomeScreen : Screen() {
     }
 
     @Composable
-    private fun RowScope.NavigationBarItem(tab: eu.kanade.presentation.util.Tab) {
+    private fun RowScope.NavigationBarItem(
+        tab: eu.kanade.presentation.util.Tab,
+        libraryPreferences: LibraryPreferences,
+    ) {
         val tabNavigator = LocalTabNavigator.current
         val navigator = LocalNavigator.currentOrThrow
         val scope = rememberCoroutineScope()
@@ -191,7 +195,7 @@ object HomeScreen : Screen() {
                     scope.launch { tab.onReselect(navigator) }
                 }
             },
-            icon = { NavigationIconItem(tab) },
+            icon = { NavigationIconItem(tab, libraryPreferences) },
             label = {
                 Text(
                     text = tab.options.title,
@@ -205,7 +209,10 @@ object HomeScreen : Screen() {
     }
 
     @Composable
-    fun NavigationRailItem(tab: eu.kanade.presentation.util.Tab) {
+    fun NavigationRailItem(
+        tab: eu.kanade.presentation.util.Tab,
+        libraryPreferences: LibraryPreferences,
+    ) {
         val tabNavigator = LocalTabNavigator.current
         val navigator = LocalNavigator.currentOrThrow
         val scope = rememberCoroutineScope()
@@ -219,7 +226,7 @@ object HomeScreen : Screen() {
                     scope.launch { tab.onReselect(navigator) }
                 }
             },
-            icon = { NavigationIconItem(tab) },
+            icon = { NavigationIconItem(tab, libraryPreferences) },
             label = {
                 Text(
                     text = tab.options.title,
@@ -233,16 +240,18 @@ object HomeScreen : Screen() {
     }
 
     @Composable
-    private fun NavigationIconItem(tab: eu.kanade.presentation.util.Tab) {
+    private fun NavigationIconItem(
+        tab: eu.kanade.presentation.util.Tab,
+        libraryPreferences: LibraryPreferences,
+    ) {
         BadgedBox(
             badge = {
                 when {
                     tab is UpdatesTab -> {
                         val count by produceState(initialValue = 0) {
-                            val pref = Injekt.get<LibraryPreferences>()
                             combine(
-                                pref.newShowUpdatesCount.changes(),
-                                pref.newUpdatesCount.changes(),
+                                libraryPreferences.newShowUpdatesCount.changes(),
+                                libraryPreferences.newUpdatesCount.changes(),
                             ) { show, count -> if (show) count else 0 }
                                 .collectLatest { value = it }
                         }

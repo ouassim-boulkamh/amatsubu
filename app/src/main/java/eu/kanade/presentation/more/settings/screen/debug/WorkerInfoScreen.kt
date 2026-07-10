@@ -29,6 +29,7 @@ import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.util.ioCoroutineScope
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.util.lang.toDateTimestampString
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import eu.kanade.tachiyomi.util.system.workManager
@@ -39,8 +40,6 @@ import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.plus
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -55,8 +54,9 @@ class WorkerInfoScreen : Screen() {
     override fun Content() {
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
+        val uiPreferences = context.appDependencies.uiPreferences
 
-        val screenModel = rememberScreenModel { Model(context) }
+        val screenModel = rememberScreenModel { Model(context, uiPreferences) }
         val enqueued by screenModel.enqueued.collectAsState()
         val finished by screenModel.finished.collectAsState()
         val running by screenModel.running.collectAsState()
@@ -117,7 +117,10 @@ class WorkerInfoScreen : Screen() {
         )
     }
 
-    private class Model(context: Context) : ScreenModel {
+    private class Model(
+        context: Context,
+        private val uiPreferences: UiPreferences,
+    ) : ScreenModel {
         private val workManager = context.workManager
 
         val finished = workManager
@@ -154,9 +157,7 @@ class WorkerInfoScreen : Screen() {
                             ZoneId.systemDefault(),
                         )
                             .toDateTimestampString(
-                                UiPreferences.dateFormat(
-                                    Injekt.get<UiPreferences>().dateFormat.get(),
-                                ),
+                                UiPreferences.dateFormat(uiPreferences.dateFormat.get()),
                             )
                         appendLine("Next scheduled run: $timestamp")
                         appendLine("Attempt #${workInfo.runAttemptCount + 1}")

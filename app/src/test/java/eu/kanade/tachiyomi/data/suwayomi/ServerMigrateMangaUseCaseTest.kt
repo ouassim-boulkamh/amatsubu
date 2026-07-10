@@ -1,12 +1,12 @@
 package eu.kanade.tachiyomi.data.suwayomi
 
-import eu.kanade.tachiyomi.ui.browse.migration.SERVER_MIGRATION_NOTES_META_KEY
+import eu.kanade.domain.migration.model.MigrationFlag
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
-import mihon.domain.migration.models.MigrationFlag
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Test
-import tachiyomi.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.Manga
 
 class ServerMigrateMangaUseCaseTest {
 
@@ -67,6 +67,7 @@ class ServerMigrateMangaUseCaseTest {
         val useCase = ServerMigrateMangaUseCase(
             migrationFlags = { setOf(MigrationFlag.CATEGORY, MigrationFlag.CHAPTER, MigrationFlag.NOTES) },
             client = client,
+            requestSharedRefresh = client::recordSharedRefresh,
         )
 
         useCase(
@@ -91,11 +92,13 @@ class ServerMigrateMangaUseCaseTest {
                     isBookmarked = true,
                     lastPageRead = 4,
                 ),
-                Operation.SetMangaMeta(20, SERVER_MIGRATION_NOTES_META_KEY, "Keep these notes"),
+                Operation.SetMangaMeta(20, SERVER_MANGA_NOTES_META_KEY, "Keep these notes"),
                 Operation.UpdateMangaLibrary(10, false),
             ),
             client.operations,
         )
+        assertEquals(1, client.sharedRefreshes)
+        assertEquals(listOf(migrationAffectedEntities(currentId = 10, targetId = 20)), client.sharedInvalidations)
     }
 
     @Test
@@ -128,19 +131,119 @@ class ServerMigrateMangaUseCaseTest {
         )
     }
 
+    @Test
+    fun `migration reports partial failure and requests shared refresh after an accepted mutation`() = runTest {
+        val failure = IllegalStateException("category update failed")
+        val client = FakeServerMigrateMangaClient(
+            mangas = mapOf(
+                10 to suwayomiManga(10, inLibrary = true),
+                20 to suwayomiManga(20, inLibrary = false),
+            ),
+            categories = mapOf(10 to listOf(3)),
+            chapters = emptyMap(),
+            failures = mutableMapOf(Operation.UpdateMangaCategories(20, listOf(3)) to failure),
+        )
+        val useCase = ServerMigrateMangaUseCase(
+            migrationFlags = { setOf(MigrationFlag.CATEGORY) },
+            client = client,
+            requestSharedRefresh = client::recordSharedRefresh,
+        )
+
+        val thrown = assertInstanceOf(
+            ServerMigrationPartialFailureException::class.java,
+            runCatching {
+                useCase(
+                    current = domainManga(10),
+                    target = domainManga(20),
+                    replace = false,
+                )
+            }.exceptionOrNull(),
+        )
+
+        assertEquals(failure, thrown.cause)
+        assertEquals(
+            listOf(
+                Operation.UpdateMangaLibrary(20, true),
+                Operation.UpdateMangaCategories(20, listOf(3)),
+            ),
+            client.operations,
+        )
+        assertEquals(1, client.sharedRefreshes)
+        assertEquals(listOf(migrationAffectedEntities(currentId = 10, targetId = 20)), client.sharedInvalidations)
+    }
+
+    @Test
+    fun `retrying after partial migration replays idempotent repair operations`() = runTest {
+        val failure = IllegalStateException("category update failed")
+        val failingClient = FakeServerMigrateMangaClient(
+            mangas = mapOf(
+                10 to suwayomiManga(10, inLibrary = true),
+                20 to suwayomiManga(20, inLibrary = false),
+            ),
+            categories = mapOf(10 to listOf(3)),
+            chapters = emptyMap(),
+            failures = mutableMapOf(Operation.UpdateMangaCategories(20, listOf(3)) to failure),
+        )
+        val repairingClient = FakeServerMigrateMangaClient(
+            mangas = mapOf(
+                10 to suwayomiManga(10, inLibrary = true),
+                20 to suwayomiManga(20, inLibrary = true),
+            ),
+            categories = mapOf(10 to listOf(3)),
+            chapters = emptyMap(),
+        )
+
+        val failingUseCase = ServerMigrateMangaUseCase(
+            migrationFlags = { setOf(MigrationFlag.CATEGORY) },
+            client = failingClient,
+        )
+        val repairingUseCase = ServerMigrateMangaUseCase(
+            migrationFlags = { setOf(MigrationFlag.CATEGORY) },
+            client = repairingClient,
+            requestSharedRefresh = repairingClient::recordSharedRefresh,
+        )
+
+        runCatching {
+            failingUseCase(
+                current = domainManga(10),
+                target = domainManga(20),
+                replace = false,
+            )
+        }
+
+        repairingUseCase(
+            current = domainManga(10),
+            target = domainManga(20),
+            replace = false,
+        )
+
+        assertEquals(
+            listOf(
+                Operation.UpdateMangaLibrary(20, true),
+                Operation.UpdateMangaCategories(20, listOf(3)),
+            ),
+            repairingClient.operations,
+        )
+        assertEquals(1, repairingClient.sharedRefreshes)
+        assertEquals(listOf(migrationAffectedEntities(currentId = 10, targetId = 20)), repairingClient.sharedInvalidations)
+    }
+
     private class FakeServerMigrateMangaClient(
         private val mangas: Map<Int, SuwayomiMangaDto>,
         private val categories: Map<Int, List<Int>>,
         private val chapters: Map<Int, List<SuwayomiChapterDto>>,
+        private val failures: MutableMap<Operation, Throwable> = mutableMapOf(),
     ) : ServerMigrateMangaClient {
         val operations = mutableListOf<Operation>()
+        val sharedInvalidations = mutableListOf<Set<ServerStateEntity>>()
+        var sharedRefreshes = 0
 
         override suspend fun getManga(mangaId: Int): SuwayomiMangaDto {
             return mangas.getValue(mangaId)
         }
 
         override suspend fun updateMangaLibrary(mangaId: Int, inLibrary: Boolean) {
-            operations += Operation.UpdateMangaLibrary(mangaId, inLibrary)
+            record(Operation.UpdateMangaLibrary(mangaId, inLibrary))
         }
 
         override suspend fun getMangaCategories(mangaId: Int): List<SuwayomiCategoryDto> {
@@ -150,7 +253,7 @@ class ServerMigrateMangaUseCaseTest {
         }
 
         override suspend fun updateMangaCategories(mangaId: Int, categoryIds: List<Int>) {
-            operations += Operation.UpdateMangaCategories(mangaId, categoryIds)
+            record(Operation.UpdateMangaCategories(mangaId, categoryIds))
         }
 
         override suspend fun getChapters(mangaId: Int): List<SuwayomiChapterDto> {
@@ -163,16 +266,28 @@ class ServerMigrateMangaUseCaseTest {
             isBookmarked: Boolean,
             lastPageRead: Int,
         ) {
-            operations += Operation.UpdateChapterMigrationState(
-                chapterId = chapterId,
-                isRead = isRead,
-                isBookmarked = isBookmarked,
-                lastPageRead = lastPageRead,
+            record(
+                Operation.UpdateChapterMigrationState(
+                    chapterId = chapterId,
+                    isRead = isRead,
+                    isBookmarked = isBookmarked,
+                    lastPageRead = lastPageRead,
+                ),
             )
         }
 
         override suspend fun setMangaMeta(mangaId: Int, key: String, value: String) {
-            operations += Operation.SetMangaMeta(mangaId, key, value)
+            record(Operation.SetMangaMeta(mangaId, key, value))
+        }
+
+        private fun record(operation: Operation) {
+            operations += operation
+            failures.remove(operation)?.let { throw it }
+        }
+
+        fun recordSharedRefresh(affected: Set<ServerStateEntity>) {
+            sharedRefreshes += 1
+            sharedInvalidations += affected
         }
     }
 
@@ -239,13 +354,25 @@ class ServerMigrateMangaUseCaseTest {
             genre = null,
             status = 0,
             thumbnailUrl = null,
-            updateStrategy = eu.kanade.tachiyomi.source.model.UpdateStrategy.ALWAYS_UPDATE,
+            updateStrategy = eu.kanade.domain.manga.model.UpdateStrategy.ALWAYS_UPDATE,
             initialized = true,
             lastModifiedAt = 0,
             favoriteModifiedAt = null,
             version = 0,
             notes = notes,
             memo = JsonObject(emptyMap()),
+        )
+    }
+
+    private fun migrationAffectedEntities(currentId: Int, targetId: Int): Set<ServerStateEntity> {
+        return setOf(
+            ServerStateEntity.Library,
+            ServerStateEntity.Categories,
+            ServerStateEntity.Manga(currentId),
+            ServerStateEntity.Manga(targetId),
+            ServerStateEntity.Chapters(currentId),
+            ServerStateEntity.Chapters(targetId),
+            ServerStateEntity.Trackers(targetId),
         )
     }
 }

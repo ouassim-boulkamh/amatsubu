@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.tachiyomi.BuildConfig
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.util.storage.getUriCompat
 import eu.kanade.tachiyomi.util.system.WebViewUtil
 import eu.kanade.tachiyomi.util.system.createFileInCacheDir
@@ -11,19 +12,17 @@ import eu.kanade.tachiyomi.util.system.toShareIntent
 import eu.kanade.tachiyomi.util.system.toast
 import tachiyomi.core.common.util.lang.withNonCancellableContext
 import tachiyomi.core.common.util.lang.withUIContext
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import java.time.OffsetDateTime
 import java.time.ZoneId
 
 class CrashLogUtil(
     private val context: Context,
-    private val preferences: BasePreferences = Injekt.get(),
+    private val preferences: BasePreferences = context.appDependencies.basePreferences,
 ) {
 
     suspend fun dumpLogs(exception: Throwable? = null) = withNonCancellableContext {
         try {
-            val file = context.createFileInCacheDir("mihon_crash_logs.txt")
+            val file = context.createFileInCacheDir("amatsubu_crash_logs.txt")
 
             file.appendText(getDebugInfo() + "\n\n")
             exception?.let { file.appendText("$it\n\n") }

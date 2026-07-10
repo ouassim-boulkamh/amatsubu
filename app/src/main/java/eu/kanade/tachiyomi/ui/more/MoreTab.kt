@@ -1,6 +1,5 @@
 package eu.kanade.tachiyomi.ui.more
 
-import android.app.Application
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
@@ -28,6 +27,10 @@ import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.notification.ServerNotificationSyncJob
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
+import eu.kanade.tachiyomi.data.suwayomi.serverNotificationDownloadAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.serverNotificationLibraryUpdateAffectedEntities
+import eu.kanade.tachiyomi.di.AppDependencies
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
 import eu.kanade.tachiyomi.ui.setting.SettingsScreen
@@ -43,10 +46,8 @@ import logcat.LogPriority
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.library.service.LibraryPreferences
+import eu.kanade.domain.library.service.LibraryPreferences
 import tachiyomi.i18n.MR
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import tachiyomi.presentation.core.i18n.stringResource as composeStringResource
 
 data object MoreTab : Tab {
@@ -71,7 +72,8 @@ data object MoreTab : Tab {
     override fun Content() {
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
-        val screenModel = rememberScreenModel { MoreScreenModel() }
+        val dependencies = context.appDependencies
+        val screenModel = rememberScreenModel { MoreScreenModel(dependencies) }
         val downloadQueueState by screenModel.downloadQueueState.collectAsState()
         val serverSyncState by screenModel.serverSyncState.collectAsState()
         val syncYomiState by screenModel.syncYomiState.collectAsState()
@@ -111,12 +113,20 @@ data object MoreTab : Tab {
     }
 }
 
-private class MoreScreenModel(
-    preferences: BasePreferences = Injekt.get(),
-    private val libraryPreferences: LibraryPreferences = Injekt.get(),
+private class MoreScreenModel private constructor(
+    preferences: BasePreferences,
+    private val libraryPreferences: LibraryPreferences,
+    private val application: android.app.Application,
+    private val suwayomiProvider: SuwayomiClientProvider,
 ) : ScreenModel {
 
-    private val suwayomiProvider = SuwayomiClientProvider()
+    constructor(dependencies: AppDependencies) : this(
+        preferences = dependencies.basePreferences,
+        libraryPreferences = dependencies.libraryPreferences,
+        application = dependencies.application,
+        suwayomiProvider = dependencies.suwayomiClientProvider,
+    )
+
     private val suwayomiClient = suwayomiProvider.graphQlClient
 
     var downloadedOnly by preferences.downloadedOnly.asState(screenModelScope)
@@ -191,7 +201,7 @@ private class MoreScreenModel(
             }
 
             refreshServerDownloadQueueState()
-            ServerStateSync.requestRefresh()
+            ServerStateSync.requestRefresh(*serverNotificationDownloadAffectedEntities().toTypedArray())
 
             val libraryUpdateResult = runCatching {
                 suwayomiClient.updateLibraryMangas()
@@ -207,7 +217,7 @@ private class MoreScreenModel(
             when (updateStarted) {
                 true -> {
                     libraryPreferences.lastUpdatedTimestamp.set(System.currentTimeMillis())
-                    ServerNotificationSyncJob.schedulePromptReconciliation(Injekt.get<Application>())
+                    ServerNotificationSyncJob.schedulePromptReconciliation(application)
                     _serverSyncState.value = ServerSyncState.LibraryUpdating()
                     _events.send(Event.ServerSyncSuccess)
                 }
@@ -228,7 +238,7 @@ private class MoreScreenModel(
             runCatching {
                 suwayomiClient.stopLibraryUpdate()
             }.onSuccess {
-                ServerStateSync.requestRefresh()
+                ServerStateSync.requestRefresh(*serverNotificationLibraryUpdateAffectedEntities().toTypedArray())
                 _serverSyncState.value = ServerSyncState.Success(System.currentTimeMillis())
             }.onFailure { error ->
                 if (error is CancellationException) throw error

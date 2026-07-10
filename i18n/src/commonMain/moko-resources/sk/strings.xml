@@ -157,9 +157,7 @@
     <string name="disabled">Zakázané</string>
     <string name="services">Sledovače</string>
     <string name="pref_create_backup">Vytvoriť zálohu</string>
-    <string name="pref_create_backup_summ">Možno použiť na obnovenie aktuálnej knižnice</string>
     <string name="pref_restore_backup">Obnoviť zálohu</string>
-    <string name="pref_restore_backup_summ">Obnoviť knižnicu zo záložného súboru</string>
     <string name="pref_backup_interval">Frekvencia zálohovania</string>
     <string name="backup_created">Záloha bola vytvorená</string>
     <string name="restore_completed">Obnovenie dokončené</string>
@@ -407,9 +405,6 @@
     <string name="page_list_empty_error">Nenašli sa žiadne stránky</string>
     <string name="pref_always_show_chapter_transition">Vždy zobraziť prechod medzi kapitolami</string>
     <string name="pref_low">Nízke</string>
-    <string name="backup_restore_content_full">Údaje zo záložného súboru sa obnovia.
-\n
-\nBudete musieť nainštalovať všetky chýbajúce rozšírenia a potom sa prihlásiť do sledovacích služieb, aby ste ich mohli používať.</string>
     <string name="pref_reset_viewer_flags_error">Nepodarilo sa obnoviť nastavenia čítačky</string>
     <string name="pref_tablet_ui_mode">Používateľské rozhranie tabletu</string>
     <string name="manga_from_library">Manga z knižnice</string>

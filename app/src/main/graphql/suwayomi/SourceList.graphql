@@ -1,0 +1,17 @@
+query SourceList {
+  sources {
+    nodes {
+      baseUrl
+      contentWarning
+      displayName
+      homeUrl
+      iconUrl
+      id
+      isConfigurable
+      isNsfw
+      lang
+      name
+      supportsLatest
+    }
+  }
+}

@@ -1,0 +1,67 @@
+fragment AmatsubuManga on MangaType {
+  artist
+  author
+  description
+  downloadCount
+  genre
+  id
+  inLibrary
+  inLibraryAt
+  initialized
+  chaptersLastFetchedAt
+  lastFetchedAt
+  latestFetchedChapter { fetchedAt }
+  latestReadChapter { lastReadAt }
+  latestUploadedChapter { uploadDate }
+  meta { key mangaId value }
+  realUrl
+  sourceId
+  status
+  thumbnailUrl
+  title
+  unreadCount
+  updateStrategy
+  url
+}
+
+fragment AmatsubuChapter on ChapterType {
+  chapterNumber
+  fetchedAt
+  id
+  isDownloaded
+  isBookmarked
+  isRead
+  lastPageRead
+  lastReadAt
+  mangaId
+  name
+  realUrl
+  scanlator
+  sourceOrder
+  uploadDate
+  url
+}
+
+query GetManga($id: Int!) {
+  manga(id: $id) { ...AmatsubuManga }
+}
+
+mutation FetchMangaAndChapters($input: FetchMangaAndChaptersInput!) {
+  fetchMangaAndChapters(input: $input) {
+    manga { ...AmatsubuManga }
+    chapters { ...AmatsubuChapter }
+  }
+}
+
+query GetMangaTrackSummary($id: Int!) {
+  manga(id: $id) {
+    description
+    id
+    status
+    thumbnailUrl
+    title
+    chapters { totalCount }
+    latestReadChapter { chapterNumber }
+    unreadCount
+  }
+}

@@ -148,9 +148,7 @@
     <string name="disabled">Онемогућено</string>
     <string name="services">Сервиси праћења</string>
     <string name="pref_create_backup">Направи резервну копију</string>
-    <string name="pref_create_backup_summ">Може се користити за враћање на тренутно стање колекције</string>
     <string name="pref_restore_backup">Врати се на резервну копију</string>
-    <string name="pref_restore_backup_summ">Врати се на колекцију из резервне копије</string>
     <string name="pref_backup_interval">Учесталост прављења резервних копија</string>
     <string name="backup_created">Направљена је резервна копија</string>
     <string name="restore_completed">Враћање је завршено</string>
@@ -408,9 +406,6 @@
     <string name="invalid_backup_file_missing_manga">Резервна копија не садржи ниједан наслов.</string>
     <string name="backup_restore_missing_trackers">Пратиоци у које нисте пријављени:</string>
     <string name="label_network">Мрежа</string>
-    <string name="backup_restore_content_full">Подаци из датотеке резервне копије ће бити враћени.
-\n
-\nМораћете да инсталирате све додатке које недостају и да се после тога пријавите на пратиоце да бисте их користили.</string>
     <string name="enhanced_tracking_info">Сервиси који пружају побољшане услуге за одређене изворе. Наслов се аутоматски прати када га додате у колекцију.</string>
     <string name="help_translate">Помозите у превођењу</string>
     <string name="pref_dump_crash_logs">Дели извештаје о паду</string>

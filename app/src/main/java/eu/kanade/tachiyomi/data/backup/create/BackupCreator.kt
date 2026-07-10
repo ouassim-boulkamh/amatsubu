@@ -8,6 +8,8 @@ import eu.kanade.tachiyomi.data.backup.BackupFileValidator
 import eu.kanade.tachiyomi.data.backup.ServerBackupFileValidator
 import eu.kanade.tachiyomi.data.backup.create.creators.PreferenceBackupCreator
 import eu.kanade.tachiyomi.data.backup.models.Backup
+import eu.kanade.tachiyomi.data.backup.models.toBackupMetadata
+import eu.kanade.tachiyomi.data.suwayomi.ClientMangaMetadataStore
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.awaitSuccess
@@ -19,8 +21,6 @@ import okio.sink
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -28,11 +28,14 @@ import java.util.Locale
 
 class BackupCreator(
     private val context: Context,
-    private val parser: ProtoBuf = Injekt.get(),
-    private val preferenceBackupCreator: PreferenceBackupCreator = PreferenceBackupCreator(),
+    private val parser: ProtoBuf,
+    private val preferenceBackupCreator: PreferenceBackupCreator,
+    private val mangaMetadataStore: ClientMangaMetadataStore,
+    private val currentServerKey: () -> String,
+    private val validator: BackupFileValidator,
 ) {
 
-    fun backup(uri: Uri, options: BackupOptions): String {
+    suspend fun backup(uri: Uri, options: BackupOptions): String {
         var file: UniFile? = null
         try {
             file = UniFile.fromUri(context, uri)
@@ -54,7 +57,7 @@ class BackupCreator(
 
             val fileUri = file.uri
 
-            BackupFileValidator(context).validate(fileUri)
+            validator.validate(fileUri)
 
             return fileUri.toString()
         } catch (e: Exception) {
@@ -64,7 +67,7 @@ class BackupCreator(
         }
     }
 
-    private fun createBackup(options: BackupOptions): Backup {
+    private suspend fun createBackup(options: BackupOptions): Backup {
         return Backup(
             backupManga = emptyList(),
             backupPreferences = if (options.appSettings) {
@@ -74,6 +77,13 @@ class BackupCreator(
             },
             backupSourcePreferences = if (options.sourceSettings) {
                 preferenceBackupCreator.createSource(options.privateSettings)
+            } else {
+                emptyList()
+            },
+            // Metadata belongs to the client backup's app-settings scope, not
+            // to server-owned library/category/chapter backup sections.
+            clientMangaMetadata = if (options.appSettings) {
+                mangaMetadataStore.forServer(currentServerKey()).map { it.toBackupMetadata() }
             } else {
                 emptyList()
             },
@@ -92,11 +102,11 @@ class BackupCreator(
     }
 }
 
-class ServerBackupCreator(
+internal class ServerBackupCreator(
     private val context: Context,
+    private val suwayomiProvider: SuwayomiClientProvider,
+    private val validator: ServerBackupFileValidator,
 ) {
-    private val suwayomiProvider = SuwayomiClientProvider()
-
     suspend fun backup(uri: Uri, options: BackupOptions): String {
         var file: UniFile? = null
         try {
@@ -117,7 +127,7 @@ class ServerBackupCreator(
                 throw IllegalStateException(context.stringResource(MR.strings.invalid_backup_file_unknown))
             }
 
-            ServerBackupFileValidator(context).validateBytes(backupBytes)
+            validator.validateBytes(backupBytes)
 
             file.openOutputStream()
                 .also {

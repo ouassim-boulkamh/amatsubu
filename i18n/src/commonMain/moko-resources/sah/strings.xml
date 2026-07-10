@@ -232,9 +232,7 @@
     <string name="invalid_backup_file">Хаппаас куопуйа алдьаммыт билэтэ</string>
     <string name="backup_created">Хаппаас куопуйа оҥоһуллунна</string>
     <string name="pref_backup_interval">Хаппаас куопуйа оҥоһуутун түргэнэ</string>
-    <string name="pref_restore_backup_summ">Бэбэлэтиэкэни хаппаас куопуйа билэтиттэн төнүҥнэрии</string>
     <string name="pref_restore_backup">Хаппаас куопуйаны куолутунан туруоруу</string>
-    <string name="pref_create_backup_summ">Билиҥни бибилиотеканы төнүннэрэргэ туттуохха сөп</string>
     <string name="pref_create_backup">Хаппаас куопуйаны оҥоруу</string>
     <string name="tracking_info">Биир өттүттэн мэнэйдэһии, кэтээһин өҥөлөргө баар түһүмэхтэр туруктарын саҥардыыга. Маанга туспа суругун уонна талкыйын кэтээһинин түстэлгэ уларыт.</string>
     <string name="services">Өҥөлөр</string>

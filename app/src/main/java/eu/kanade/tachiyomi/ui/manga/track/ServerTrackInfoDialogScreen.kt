@@ -1,6 +1,5 @@
 package eu.kanade.tachiyomi.ui.manga.track
 
-import android.app.Application
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -42,6 +41,10 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.presentation.track.ServerTrackItem
+import eu.kanade.presentation.track.ServerTrackRecord
+import eu.kanade.presentation.track.ServerTrackSearchResult
+import eu.kanade.presentation.track.ServerTrackerPresentation
 import eu.kanade.presentation.track.TrackChapterSelector
 import eu.kanade.presentation.track.TrackDateSelector
 import eu.kanade.presentation.track.TrackInfoDialogHome
@@ -50,17 +53,16 @@ import eu.kanade.presentation.track.TrackStatusSelector
 import eu.kanade.presentation.track.TrackerSearch
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.R
-import eu.kanade.tachiyomi.data.database.models.Track
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateEntity
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateInvalidation
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
-import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiGraphQlClient
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiTrackRecordDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiTrackSearchDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiTrackerDto
-import eu.kanade.tachiyomi.data.track.DeletableTracker
-import eu.kanade.tachiyomi.data.track.Tracker
-import eu.kanade.tachiyomi.data.track.model.TrackSearch
-import eu.kanade.tachiyomi.network.NetworkHelper
+import eu.kanade.tachiyomi.data.suwayomi.serverTrackAffectedEntities
+import eu.kanade.tachiyomi.di.appDependencies
+import eu.kanade.tachiyomi.ui.ServerForegroundRefreshEffect
 import eu.kanade.tachiyomi.util.lang.convertEpochMillisZone
 import eu.kanade.tachiyomi.util.lang.toLocalDate
 import eu.kanade.tachiyomi.util.system.copyToClipboard
@@ -68,13 +70,12 @@ import eu.kanade.tachiyomi.util.system.openInBrowser
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import logcat.LogPriority
-import okhttp3.OkHttpClient
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
@@ -86,12 +87,9 @@ import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
-import tachiyomi.domain.track.model.Track as DomainTrack
 
 data class ServerTrackInfoDialogScreen(
     private val mangaId: Int,
@@ -103,9 +101,15 @@ data class ServerTrackInfoDialogScreen(
         val navigator = LocalNavigator.currentOrThrow
         val context = LocalContext.current
         val lifecycleOwner = LocalLifecycleOwner.current
-        val screenModel = rememberScreenModel { Model(mangaId) }
+        val dependencies = context.appDependencies
+        val screenModel = rememberScreenModel {
+            Model(
+                mangaId = mangaId,
+                client = dependencies.suwayomiClientProvider.graphQlClient,
+            )
+        }
         val state by screenModel.state.collectAsState()
-        val dateFormat = remember { UiPreferences.dateFormat(Injekt.get<UiPreferences>().dateFormat.get()) }
+        val dateFormat = remember { UiPreferences.dateFormat(dependencies.uiPreferences.dateFormat.get()) }
 
         DisposableEffect(lifecycleOwner, screenModel) {
             val observer = LifecycleEventObserver { _, event ->
@@ -117,6 +121,10 @@ data class ServerTrackInfoDialogScreen(
             onDispose {
                 lifecycleOwner.lifecycle.removeObserver(observer)
             }
+        }
+
+        ServerForegroundRefreshEffect {
+            screenModel.refresh(showLoading = false)
         }
 
         when {
@@ -135,7 +143,7 @@ data class ServerTrackInfoDialogScreen(
                                 mangaId = mangaId,
                                 mangaTitle = mangaTitle,
                                 track = it.track!!,
-                                tracker = it.tracker as ServerTracker,
+                                tracker = it.tracker,
                             ),
                         )
                     },
@@ -154,7 +162,7 @@ data class ServerTrackInfoDialogScreen(
                                 mangaId = mangaId,
                                 mangaTitle = mangaTitle,
                                 track = it.track!!,
-                                tracker = it.tracker as ServerTracker,
+                                tracker = it.tracker,
                             ),
                         )
                     },
@@ -189,7 +197,7 @@ data class ServerTrackInfoDialogScreen(
                                 mangaTitle = mangaTitle,
                                 initialQuery = initialQuery,
                                 currentUrl = track?.remoteUrl,
-                                tracker = it.tracker as ServerTracker,
+                                tracker = it.tracker,
                             ),
                         )
                     },
@@ -200,7 +208,7 @@ data class ServerTrackInfoDialogScreen(
                                 mangaId = mangaId,
                                 mangaTitle = mangaTitle,
                                 track = it.track!!,
-                                tracker = it.tracker as ServerTracker,
+                                tracker = it.tracker,
                             ),
                         )
                     },
@@ -211,7 +219,7 @@ data class ServerTrackInfoDialogScreen(
         }
     }
 
-    private fun Context.copyTrackerLink(trackItem: TrackItem) {
+    private fun Context.copyTrackerLink(trackItem: ServerTrackItem) {
         val url = trackItem.track?.remoteUrl ?: return
         if (url.isNotBlank()) {
             copyToClipboard(url, url)
@@ -220,12 +228,12 @@ data class ServerTrackInfoDialogScreen(
 
     private class Model(
         private val mangaId: Int,
+        private val client: SuwayomiGraphQlClient,
     ) : StateScreenModel<Model.State>(State()) {
-        private val client = suwayomiClient()
-
         init {
             refresh(showLoading = true)
-            ServerStateSync.refreshes
+            ServerStateSync.invalidations
+                .filterTrackInvalidations(mangaId)
                 .onEach { refresh(showLoading = false) }
                 .launchIn(screenModelScope)
         }
@@ -243,9 +251,9 @@ data class ServerTrackInfoDialogScreen(
                         val records = client.getTrackRecords(mangaId)
                         val displayScores = records.associate { it.id.toLong() to (it.displayScore.orEmpty()) }
                         trackers.map { tracker ->
-                            TrackItem(
-                                track = records.find { it.trackerId == tracker.id }?.toDomainTrack(),
-                                tracker = ServerTracker(tracker, displayScores),
+                            ServerTrackItem(
+                                track = records.find { it.trackerId == tracker.id }?.toServerTrackRecord(),
+                                tracker = tracker.toPresentation(displayScores),
                             )
                         }
                     }
@@ -265,11 +273,11 @@ data class ServerTrackInfoDialogScreen(
             }
         }
 
-        fun togglePrivate(track: DomainTrack) {
+        fun togglePrivate(track: ServerTrackRecord) {
             screenModelScope.launchNonCancellable {
                 runCatching {
                     client.updateTrack(track.id.toInt(), private = !track.private)
-                    ServerStateSync.requestRefresh()
+                    ServerStateSync.requestRefresh(*serverTrackAffectedEntities(mangaId).toTypedArray())
                     refresh(showLoading = false)
                 }.onFailure { e ->
                     if (e is CancellationException) throw e
@@ -282,7 +290,16 @@ data class ServerTrackInfoDialogScreen(
         data class State(
             val loading: Boolean = true,
             val error: String? = null,
-            val trackItems: List<TrackItem> = emptyList(),
+            val trackItems: List<ServerTrackItem> = emptyList(),
+        )
+    }
+}
+
+private fun Flow<ServerStateInvalidation>.filterTrackInvalidations(mangaId: Int): Flow<ServerStateInvalidation> {
+    return filter {
+        it.affectsAny(
+            ServerStateEntity.Manga(mangaId),
+            ServerStateEntity.Trackers(mangaId),
         )
     }
 }
@@ -292,12 +309,22 @@ private data class ServerTrackerSearchScreen(
     private val mangaTitle: String,
     private val initialQuery: String,
     private val currentUrl: String?,
-    private val tracker: ServerTracker,
+    private val tracker: ServerTrackerPresentation,
 ) : Screen() {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val screenModel = rememberScreenModel { Model(mangaId, initialQuery, currentUrl, tracker.dto) }
+        val context = LocalContext.current
+        val screenModel = rememberScreenModel {
+            Model(
+                mangaId = mangaId,
+                initialQuery = initialQuery,
+                currentUrl = currentUrl,
+                tracker = tracker,
+                client = context.appDependencies.suwayomiClientProvider.graphQlClient,
+                context = context.applicationContext,
+            )
+        }
         val state by screenModel.state.collectAsState()
         val textFieldState = rememberTextFieldState(initialQuery)
 
@@ -322,10 +349,10 @@ private data class ServerTrackerSearchScreen(
         private val mangaId: Int,
         initialQuery: String,
         private val currentUrl: String?,
-        private val tracker: SuwayomiTrackerDto,
+        private val tracker: ServerTrackerPresentation,
+        private val client: SuwayomiGraphQlClient,
+        private val context: Context,
     ) : StateScreenModel<Model.State>(State()) {
-        private val client = suwayomiClient()
-
         init {
             search(initialQuery)
         }
@@ -335,46 +362,46 @@ private data class ServerTrackerSearchScreen(
                 mutableState.update { it.copy(queryResult = null, selected = null) }
                 val result = withIOContext {
                     runCatching {
-                        client.searchTracker(tracker.id, query)
-                            .map { it.toTrackSearch() }
+                        client.searchTracker(tracker.id.toInt(), query)
+                            .map { it.toServerTrackSearchResult() }
                     }
                 }
                 mutableState.update {
                     it.copy(
                         queryResult = result,
-                        selected = result.getOrNull()?.find { search -> search.tracking_url == currentUrl },
+                        selected = result.getOrNull()?.find { search -> search.trackingUrl == currentUrl },
                     )
                 }
             }
         }
 
         fun bind(
-            item: TrackSearch,
+            item: ServerTrackSearchResult,
             private: Boolean,
             onComplete: () -> Unit,
         ) {
             screenModelScope.launchNonCancellable {
                 runCatching {
-                    client.bindTrack(mangaId, tracker.id, item.remote_id, private)
+                    client.bindTrack(mangaId, tracker.id.toInt(), item.remoteId, private)
                 }.onSuccess {
-                    ServerStateSync.requestRefresh()
+                    ServerStateSync.requestRefresh(*serverTrackAffectedEntities(mangaId).toTypedArray())
                     withUIContext { onComplete() }
                 }.onFailure { e ->
                     if (e is CancellationException) throw e
                     logcat(LogPriority.ERROR, e) { "Failed to bind Suwayomi track" }
-                    withUIContext { Injekt.get<Application>().toast(e.message ?: "Tracking failed") }
+                    withUIContext { context.toast(e.message ?: "Tracking failed") }
                 }
             }
         }
 
-        fun select(selected: TrackSearch) {
+        fun select(selected: ServerTrackSearchResult) {
             mutableState.update { it.copy(selected = selected) }
         }
 
         @Immutable
         data class State(
-            val queryResult: Result<List<TrackSearch>>? = null,
-            val selected: TrackSearch? = null,
+            val queryResult: Result<List<ServerTrackSearchResult>>? = null,
+            val selected: ServerTrackSearchResult? = null,
         )
     }
 }
@@ -382,8 +409,8 @@ private data class ServerTrackerSearchScreen(
 private data class ServerTrackStatusSelectorScreen(
     private val mangaId: Int,
     private val mangaTitle: String,
-    private val track: DomainTrack,
-    private val tracker: ServerTracker,
+    private val track: ServerTrackRecord,
+    private val tracker: ServerTrackerPresentation,
 ) : Screen() {
     @Composable
     override fun Content() {
@@ -403,10 +430,7 @@ private data class ServerTrackStatusSelectorScreen(
                 selection = selection,
                 onSelectionChange = { selection = it },
                 selections = remember {
-                    tracker.dto.statuses.associate {
-                        it.value.toLong() to
-                            it.name.toStatusStringResource()
-                    }
+                    tracker.statuses.associate { it.value to it.label }
                 },
                 onConfirm = { pending = true },
                 onDismissRequest = navigator::pop,
@@ -418,7 +442,7 @@ private data class ServerTrackStatusSelectorScreen(
 private data class ServerTrackChapterSelectorScreen(
     private val mangaId: Int,
     private val mangaTitle: String,
-    private val track: DomainTrack,
+    private val track: ServerTrackRecord,
 ) : Screen() {
     @Composable
     override fun Content() {
@@ -448,8 +472,8 @@ private data class ServerTrackChapterSelectorScreen(
 private data class ServerTrackScoreSelectorScreen(
     private val mangaId: Int,
     private val mangaTitle: String,
-    private val track: DomainTrack,
-    private val tracker: ServerTracker,
+    private val track: ServerTrackRecord,
+    private val tracker: ServerTrackerPresentation,
 ) : Screen() {
     @Composable
     override fun Content() {
@@ -468,7 +492,7 @@ private data class ServerTrackScoreSelectorScreen(
             TrackScoreSelector(
                 selection = selection,
                 onSelectionChange = { selection = it },
-                selections = remember { tracker.getScoreList() },
+                selections = remember { tracker.scores },
                 onConfirm = { pending = true },
                 onDismissRequest = navigator::pop,
             )
@@ -479,7 +503,7 @@ private data class ServerTrackScoreSelectorScreen(
 private data class ServerTrackDateSelectorScreen(
     private val mangaId: Int,
     private val mangaTitle: String,
-    private val track: DomainTrack,
+    private val track: ServerTrackRecord,
     private val start: Boolean,
 ) : Screen() {
     @Transient
@@ -562,8 +586,8 @@ private data class ServerTrackDateSelectorScreen(
 private data class ServerTrackerRemoveScreen(
     private val mangaId: Int,
     private val mangaTitle: String,
-    private val track: DomainTrack,
-    private val tracker: ServerTracker,
+    private val track: ServerTrackRecord,
+    private val tracker: ServerTrackerPresentation,
 ) : Screen() {
     @Composable
     override fun Content() {
@@ -596,7 +620,7 @@ private data class ServerTrackerRemoveScreen(
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small)) {
                         Text(text = stringResource(MR.strings.track_delete_text, tracker.name))
-                        if (tracker.dto.supportsTrackDeletion) {
+                        if (tracker.supportsTrackDeletion) {
                             LabeledCheckbox(
                                 label = stringResource(MR.strings.track_delete_remote_text, tracker.name),
                                 checked = removeRemoteTrack,
@@ -640,9 +664,9 @@ private fun ServerUpdateEffect(
     val context = LocalContext.current
     LaunchedEffect(Unit) {
         runCatching {
-            suwayomiClient().action()
+            context.appDependencies.suwayomiClientProvider.graphQlClient.action()
         }.onSuccess {
-            ServerStateSync.requestRefresh()
+            ServerStateSync.requestRefresh(*serverTrackAffectedEntities(mangaId).toTypedArray())
             navigator.replaceAll(ServerTrackInfoDialogScreen(mangaId, mangaTitle))
         }.onFailure { e ->
             if (e is CancellationException) throw e
@@ -654,19 +678,10 @@ private fun ServerUpdateEffect(
     LoadingScreen()
 }
 
-private data class ServerTracker(
-    val dto: SuwayomiTrackerDto,
-    private val displayScores: Map<Long, String> = emptyMap(),
-) : Tracker, DeletableTracker {
-    override val id: Long = dto.id.toLong()
-    override val name: String = dto.name
-    override val client: OkHttpClient = Injekt.get<NetworkHelper>().client
-    override val supportsReadingDates: Boolean = dto.supportsReadingDates
-    override val supportsPrivateTracking: Boolean = dto.supportsPrivateTracking
-    override val isLoggedIn: Boolean = dto.isLoggedIn
-    override val isLoggedInFlow: Flow<Boolean> = MutableStateFlow(dto.isLoggedIn)
-
-    override fun getLogo(): Int = when (dto.name.lowercase()) {
+private fun SuwayomiTrackerDto.toPresentation(
+    displayScores: Map<Long, String> = emptyMap(),
+): ServerTrackerPresentation {
+    val logoRes = when (name.lowercase()) {
         "myanimelist" -> R.drawable.brand_myanimelist
         "anilist" -> R.drawable.brand_anilist
         "kitsu" -> R.drawable.brand_kitsu
@@ -675,52 +690,22 @@ private data class ServerTracker(
         "bangumi" -> R.drawable.brand_bangumi
         else -> R.drawable.brand_suwayomi
     }
-
-    override fun getStatusList(): List<Long> = dto.statuses.map { it.value.toLong() }
-    override fun getStatus(
-        status: Long,
-    ): StringResource? = dto.statuses.firstOrNull { it.value.toLong() == status }?.name.toStatusStringResource()
-    override fun getReadingStatus(): Long = dto.statuses.firstOrNull()?.value?.toLong() ?: 0
-    override fun getRereadingStatus(): Long =
-        dto.statuses.firstOrNull { it.name.equals("Rereading", ignoreCase = true) }?.value?.toLong()
-            ?: getReadingStatus()
-    override fun getCompletionStatus(): Long =
-        dto.statuses.firstOrNull { it.name.equals("Completed", ignoreCase = true) }?.value?.toLong()
-            ?: getReadingStatus()
-    override fun getScoreList(): List<String> = dto.scores
-    override fun get10PointScore(track: DomainTrack): Double = track.score
-    override fun indexToScore(index: Int): Double = dto.scores.getOrNull(index)?.toDoubleOrNull() ?: 0.0
-    override fun displayScore(track: DomainTrack): String =
-        displayScores[track.id]?.takeIf { it.isNotBlank() } ?: track.score.toString()
-
-    override suspend fun update(track: Track, didReadChapter: Boolean): Track = unsupported()
-    override suspend fun bind(track: Track, hasReadChapters: Boolean): Track = unsupported()
-    override suspend fun search(query: String): List<TrackSearch> = unsupported()
-    override suspend fun refresh(track: Track): Track = unsupported()
-    override suspend fun login(username: String, password: String) = unsupported<Unit>()
-    override fun logout() = Unit
-    override fun getUsername(): String = ""
-    override fun getPassword(): String = ""
-    override fun getDisplayUsername(): String = ""
-    override fun saveDisplayUsername(displayName: String) = Unit
-    override fun saveCredentials(username: String, password: String) = Unit
-    override suspend fun register(item: Track, mangaId: Long) = unsupported<Unit>()
-    override suspend fun setRemoteStatus(track: Track, status: Long) = unsupported<Unit>()
-    override suspend fun setRemoteLastChapterRead(track: Track, chapterNumber: Int) = unsupported<Unit>()
-    override suspend fun setRemoteScore(track: Track, scoreString: String) = unsupported<Unit>()
-    override suspend fun setRemoteStartDate(track: Track, epochMillis: Long) = unsupported<Unit>()
-    override suspend fun setRemoteFinishDate(track: Track, epochMillis: Long) = unsupported<Unit>()
-    override suspend fun setRemotePrivate(track: Track, private: Boolean) = unsupported<Unit>()
-    override suspend fun delete(track: DomainTrack) = unsupported<Unit>()
+    return ServerTrackerPresentation(
+        id = id.toLong(),
+        name = name,
+        logoRes = logoRes,
+        supportsReadingDates = supportsReadingDates,
+        supportsPrivateTracking = supportsPrivateTracking,
+        supportsTrackDeletion = supportsTrackDeletion,
+        statuses = statuses.map { ServerTrackerPresentation.Status(it.value.toLong(), it.name.toStatusStringResource()) },
+        scores = scores,
+        displayScores = displayScores,
+    )
 }
 
-private fun SuwayomiTrackRecordDto.toDomainTrack(): DomainTrack {
-    return DomainTrack(
+private fun SuwayomiTrackRecordDto.toServerTrackRecord(): ServerTrackRecord {
+    return ServerTrackRecord(
         id = id.toLong(),
-        mangaId = mangaId.toLong(),
-        trackerId = trackerId.toLong(),
-        remoteId = remoteId.toLongOrNull() ?: 0L,
-        libraryId = libraryId?.toLongOrNull(),
         title = title,
         lastChapterRead = lastChapterRead,
         totalChapters = totalChapters.toLong(),
@@ -733,26 +718,19 @@ private fun SuwayomiTrackRecordDto.toDomainTrack(): DomainTrack {
     )
 }
 
-private fun SuwayomiTrackSearchDto.toTrackSearch(): TrackSearch {
-    return TrackSearch.create(trackerId.toLong()).also {
-        it.id = id.toLong()
-        it.remote_id = remoteId.toLongOrNull() ?: 0L
-        it.library_id = libraryId?.toLongOrNull()
-        it.title = title
-        it.last_chapter_read = lastChapterRead
-        it.total_chapters = totalChapters.toLong()
-        it.tracking_url = trackingUrl
-        it.cover_url = coverUrl.orEmpty()
-        it.summary = summary.orEmpty()
-        it.publishing_status = publishingStatus.orEmpty()
-        it.publishing_type = publishingType.orEmpty()
-        it.start_date = startDate.orEmpty()
-        it.status = status.toLong()
-        it.score = score
-        it.started_reading_date = startedReadingDate.toLongOrNull() ?: 0L
-        it.finished_reading_date = finishedReadingDate.toLongOrNull() ?: 0L
-        it.private = private
-    }
+private fun SuwayomiTrackSearchDto.toServerTrackSearchResult(): ServerTrackSearchResult {
+    return ServerTrackSearchResult(
+        id = id.toLong(),
+        remoteId = remoteId.toLongOrNull() ?: 0L,
+        title = title,
+        coverUrl = coverUrl.orEmpty(),
+        summary = summary.orEmpty(),
+        publishingStatus = publishingStatus.orEmpty(),
+        publishingType = publishingType.orEmpty(),
+        startDate = startDate.orEmpty(),
+        score = score,
+        trackingUrl = trackingUrl,
+    )
 }
 
 private fun String?.toStatusStringResource(): StringResource? {
@@ -765,10 +743,6 @@ private fun String?.toStatusStringResource(): StringResource? {
         "rereading" -> MR.strings.repeating
         else -> null
     }
-}
-
-private fun suwayomiClient(): SuwayomiGraphQlClient {
-    return SuwayomiClientProvider().graphQlClient
 }
 
 private fun <T> unsupported(): T = throw UnsupportedOperationException(

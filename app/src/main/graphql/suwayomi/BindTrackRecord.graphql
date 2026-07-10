@@ -1,0 +1,7 @@
+mutation BindTrackRecord($input: BindTrackRecordInput!) {
+  bindTrackRecord(input: $input) {
+    trackRecord {
+      ...AmatsubuTrackRecord
+    }
+  }
+}

@@ -1,0 +1,5 @@
+mutation TrackProgress($input: TrackProgressInput!) {
+  trackProgress(input: $input) {
+    clientMutationId
+  }
+}

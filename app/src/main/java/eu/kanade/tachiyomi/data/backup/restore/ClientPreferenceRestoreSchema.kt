@@ -7,6 +7,11 @@ package eu.kanade.tachiyomi.data.backup.restore
  */
 object ClientPreferenceRestoreSchema {
 
+    /**
+     * Restore allowlist for client-owned app settings. Server-owned backup
+     * sections are handled by [BackupCompatibilityPolicy] and must stay ignored
+     * instead of gaining Android-local restore authority.
+     */
     val defaultValues: Map<String, Any> = mapOf(
         // Library display and filters
         "display_download_badge" to false,

@@ -459,7 +459,6 @@
     <string name="notification_chapters_single">Kapitulli %1$s</string>
     <string name="library_errors_help">Për ndihmë se si të rregulloni gabimet e përditësimit të bibliotekës, shihni %1$s</string>
     <string name="pref_create_backup">Krijo kopje rezervë</string>
-    <string name="pref_create_backup_summ">Mund të përdoret për të rivendosur bibliotekën aktuale</string>
     <string name="pref_restore_backup">Rivendos kopjen rezervë</string>
     <string name="backup_created">U krijua një kopje rezervë</string>
     <string name="backup_restore_missing_sources">Burimet që mungojnë:</string>
@@ -593,10 +592,6 @@
     <string name="file_select_backup">Zgjidhni skedarin rezervë</string>
     <string name="chapter_settings_updated">Cilësimet e kapitullit të parazgjedhur të përditësuara</string>
     <string name="theme_midnightdusk">Perëndim Mesnate</string>
-    <string name="pref_restore_backup_summ">Rivendosni bibliotekën nga skedari rezervë</string>
-    <string name="backup_restore_content_full">Të dhënat nga skedari rezervë do të rikthehen.
-\n
-\n Do t\'ju duhet të instaloni çdo shtesë që mungon dhe më pas të identifikoheni në shërbimet e gjurmimit për t\'i përdorur ato.</string>
     <string name="invalid_backup_file">Skedar rezervë i pavlefshëm</string>
     <string name="invalid_backup_file_missing_manga">Rezervimi nuk përmban asnjë element në bibliotekë.</string>
     <string name="pref_user_agent_string">Varg i parazgjedhur i agjentit të përdoruesit</string>

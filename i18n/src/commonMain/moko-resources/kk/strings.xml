@@ -401,9 +401,6 @@
     <string name="pref_dns_over_https">DNS арқылы HTTPS (DoH)</string>
     <string name="restoring_backup_canceled">Қалпына келтіру күші жойылды</string>
     <string name="popular">Танымал</string>
-    <string name="backup_restore_content_full">Сақтық көшірме файлынан дерек қалпына келеді.
-\n
-\nОны қолдану үшін сізге түгел жетпей тұрған кеңейтулерді жүктеп, бақылау қызметтеріне кіру керек.</string>
     <string name="chapter_not_found">Тарау табылмады</string>
     <string name="action_track">Бақылау</string>
     <string name="pref_tablet_ui_mode">Планшетті интерфейс</string>
@@ -442,9 +439,7 @@
     <string name="on_hiatus">Үзілісте</string>
     <string name="enhanced_tracking_info">Белгілі бір дереккөз үшін жақсартылған мүмкіндікті қамтамасыз ететін қызмет. Кітапханаға қосылған кезде топтама автоматты түрде аңдылады.</string>
     <string name="pref_restore_backup">Сақтық көшірмеден қайтару</string>
-    <string name="pref_create_backup_summ">Қазіргі кітапхананы қалпына келтіру үшін қолдануға болады</string>
     <string name="pref_backup_interval">Сақтық көшірме жиілігі</string>
-    <string name="pref_restore_backup_summ">Сақтық көшірмеден кітапхананы қайтару</string>
     <string name="creating_backup">Сақтық көшірмесін жасау</string>
     <string name="used_cache">Қолданылған: %1$s</string>
     <string name="cache_delete_error">Тазалауда қателік пайда болды</string>

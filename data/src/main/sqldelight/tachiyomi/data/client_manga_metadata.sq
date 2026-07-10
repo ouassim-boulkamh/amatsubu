@@ -1,0 +1,35 @@
+-- Explicit Amatsubu-owned metadata. This is not a cache of Suwayomi manga state.
+CREATE TABLE client_manga_metadata(
+    server_key TEXT NOT NULL,
+    source_id INTEGER NOT NULL,
+    manga_id INTEGER NOT NULL,
+    notes TEXT NOT NULL,
+    memo TEXT NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY(server_key, source_id, manga_id)
+);
+
+CREATE INDEX client_manga_metadata_server_manga_index
+ON client_manga_metadata(server_key, manga_id);
+
+upsertMetadata:
+INSERT INTO client_manga_metadata(server_key, source_id, manga_id, notes, memo, updated_at)
+VALUES (:serverKey, :sourceId, :mangaId, :notes, :memo, :updatedAt)
+ON CONFLICT(server_key, source_id, manga_id) DO UPDATE SET
+    notes = excluded.notes,
+    memo = excluded.memo,
+    updated_at = excluded.updated_at
+WHERE excluded.updated_at >= client_manga_metadata.updated_at;
+
+getMetadata:
+SELECT *
+FROM client_manga_metadata
+WHERE server_key = :serverKey
+AND source_id = :sourceId
+AND manga_id = :mangaId;
+
+getMetadataForServer:
+SELECT *
+FROM client_manga_metadata
+WHERE server_key = :serverKey
+ORDER BY updated_at, manga_id;

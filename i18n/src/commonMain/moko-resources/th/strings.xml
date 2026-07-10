@@ -146,9 +146,7 @@
     <string name="disabled">ปิดการใช้งาน</string>
     <string name="services">ตัวติดตาม</string>
     <string name="pref_create_backup">สำรองข้อมูล</string>
-    <string name="pref_create_backup_summ">สามารถใช้ในการเรียกคืนค่าคลังปัจจุบัน</string>
     <string name="pref_restore_backup">เรียกคืนค่าการสำรองข้อมูล</string>
-    <string name="pref_restore_backup_summ">เรียกคืนค่าคลังจากแฟ้มข้อมูลสำรอง</string>
     <string name="pref_backup_interval">ความถี่ในการสำรองข้อมูลอัตโนมัติ</string>
     <string name="backup_created">สร้างการสำรองข้อมูลแล้ว</string>
     <string name="restore_completed">คืนค่าเสร็จสมบูรณ์</string>
@@ -434,7 +432,6 @@
     <string name="creating_backup_error">การสำรองข้อมูลล้มเหลว</string>
     <string name="backup_in_progress">การสำรองข้อมูลกําลังดําเนินการอยู่แล้ว</string>
     <string name="restore_duration">%1$02d นาที %2$02d วินาที</string>
-    <string name="backup_restore_content_full">คุณจะต้องติดตั้งส่วนขยายที่ขาดหายไปและลงชื่อเข้าใช้บริการติดตามจึงจะสามารถใช้งานได้</string>
     <string name="backup_restore_missing_trackers">ตัวติดตามไม่ได้เข้าสู่ระบบ:</string>
     <string name="backup_restore_missing_sources">แหล่งที่มาที่หายไป:</string>
     <string name="invalid_backup_file_missing_manga">แฟ้มสํารองข้อมูลไม่มีรายการคลังใด ๆ</string>

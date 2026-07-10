@@ -145,9 +145,7 @@
     <string name="disabled">Απενεργοποιημένο</string>
     <string name="services">Ιχνηλάτες</string>
     <string name="pref_create_backup">Δημιουργία αντιγράφου ασφαλείας</string>
-    <string name="pref_create_backup_summ">Μπορεί να χρησιμοποιηθεί για επαναφορά τρέχουσας βιβλιοθήκης</string>
     <string name="pref_restore_backup">Επαναφορά αντιγράφου ασφαλείας</string>
-    <string name="pref_restore_backup_summ">Επαναφορά βιβλιοθήκης από αρχείο αντιγράφου ασφαλείας</string>
     <string name="pref_backup_interval">Συχνότητα αυτόματων αντιγράφων ασφαλείας</string>
     <string name="backup_created">Δημιουργήθηκε αντίγραφο ασφαλείας</string>
     <string name="restore_completed">Η επαναφορά ολοκληρώθηκε</string>
@@ -430,7 +428,6 @@
     <string name="pref_dual_page_split">Διαχωρισμός πλατιών σελίδων</string>
     <string name="pref_dual_page_invert_summary">Εάν η τοποθέτηση των διαχωρισμένων πλατιών σελίδων δεν ταιριάζει με την κατεύθυνση ανάγνωσης</string>
     <string name="pref_dual_page_invert">Αντιστροφή τοποθέτησης διαχωρισμένης σελίδας</string>
-    <string name="backup_restore_content_full">Ενδέχεται να χρειαστεί να εγκαταστήσετε τυχόν επεκτάσεις που λείπουν και στη συνέχεια να συνδεθείτε στις υπηρεσίες παρακολούθησης για να τις χρησιμοποιήσετε.</string>
     <string name="pref_show_navigation_mode_summary">Εμφάνιση εν συντομία κατά το άνοιγμα του προγράμματος ανάγνωσης</string>
     <string name="pref_show_navigation_mode">Εμφάνιση επικάλυψης ζωνών πατήματος</string>
     <string name="nav_zone_right">Δεξιά</string>

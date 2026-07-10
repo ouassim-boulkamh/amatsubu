@@ -1,5 +1,11 @@
 package eu.kanade.tachiyomi.data.suwayomi
 
+import eu.kanade.tachiyomi.data.suwayomi.generated.DownloadStatusChangedSubscription
+import eu.kanade.tachiyomi.data.suwayomi.generated.LibraryUpdateStatusChangedSubscription
+import eu.kanade.tachiyomi.data.suwayomi.generated.SyncStatusChangedSubscription
+import eu.kanade.tachiyomi.data.suwayomi.generated.type.DownloadChangedInput
+import eu.kanade.tachiyomi.data.suwayomi.generated.type.LibraryUpdateStatusChangedInput
+import com.apollographql.apollo.api.Optional
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -23,28 +29,10 @@ internal class SuwayomiGraphQlSubscriptionClient(
     private val endpoint: () -> String,
 ) {
     fun downloadStatusChanged(maxUpdates: Int = 150): Flow<SuwayomiDownloadUpdatesDto> {
-        val query = """
-            subscription DownloadStatusChanged(${'$'}input: DownloadChangedInput!) {
-              downloadStatusChanged(input: ${'$'}input) {
-                state
-                omittedUpdates
-                updates {
-                  type
-                  download {
-                    ...AmatsubuDownload
-                  }
-                }
-                initial {
-                  ...AmatsubuDownload
-                }
-              }
-            }
-
-            $DOWNLOAD_FRAGMENT
-        """.trimIndent()
+        val operation = DownloadStatusChangedSubscription(DownloadChangedInput(maxUpdates = Optional.present(maxUpdates)))
         return subscribe(
-            operationName = "DownloadStatusChanged",
-            query = query,
+            operationName = operation.name(),
+            query = operation.document(),
             variables = buildJsonObject {
                 putJsonObject("input") {
                     put("maxUpdates", maxUpdates)
@@ -55,21 +43,12 @@ internal class SuwayomiGraphQlSubscriptionClient(
     }
 
     fun libraryUpdateStatusChanged(maxUpdates: Int = 150): Flow<SuwayomiLibraryUpdateUpdatesDto> {
-        val query = """
-            subscription LibraryUpdateStatusChanged(${'$'}input: LibraryUpdateStatusChangedInput!) {
-              libraryUpdateStatusChanged(input: ${'$'}input) {
-                ...AmatsubuLibraryUpdateUpdates
-              }
-            }
-
-            $LIBRARY_UPDATE_UPDATES_FRAGMENT
-            $LIBRARY_UPDATE_STATUS_FRAGMENT
-            $CATEGORY_FRAGMENT
-            $MANGA_FRAGMENT
-        """.trimIndent()
+        val operation = LibraryUpdateStatusChangedSubscription(
+            LibraryUpdateStatusChangedInput(maxUpdates = Optional.present(maxUpdates)),
+        )
         return subscribe(
-            operationName = "LibraryUpdateStatusChanged",
-            query = query,
+            operationName = operation.name(),
+            query = operation.document(),
             variables = buildJsonObject {
                 putJsonObject("input") {
                     put("maxUpdates", maxUpdates)
@@ -80,18 +59,10 @@ internal class SuwayomiGraphQlSubscriptionClient(
     }
 
     fun syncStatusChanged(): Flow<SuwayomiSyncStatusDto> {
-        val query = """
-            subscription SyncStatusChanged {
-              syncStatusChanged {
-                ...AmatsubuSyncStatus
-              }
-            }
-
-            $SYNC_STATUS_FRAGMENT
-        """.trimIndent()
+        val operation = SyncStatusChangedSubscription()
         return subscribe(
-            operationName = "SyncStatusChanged",
-            query = query,
+            operationName = operation.name(),
+            query = operation.document(),
             deserializer = GraphQlResponse.serializer(SyncStatusChangedData.serializer()),
         ) { it.syncStatusChanged }
     }
@@ -186,137 +157,6 @@ internal class SuwayomiGraphQlSubscriptionClient(
         }
     }
 
-    private companion object {
-        private val CATEGORY_FRAGMENT = """
-            fragment AmatsubuCategory on CategoryType {
-              id
-              name
-              order
-              includeInDownload
-              includeInUpdate
-            }
-        """.trimIndent()
-
-        private val MANGA_FRAGMENT = """
-            fragment AmatsubuManga on MangaType {
-              artist
-              author
-              description
-              downloadCount
-              genre
-              id
-              inLibrary
-              inLibraryAt
-              initialized
-              latestFetchedChapter {
-                fetchedAt
-              }
-              latestReadChapter {
-                lastReadAt
-              }
-              latestUploadedChapter {
-                uploadDate
-              }
-              meta {
-                key
-                mangaId
-                value
-              }
-              sourceId
-              status
-              thumbnailUrl
-              title
-              unreadCount
-              updateStrategy
-              url
-            }
-        """.trimIndent()
-
-        private val DOWNLOAD_FRAGMENT = """
-            fragment AmatsubuDownload on DownloadType {
-              chapter {
-                id
-                name
-                chapterNumber
-                uploadDate
-                sourceOrder
-                isDownloaded
-              }
-              manga {
-                id
-                title
-                downloadCount
-                thumbnailUrl
-              }
-              progress
-              state
-              tries
-              position
-            }
-        """.trimIndent()
-
-        private val LIBRARY_UPDATE_STATUS_FRAGMENT = """
-            fragment AmatsubuLibraryUpdateStatus on LibraryUpdateStatus {
-              categoryUpdates {
-                category {
-                  ...AmatsubuCategory
-                }
-                status
-              }
-              mangaUpdates {
-                manga {
-                  ...AmatsubuManga
-                }
-                status
-              }
-              jobsInfo {
-                isRunning
-                totalJobs
-                finishedJobs
-                skippedCategoriesCount
-                skippedMangasCount
-              }
-            }
-        """.trimIndent()
-
-        private val LIBRARY_UPDATE_UPDATES_FRAGMENT = """
-            fragment AmatsubuLibraryUpdateUpdates on UpdaterUpdates {
-              categoryUpdates {
-                category {
-                  ...AmatsubuCategory
-                }
-                status
-              }
-              mangaUpdates {
-                manga {
-                  ...AmatsubuManga
-                }
-                status
-              }
-              initial {
-                ...AmatsubuLibraryUpdateStatus
-              }
-              jobsInfo {
-                isRunning
-                totalJobs
-                finishedJobs
-                skippedCategoriesCount
-                skippedMangasCount
-              }
-              omittedUpdates
-            }
-        """.trimIndent()
-
-        private val SYNC_STATUS_FRAGMENT = """
-            fragment AmatsubuSyncStatus on SyncStatus {
-              state
-              startDate
-              endDate
-              backupRestoreId
-              errorMessage
-            }
-        """.trimIndent()
-    }
 }
 
 internal fun toSuwayomiWebSocketUrl(endpoint: String): String {

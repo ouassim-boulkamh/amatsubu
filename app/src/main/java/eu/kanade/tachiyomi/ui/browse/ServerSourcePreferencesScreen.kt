@@ -23,6 +23,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import eu.kanade.tachiyomi.di.appDependencies
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -36,9 +38,11 @@ import eu.kanade.presentation.more.settings.widget.SwitchPreferenceWidget
 import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
-import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateEntity
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiSourcePreferenceChange
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiSourcePreferenceDto
+import eu.kanade.tachiyomi.data.suwayomi.serverSourcePreferenceAffectedEntities
+import eu.kanade.tachiyomi.ui.ServerForegroundRefreshEffect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import tachiyomi.core.common.util.lang.withIOContext
@@ -55,10 +59,11 @@ data class ServerSourcePreferencesScreen(
 
     @Composable
     override fun Content() {
+        val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
         val lifecycleOwner = LocalLifecycleOwner.current
         val scope = rememberCoroutineScope()
-        val provider = remember { SuwayomiClientProvider() }
+        val provider = remember(context) { context.appDependencies.suwayomiClientProvider }
         var preferences by remember { mutableStateOf<List<SuwayomiSourcePreferenceDto>>(emptyList()) }
         var isLoading by remember { mutableStateOf(true) }
         var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -89,7 +94,7 @@ data class ServerSourcePreferencesScreen(
                 }.onSuccess {
                     preferences = it
                     errorMessage = null
-                    ServerStateSync.requestRefresh()
+                    ServerStateSync.requestRefresh(*serverSourcePreferenceAffectedEntities(sourceId).toTypedArray())
                 }.onFailure {
                     errorMessage = it.message ?: it.toString()
                 }
@@ -101,9 +106,21 @@ data class ServerSourcePreferencesScreen(
         }
 
         LaunchedEffect(sourceId) {
-            ServerStateSync.refreshes.collectLatest {
-                loadPreferences(showLoading = false)
+            ServerStateSync.invalidations
+                .collectLatest { invalidation ->
+                    if (
+                        invalidation.affectsAny(
+                            ServerStateEntity.Sources,
+                            ServerStateEntity.SourcePreferences(sourceId),
+                        )
+                    ) {
+                        loadPreferences(showLoading = false)
+                    }
             }
+        }
+
+        ServerForegroundRefreshEffect {
+            loadPreferences(showLoading = false)
         }
 
         DisposableEffect(lifecycleOwner, sourceId) {

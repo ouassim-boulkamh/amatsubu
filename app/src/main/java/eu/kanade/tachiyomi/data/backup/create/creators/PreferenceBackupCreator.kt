@@ -10,11 +10,9 @@ import eu.kanade.tachiyomi.data.backup.models.StringPreferenceValue
 import eu.kanade.tachiyomi.data.backup.models.StringSetPreferenceValue
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 class PreferenceBackupCreator(
-    private val preferenceStore: PreferenceStore = Injekt.get(),
+    private val preferenceStore: PreferenceStore,
 ) {
 
     fun createApp(includePrivatePreferences: Boolean): List<BackupPreference> {

@@ -4,9 +4,9 @@ import dev.icerock.moko.resources.StringResource
 import tachiyomi.i18n.MR
 
 data class BackupOptions(
-    val libraryEntries: Boolean = true,
-    val categories: Boolean = true,
-    val chapters: Boolean = true,
+    val libraryEntries: Boolean = false,
+    val categories: Boolean = false,
+    val chapters: Boolean = false,
     val tracking: Boolean = false,
     val history: Boolean = false,
     val readEntries: Boolean = false,
@@ -52,15 +52,15 @@ data class BackupOptions(
         )
 
         fun fromBooleanArray(array: BooleanArray) = BackupOptions(
-            libraryEntries = array[0],
-            categories = array[1],
-            chapters = array[2],
-            tracking = array[3],
-            history = array[4],
-            readEntries = array[5],
-            appSettings = array[6],
-            sourceSettings = array[7],
-            privateSettings = array[8],
+            libraryEntries = false,
+            categories = false,
+            chapters = false,
+            tracking = false,
+            history = false,
+            readEntries = false,
+            appSettings = array.getOrElse(6) { true },
+            sourceSettings = array.getOrElse(7) { true },
+            privateSettings = array.getOrElse(8) { false },
         )
     }
 

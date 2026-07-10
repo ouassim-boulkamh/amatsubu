@@ -457,9 +457,7 @@
     <string name="pref_storage_location">Месца сховішча</string>
     <string name="pref_storage_location_info">Для аўтаматычных рэзервовак, спампоўвання раздзелаў і лакальных крыніц.</string>
     <string name="pref_create_backup">Зарэзерваваць</string>
-    <string name="pref_create_backup_summ">можна выкарыстаць каб аднавіць бягучую бібліятэку</string>
     <string name="pref_restore_backup">Аднавіць з рэзервоўкі</string>
-    <string name="pref_restore_backup_summ">Аднавіць бібліятэку з файла рэзервоўкі</string>
     <string name="pref_backup_interval">Частата аўтаматычнага рэзервавання</string>
     <string name="action_create">Стварыць</string>
     <string name="backup_created">Рэзервоўка створана</string>
@@ -470,7 +468,6 @@
     <string name="invalid_backup_file_unknown">Файл рэзервоўкі пашкоджаны</string>
     <string name="backup_restore_missing_sources">Адсутныя крыніцы:</string>
     <string name="backup_restore_missing_trackers">Трэкеры без аўтарызацыі:</string>
-    <string name="backup_restore_content_full">Вам можа спатрэбіцца ўсталяваць адсутныя пашырэнні і ўвайсці ў трэкеры для іх выкарыстання.</string>
     <string name="restore_completed">Аднаўленне завершана</string>
     <string name="restore_duration">%1$02d хв %2$02d сек</string>
     <string name="backup_in_progress">Рэзерваванне ўжо выконваецца</string>

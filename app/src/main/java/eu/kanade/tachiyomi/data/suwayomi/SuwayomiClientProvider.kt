@@ -3,22 +3,32 @@ package eu.kanade.tachiyomi.data.suwayomi
 import eu.kanade.tachiyomi.network.NetworkHelper
 import kotlinx.serialization.json.Json
 import tachiyomi.core.common.preference.PreferenceStore
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 internal class SuwayomiClientProvider(
-    preferenceStore: PreferenceStore = Injekt.get(),
-    networkHelper: NetworkHelper = Injekt.get(),
-    json: Json = Injekt.get(),
-    snapshotCache: SuwayomiSnapshotCache? = Injekt.getInstanceOrNull(SuwayomiSnapshotCache::class.java),
+    preferenceStore: PreferenceStore,
+    networkHelper: NetworkHelper,
+    json: Json,
+    snapshotCache: SuwayomiSnapshotCache?,
+    tokenStore: SuwayomiTokenStore,
 ) {
-    val preferences = SuwayomiPreferences(preferenceStore)
+    val preferences = SuwayomiPreferences(preferenceStore, tokenStore)
 
-    val httpClient = preferences.httpClient(networkHelper.client)
+    private val unauthenticatedGraphQlClient = SuwayomiGraphQlClient(
+        client = SuwayomiPreferences(preferenceStore).httpClient(networkHelper.client),
+        endpoint = preferences::graphQlEndpoint,
+        snapshotCache = snapshotCache,
+    )
+
+    val tokenAuth = SuwayomiTokenAuthApi(
+        operations = unauthenticatedGraphQlClient,
+        tokenStore = tokenStore,
+        serverKey = ::serverKey,
+    )
+
+    val httpClient = preferences.httpClient(networkHelper.client, tokenAuth::refresh)
 
     val graphQlClient = SuwayomiGraphQlClient(
         client = httpClient,
-        json = json,
         endpoint = preferences::graphQlEndpoint,
         snapshotCache = snapshotCache,
     )
@@ -36,7 +46,9 @@ internal class SuwayomiClientProvider(
 
     fun baseUrl(): String = preferences.baseUrl()
 
-    fun serverKey(): String = preferences.graphQlEndpoint().trimEnd('/')
+    fun serverIdentity(): SuwayomiServerIdentity = SuwayomiServerIdentity.fromBaseUrl(baseUrl())
+
+    fun serverKey(): String = serverIdentity().serverKey
 
     fun restUrl(path: String): String = "${baseUrl()}/${path.trimStart('/')}"
 }

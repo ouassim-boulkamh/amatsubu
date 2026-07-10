@@ -1,0 +1,7 @@
+query TrackRecords($mangaId: Int!) {
+  trackRecords(condition: { mangaId: $mangaId }) {
+    nodes {
+      ...AmatsubuTrackRecord
+    }
+  }
+}

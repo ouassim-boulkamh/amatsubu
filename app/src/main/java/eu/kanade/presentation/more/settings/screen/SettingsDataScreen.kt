@@ -41,9 +41,9 @@ import eu.kanade.tachiyomi.data.backup.restore.RestoreOptions
 import eu.kanade.tachiyomi.data.cache.ChapterCache
 import eu.kanade.tachiyomi.data.export.LibraryExporter
 import eu.kanade.tachiyomi.data.export.LibraryExporter.ExportOptions
-import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaDto
 import eu.kanade.tachiyomi.data.suwayomi.normalizedGenre
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.ui.download.ClientDeviceCopiesScreen
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.Dispatchers
@@ -55,16 +55,13 @@ import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.manga.model.Manga
-import tachiyomi.domain.storage.service.StoragePreferences
+import eu.kanade.domain.manga.model.Manga
+import eu.kanade.domain.storage.service.StoragePreferences
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.LabeledCheckbox
 import tachiyomi.presentation.core.components.material.TextButton
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 object SettingsDataScreen : SearchableSettings {
 
@@ -88,7 +85,8 @@ object SettingsDataScreen : SearchableSettings {
 
     @Composable
     override fun getPreferences(): List<Preference> {
-        val storagePreferences = Injekt.get<StoragePreferences>()
+        val context = LocalContext.current
+        val storagePreferences = remember(context) { context.appDependencies.storagePreferences }
         val navigator = LocalNavigator.currentOrThrow
 
         return listOf(
@@ -374,9 +372,9 @@ object SettingsDataScreen : SearchableSettings {
     private fun getDataGroup(): Preference.PreferenceGroup {
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
-        val libraryPreferences = remember { Injekt.get<LibraryPreferences>() }
-
-        val chapterCache = remember { Injekt.get<ChapterCache>() }
+        val dependencies = remember(context) { context.appDependencies }
+        val libraryPreferences = dependencies.libraryPreferences
+        val chapterCache = dependencies.chapterCache
         var cacheReadableSizeSema by remember { mutableIntStateOf(0) }
         val cacheReadableSize = remember(cacheReadableSizeSema) { chapterCache.readableSize }
 
@@ -424,7 +422,7 @@ object SettingsDataScreen : SearchableSettings {
 
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
-        val suwayomiClient = remember { SuwayomiClientProvider().graphQlClient }
+        val suwayomiClient = remember(context) { context.appDependencies.suwayomiClientProvider.graphQlClient }
         var favorites by remember { mutableStateOf<List<Manga>>(emptyList()) }
         LaunchedEffect(Unit) {
             favorites = runCatching {

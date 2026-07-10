@@ -1,6 +1,6 @@
 package eu.kanade.tachiyomi.ui.library
 
-import tachiyomi.domain.library.model.LibraryManga
+import eu.kanade.domain.library.model.LibraryManga
 
 private const val LOCAL_SOURCE_ID_ALIAS = "local"
 

@@ -433,7 +433,6 @@
     <string name="pref_landscape_zoom">Automatikusan nagyítsa a széles képeket</string>
     <string name="restore_completed">Helyreállítás befejeződött</string>
     <string name="restore_duration">%1$02d perc, %2$02d mp.</string>
-    <string name="backup_restore_content_full">Előfordulhat, hogy telepítenie kell a hiányzó bővítményeket, majd később be kell jelentkeznie a nyilvántartási szolgáltatásokba a használatukhoz.</string>
     <string name="pref_refresh_library_covers">Könyvtár fedők frissítése</string>
     <string name="pref_dump_crash_logs">Hibaüzenetetek törlése</string>
     <string name="pref_reset_viewer_flags">Sorozat beállításainak visszaállítása</string>
@@ -546,9 +545,7 @@
     <string name="disabled_nav">Kikapcsolva</string>
     <string name="enhanced_tracking_info">Szolgáltatások, amelyek fejlett funkciókat kínálnak. Az elemek automatikusan könyvtárhoz lesznek adva és frissítve lesznek.</string>
     <string name="pref_create_backup">Biztonsági mentés készítése</string>
-    <string name="pref_create_backup_summ">Felhasználható az aktuális könyvtár visszaállítására</string>
     <string name="pref_restore_backup">Biztonsági mentésből visszaállítás</string>
-    <string name="pref_restore_backup_summ">Könyvtár visszaállítása biztonsági mentésről</string>
     <string name="pref_backup_interval">Biztonsági mentések gyakorisága</string>
     <string name="restoring_backup">Biztonsági mentés helyreállítása</string>
     <string name="restoring_backup_error">Nem sikerült a biztonsági mentés helyreállítása</string>
