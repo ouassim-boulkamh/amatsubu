@@ -54,8 +54,6 @@ import dev.icerock.moko.resources.StringResource
 import eu.kanade.presentation.components.DropdownMenu
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import eu.kanade.presentation.track.components.TrackLogoIcon
-import eu.kanade.tachiyomi.data.track.Tracker
-import eu.kanade.tachiyomi.ui.manga.track.TrackItem
 import eu.kanade.tachiyomi.util.lang.toLocalDate
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import tachiyomi.i18n.MR
@@ -64,18 +62,18 @@ import java.time.format.DateTimeFormatter
 
 @Composable
 fun TrackInfoDialogHome(
-    trackItems: List<TrackItem>,
+    trackItems: List<ServerTrackItem>,
     dateFormat: DateTimeFormatter,
-    onStatusClick: (TrackItem) -> Unit,
-    onChapterClick: (TrackItem) -> Unit,
-    onScoreClick: (TrackItem) -> Unit,
-    onStartDateEdit: (TrackItem) -> Unit,
-    onEndDateEdit: (TrackItem) -> Unit,
-    onNewSearch: (TrackItem) -> Unit,
-    onOpenInBrowser: (TrackItem) -> Unit,
-    onRemoved: (TrackItem) -> Unit,
-    onCopyLink: (TrackItem) -> Unit,
-    onTogglePrivate: (TrackItem) -> Unit,
+    onStatusClick: (ServerTrackItem) -> Unit,
+    onChapterClick: (ServerTrackItem) -> Unit,
+    onScoreClick: (ServerTrackItem) -> Unit,
+    onStartDateEdit: (ServerTrackItem) -> Unit,
+    onEndDateEdit: (ServerTrackItem) -> Unit,
+    onNewSearch: (ServerTrackItem) -> Unit,
+    onOpenInBrowser: (ServerTrackItem) -> Unit,
+    onRemoved: (ServerTrackItem) -> Unit,
+    onCopyLink: (ServerTrackItem) -> Unit,
+    onTogglePrivate: (ServerTrackItem) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -88,13 +86,13 @@ fun TrackInfoDialogHome(
     ) {
         trackItems.forEach { item ->
             if (item.track != null) {
-                val supportsScoring = item.tracker.getScoreList().isNotEmpty()
+                val supportsScoring = item.tracker.scores.isNotEmpty()
                 val supportsReadingDates = item.tracker.supportsReadingDates
                 val supportsPrivate = item.tracker.supportsPrivateTracking
                 TrackInfoItem(
                     title = item.track.title,
                     tracker = item.tracker,
-                    status = item.tracker.getStatus(item.track.status),
+                    status = item.tracker.statusLabel(item.track.status),
                     onStatusClick = { onStatusClick(item) },
                     chapters = "${item.track.lastChapterRead.toInt()}".let {
                         val totalChapters = item.track.totalChapters
@@ -139,7 +137,7 @@ fun TrackInfoDialogHome(
 @Composable
 private fun TrackInfoItem(
     title: String,
-    tracker: Tracker,
+    tracker: ServerTrackerPresentation,
     status: StringResource?,
     onStatusClick: () -> Unit,
     chapters: String,
@@ -180,7 +178,8 @@ private fun TrackInfoItem(
                 },
             ) {
                 TrackLogoIcon(
-                    tracker = tracker,
+                    logoRes = tracker.logoRes,
+                    name = tracker.name,
                     onClick = onOpenInBrowser,
                     onLongClick = onCopyLink,
                 )
@@ -300,13 +299,13 @@ private fun TrackDetailsItem(
 
 @Composable
 private fun TrackInfoItemEmpty(
-    tracker: Tracker,
+    tracker: ServerTrackerPresentation,
     onNewSearch: () -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TrackLogoIcon(tracker)
+        TrackLogoIcon(logoRes = tracker.logoRes, name = tracker.name)
         TextButton(
             onClick = onNewSearch,
             modifier = Modifier

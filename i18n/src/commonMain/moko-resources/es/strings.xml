@@ -184,9 +184,7 @@
     <string name="color_filter_a_value">Alfa</string>
     <string name="disabled">Desactivado</string>
     <string name="pref_create_backup">Crear una copia de seguridad</string>
-    <string name="pref_create_backup_summ">Se puede utilizar para restaurar la biblioteca actual</string>
     <string name="pref_restore_backup">Restaurar copia de seguridad</string>
-    <string name="pref_restore_backup_summ">Restaurar la biblioteca a partir de una copia de seguridad</string>
     <string name="pref_backup_interval">Frecuencia de respaldo automático</string>
     <string name="backup_created">Copia de seguridad creada</string>
     <string name="restore_completed">Restauración completada</string>
@@ -424,7 +422,6 @@
     <string name="action_order_by_upload_date">Por fecha de subida</string>
     <string name="action_filter_tracked">En seguimiento</string>
     <string name="right_and_left_nav">Derecha e izquierda</string>
-    <string name="backup_restore_content_full">Tendrás que instalar las extensiones que falten e iniciar sesión en los servicios de seguimiento para poder usarlos.</string>
     <string name="clipboard_copy_error">No se pudo copiar al portapapeles</string>
     <string name="pref_dns_over_https">DNS sobre HTTPS (DoH)</string>
     <string name="pref_category_auto_download">Descarga automática</string>

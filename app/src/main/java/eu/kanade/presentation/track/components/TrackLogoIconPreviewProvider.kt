@@ -1,16 +1,12 @@
 package eu.kanade.presentation.track.components
 
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
-import eu.kanade.tachiyomi.data.track.Tracker
-import eu.kanade.test.DummyTracker
+import eu.kanade.tachiyomi.R
 
-internal class TrackLogoIconPreviewProvider : PreviewParameterProvider<Tracker> {
+internal class TrackLogoIconPreviewProvider : PreviewParameterProvider<Int> {
 
-    override val values: Sequence<Tracker>
+    override val values: Sequence<Int>
         get() = sequenceOf(
-            DummyTracker(
-                id = 1L,
-                name = "Dummy Tracker",
-            ),
+            R.drawable.brand_anilist,
         )
 }

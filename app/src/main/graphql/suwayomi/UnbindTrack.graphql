@@ -1,0 +1,7 @@
+mutation UnbindTrack($input: UnbindTrackInput!) {
+  unbindTrack(input: $input) {
+    trackRecord {
+      ...AmatsubuTrackRecord
+    }
+  }
+}

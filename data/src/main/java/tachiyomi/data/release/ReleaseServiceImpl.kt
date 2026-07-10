@@ -5,10 +5,10 @@ import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.network.parseAs
+import eu.kanade.domain.release.interactor.GetApplicationRelease
+import eu.kanade.domain.release.model.Release
+import eu.kanade.domain.release.service.ReleaseService
 import kotlinx.serialization.json.Json
-import tachiyomi.domain.release.interactor.GetApplicationRelease
-import tachiyomi.domain.release.model.Release
-import tachiyomi.domain.release.service.ReleaseService
 
 class ReleaseServiceImpl(
     private val networkService: NetworkHelper,

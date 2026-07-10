@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -16,8 +16,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.AdaptiveSheet
-import eu.kanade.tachiyomi.source.model.Filter
-import eu.kanade.tachiyomi.source.model.FilterList
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.CheckboxItem
@@ -33,13 +31,11 @@ import tachiyomi.presentation.core.i18n.stringResource
 @Composable
 fun SourceFilterDialog(
     onDismissRequest: () -> Unit,
-    filters: FilterList,
+    filters: SourceFilterList,
     onReset: () -> Unit,
     onFilter: () -> Unit,
-    onUpdate: (FilterList) -> Unit,
+    onUpdate: (SourceFilterList) -> Unit,
 ) {
-    val updateFilters = { onUpdate(filters) }
-
     AdaptiveSheet(onDismissRequest = onDismissRequest) {
         LazyColumn {
             stickyHeader {
@@ -69,114 +65,118 @@ fun SourceFilterDialog(
                 HorizontalDivider()
             }
 
-            items(filters) {
-                FilterItem(it, updateFilters)
+            itemsIndexed(filters.items) { index, filter ->
+                FilterItem(filter) { updatedFilter ->
+                    onUpdate(filters.replaceAt(index, updatedFilter))
+                }
             }
         }
     }
 }
 
 @Composable
-private fun FilterItem(filter: Filter<*>, onUpdate: () -> Unit) {
+private fun FilterItem(filter: SourceFilter, onUpdate: (SourceFilter) -> Unit) {
     when (filter) {
-        is Filter.Header -> {
+        is SourceFilter.Header -> {
             HeadingItem(filter.name)
         }
-        is Filter.Separator -> {
+        is SourceFilter.Separator -> {
             HorizontalDivider()
         }
-        is Filter.CheckBox -> {
+        is SourceFilter.CheckBox -> {
             CheckboxItem(
                 label = filter.name,
                 checked = filter.state,
             ) {
-                filter.state = !filter.state
-                onUpdate()
+                onUpdate(filter.copy(state = !filter.state))
             }
         }
-        is Filter.TriState -> {
+        is SourceFilter.TriState -> {
             TriStateItem(
                 label = filter.name,
                 state = filter.state.toTriStateFilter(),
             ) {
-                filter.state = filter.state.toTriStateFilter().next().toTriStateInt()
-                onUpdate()
+                onUpdate(filter.copy(state = filter.state.toTriStateFilter().next().toSourceFilterState()))
             }
         }
-        is Filter.Text -> {
+        is SourceFilter.Text -> {
             TextItem(
                 label = filter.name,
                 value = filter.state,
             ) {
-                filter.state = it
-                onUpdate()
+                onUpdate(filter.copy(state = it))
             }
         }
-        is Filter.Select<*> -> {
+        is SourceFilter.Select -> {
             SelectItem(
                 label = filter.name,
-                options = filter.values,
+                options = filter.values.toTypedArray(),
                 selectedIndex = filter.state,
             ) {
-                filter.state = it
-                onUpdate()
+                onUpdate(filter.copy(state = it))
             }
         }
-        is Filter.Sort -> {
+        is SourceFilter.Sort -> {
             CollapsibleBox(
                 heading = filter.name,
             ) {
                 Column {
                     filter.values.mapIndexed { index, item ->
-                        val sortAscending = filter.state?.ascending
-                            ?.takeIf { index == filter.state?.index }
+                        val sortAscending = filter.state
+                            ?.takeIf { index == it.index }
+                            ?.ascending
                         SortItem(
                             label = item,
                             sortDescending = if (sortAscending != null) !sortAscending else null,
                             onClick = {
-                                val ascending = if (index == filter.state?.index) {
-                                    !filter.state!!.ascending
+                                val currentSelection = filter.state
+                                val ascending = if (index == currentSelection?.index) {
+                                    !currentSelection.ascending
                                 } else {
-                                    filter.state?.ascending ?: true
+                                    currentSelection?.ascending ?: true
                                 }
-                                filter.state = Filter.Sort.Selection(
-                                    index = index,
-                                    ascending = ascending,
+                                onUpdate(
+                                    filter.copy(
+                                        state = SourceFilter.Sort.Selection(
+                                            index = index,
+                                            ascending = ascending,
+                                        ),
+                                    ),
                                 )
-                                onUpdate()
                             },
                         )
                     }
                 }
             }
         }
-        is Filter.Group<*> -> {
+        is SourceFilter.Group -> {
             CollapsibleBox(
                 heading = filter.name,
             ) {
                 Column {
-                    filter.state
-                        .filterIsInstance<Filter<*>>()
-                        .map { FilterItem(filter = it, onUpdate = onUpdate) }
+                    filter.state.mapIndexed { index, childFilter ->
+                        FilterItem(filter = childFilter) { updatedChildFilter ->
+                            onUpdate(filter.replaceAt(index, updatedChildFilter))
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-private fun Int.toTriStateFilter(): TriState {
+private fun SourceFilter.TriState.State.toTriStateFilter(): TriState {
     return when (this) {
-        Filter.TriState.STATE_IGNORE -> TriState.DISABLED
-        Filter.TriState.STATE_INCLUDE -> TriState.ENABLED_IS
-        Filter.TriState.STATE_EXCLUDE -> TriState.ENABLED_NOT
-        else -> throw IllegalStateException("Unknown TriState state: $this")
+        SourceFilter.TriState.State.IGNORE -> TriState.DISABLED
+        SourceFilter.TriState.State.INCLUDE -> TriState.ENABLED_IS
+        SourceFilter.TriState.State.EXCLUDE -> TriState.ENABLED_NOT
     }
 }
 
-private fun TriState.toTriStateInt(): Int {
+private fun TriState.toSourceFilterState(): SourceFilter.TriState.State {
     return when (this) {
-        TriState.DISABLED -> Filter.TriState.STATE_IGNORE
-        TriState.ENABLED_IS -> Filter.TriState.STATE_INCLUDE
-        TriState.ENABLED_NOT -> Filter.TriState.STATE_EXCLUDE
+        TriState.DISABLED -> SourceFilter.TriState.State.IGNORE
+        TriState.ENABLED_IS -> SourceFilter.TriState.State.INCLUDE
+        TriState.ENABLED_NOT -> SourceFilter.TriState.State.EXCLUDE
     }
 }

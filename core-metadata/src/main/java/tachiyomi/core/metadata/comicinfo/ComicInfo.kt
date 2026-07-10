@@ -1,6 +1,5 @@
 package tachiyomi.core.metadata.comicinfo
 
-import eu.kanade.tachiyomi.source.model.SManga
 import kotlinx.serialization.Serializable
 import nl.adaptivity.xmlutil.serialization.XmlElement
 import nl.adaptivity.xmlutil.serialization.XmlSerialName
@@ -8,7 +7,16 @@ import nl.adaptivity.xmlutil.serialization.XmlValue
 
 const val COMIC_INFO_FILE = "ComicInfo.xml"
 
-fun SManga.getComicInfo() = ComicInfo(
+data class ComicInfoMangaMetadata(
+    val title: String,
+    val description: String?,
+    val author: String?,
+    val artist: String?,
+    val genre: String?,
+    val status: Int,
+)
+
+fun ComicInfoMangaMetadata.toComicInfo() = ComicInfo(
     series = ComicInfo.Series(title),
     summary = description?.let { ComicInfo.Summary(it) },
     writer = author?.let { ComicInfo.Writer(it) },
@@ -30,35 +38,36 @@ fun SManga.getComicInfo() = ComicInfo(
     source = null,
 )
 
-fun SManga.copyFromComicInfo(comicInfo: ComicInfo) {
-    comicInfo.series?.let { title = it.value }
-    comicInfo.writer?.let { author = it.value }
-    comicInfo.summary?.let { description = it.value }
-
-    listOfNotNull(
-        comicInfo.genre?.value,
-        comicInfo.tags?.value,
-        comicInfo.categories?.value,
+fun ComicInfo.toMangaMetadata(): ComicInfoMangaMetadata {
+    val genre = listOfNotNull(
+        genre?.value,
+        tags?.value,
+        categories?.value,
     )
         .distinct()
         .joinToString(", ") { it.trim() }
         .takeIf { it.isNotEmpty() }
-        ?.let { genre = it }
 
-    listOfNotNull(
-        comicInfo.penciller?.value,
-        comicInfo.inker?.value,
-        comicInfo.colorist?.value,
-        comicInfo.letterer?.value,
-        comicInfo.coverArtist?.value,
+    val artist = listOfNotNull(
+        penciller?.value,
+        inker?.value,
+        colorist?.value,
+        letterer?.value,
+        coverArtist?.value,
     )
         .flatMap { it.split(", ") }
         .distinct()
         .joinToString(", ") { it.trim() }
         .takeIf { it.isNotEmpty() }
-        ?.let { artist = it }
 
-    status = ComicInfoPublishingStatus.toSMangaValue(comicInfo.publishingStatus?.value)
+    return ComicInfoMangaMetadata(
+        title = series?.value.orEmpty(),
+        description = summary?.value,
+        author = writer?.value,
+        artist = artist,
+        genre = genre,
+        status = ComicInfoPublishingStatus.toMangaStatusValue(publishingStatus?.value),
+    )
 }
 
 // https://anansi-project.github.io/docs/comicinfo/schemas/v2.0
@@ -164,26 +173,26 @@ data class ComicInfo(
 
 enum class ComicInfoPublishingStatus(
     val comicInfoValue: String,
-    val sMangaModelValue: Int,
+    val mangaStatusValue: Int,
 ) {
-    ONGOING("Ongoing", SManga.ONGOING),
-    COMPLETED("Completed", SManga.COMPLETED),
-    LICENSED("Licensed", SManga.LICENSED),
-    PUBLISHING_FINISHED("Publishing finished", SManga.PUBLISHING_FINISHED),
-    CANCELLED("Cancelled", SManga.CANCELLED),
-    ON_HIATUS("On hiatus", SManga.ON_HIATUS),
-    UNKNOWN("Unknown", SManga.UNKNOWN),
+    ONGOING("Ongoing", 1),
+    COMPLETED("Completed", 2),
+    LICENSED("Licensed", 3),
+    PUBLISHING_FINISHED("Publishing finished", 4),
+    CANCELLED("Cancelled", 5),
+    ON_HIATUS("On hiatus", 6),
+    UNKNOWN("Unknown", 0),
     ;
 
     companion object {
         fun toComicInfoValue(value: Long): String {
-            return entries.firstOrNull { it.sMangaModelValue == value.toInt() }?.comicInfoValue
+            return entries.firstOrNull { it.mangaStatusValue == value.toInt() }?.comicInfoValue
                 ?: UNKNOWN.comicInfoValue
         }
 
-        fun toSMangaValue(value: String?): Int {
-            return entries.firstOrNull { it.comicInfoValue == value }?.sMangaModelValue
-                ?: UNKNOWN.sMangaModelValue
+        fun toMangaStatusValue(value: String?): Int {
+            return entries.firstOrNull { it.comicInfoValue == value }?.mangaStatusValue
+                ?: UNKNOWN.mangaStatusValue
         }
     }
 }

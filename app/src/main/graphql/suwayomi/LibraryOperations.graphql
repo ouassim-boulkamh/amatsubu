@@ -1,0 +1,136 @@
+fragment AmatsubuLibraryManga on MangaType {
+  artist
+  author
+  description
+  downloadCount
+  genre
+  id
+  inLibrary
+  inLibraryAt
+  initialized
+  chaptersLastFetchedAt
+  lastFetchedAt
+  latestFetchedChapter { fetchedAt }
+  latestReadChapter { lastReadAt }
+  latestUploadedChapter { uploadDate }
+  meta { key mangaId value }
+  realUrl
+  sourceId
+  status
+  thumbnailUrl
+  title
+  unreadCount
+  updateStrategy
+  url
+}
+
+fragment AmatsubuLibraryChapter on ChapterType {
+  chapterNumber
+  fetchedAt
+  id
+  isDownloaded
+  isBookmarked
+  isRead
+  lastPageRead
+  lastReadAt
+  mangaId
+  name
+  realUrl
+  scanlator
+  sourceOrder
+  uploadDate
+  url
+}
+
+query GetNamedCategoryMangas($categoryIds: [Int!]!, $inLibrary: Boolean!) {
+  mangas(condition: { inLibrary: $inLibrary, categoryIds: $categoryIds }) {
+    nodes { ...AmatsubuLibraryManga }
+  }
+}
+
+query GetCategoryMangas($id: Int!) {
+  category(id: $id) {
+    mangas { nodes { ...AmatsubuLibraryManga } }
+  }
+}
+
+query GetLibraryMangas {
+  mangas(filter: { inLibrary: { equalTo: true } }) {
+    nodes { ...AmatsubuLibraryManga }
+  }
+}
+
+query GetLibraryChapters {
+  chapters(filter: { inLibrary: { equalTo: true } }, first: 10000) {
+    nodes { ...AmatsubuLibraryChapter }
+  }
+}
+
+query GetLibraryTrackingData {
+  libraryTrackingMangas: mangas(filter: { inLibrary: { equalTo: true } }, first: 10000) {
+    nodes {
+      id
+      trackRecords { nodes { trackerId score } }
+    }
+  }
+  trackers { nodes { id name isLoggedIn } }
+}
+
+query GetRecentChapters($first: Int!) {
+  chapters(
+    filter: { inLibrary: { equalTo: true } }
+    first: $first
+    order: [
+      { by: FETCHED_AT, byType: DESC }
+      { by: SOURCE_ORDER, byType: DESC }
+    ]
+  ) {
+    nodes {
+      ...AmatsubuLibraryChapter
+      manga { ...AmatsubuLibraryManga }
+    }
+  }
+}
+
+query GetReadingHistory($first: Int!) {
+  chapters(
+    filter: {
+      lastReadAt: { greaterThan: "0" }
+      or: [
+        { isRead: { equalTo: true } }
+        { lastPageRead: { greaterThan: 0 } }
+      ]
+    }
+    first: $first
+    order: [
+      { by: LAST_READ_AT, byType: DESC }
+      { by: SOURCE_ORDER, byType: DESC }
+    ]
+  ) {
+    nodes {
+      ...AmatsubuLibraryChapter
+      manga { ...AmatsubuLibraryManga }
+    }
+  }
+}
+
+query GetReadingHistoryIds($first: Int!, $offset: Int!) {
+  chapters(
+    filter: {
+      lastReadAt: { greaterThan: "0" }
+      or: [
+        { isRead: { equalTo: true } }
+        { lastPageRead: { greaterThan: 0 } }
+      ]
+    }
+    first: $first
+    offset: $offset
+    order: [
+      { by: LAST_READ_AT, byType: DESC }
+      { by: SOURCE_ORDER, byType: DESC }
+    ]
+  ) {
+    nodes { id }
+    totalCount
+  }
+}

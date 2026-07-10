@@ -2,8 +2,8 @@ package eu.kanade.presentation.history
 
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import eu.kanade.tachiyomi.ui.history.HistoryScreenModel
-import tachiyomi.domain.history.model.HistoryWithRelations
-import tachiyomi.domain.manga.model.MangaCover
+import eu.kanade.domain.history.model.HistoryWithRelations
+import eu.kanade.domain.manga.model.MangaCover
 import java.time.Instant
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit

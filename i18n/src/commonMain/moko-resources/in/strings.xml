@@ -120,9 +120,7 @@
     <string name="disabled">Tidak Aktif</string>
     <string name="services">Pelacakan</string>
     <string name="pref_create_backup">Buat cadangan</string>
-    <string name="pref_create_backup_summ">Dapat digunakan untuk memulihkan isi pustaka saat ini</string>
     <string name="pref_restore_backup">Pulihkan cadangan</string>
-    <string name="pref_restore_backup_summ">Pulihkan isi pustaka dari berkas cadangan</string>
     <string name="pref_backup_interval">Frekuensi pencadangan otomatis</string>
     <string name="backup_created">Cadangan dibuat</string>
     <string name="restore_completed">Pemulihan selesai</string>
@@ -443,7 +441,6 @@
     <string name="pref_dns_over_https">DNS melalui HTTPS (DoH)</string>
     <string name="kindlish_nav">semacam Kindle</string>
     <string name="pref_category_auto_download">Unduh otomatis</string>
-    <string name="backup_restore_content_full">Anda mungkin perlu memasang ulang ekstensi yang hilang dan log in ke layanan pelacakan setelahnya untuk menggunakannya.</string>
     <string name="notification_incognito_text">Matikan mode penyamaran</string>
     <string name="source_unsupported">Sumber tidak didukung</string>
     <string name="error_no_match">Tidak ditemukan kecocokan</string>

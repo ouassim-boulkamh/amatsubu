@@ -9,19 +9,20 @@ import eu.kanade.tachiyomi.data.backup.models.IntPreferenceValue
 import eu.kanade.tachiyomi.data.backup.models.LongPreferenceValue
 import eu.kanade.tachiyomi.data.backup.models.StringPreferenceValue
 import eu.kanade.tachiyomi.data.backup.models.StringSetPreferenceValue
-import eu.kanade.tachiyomi.source.sourcePreferences
 import logcat.LogPriority
 import tachiyomi.core.common.preference.AndroidPreferenceStore
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.util.system.logcat
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 class PreferenceRestorer(
     context: Context?,
-    private val preferenceStore: PreferenceStore = Injekt.get(),
+    private val preferenceStore: PreferenceStore,
     private val sourcePreferenceStoreFactory: (String) -> PreferenceStore = { sourceKey ->
-        AndroidPreferenceStore(checkNotNull(context), sourcePreferences(sourceKey))
+        val appContext = checkNotNull(context)
+        AndroidPreferenceStore(
+            appContext,
+            appContext.getSharedPreferences(restoredSourcePreferenceFileName(sourceKey), Context.MODE_PRIVATE),
+        )
     },
 ) {
 
@@ -104,6 +105,8 @@ class PreferenceRestorer(
         }
     }
 }
+
+internal fun restoredSourcePreferenceFileName(sourceKey: String): String = sourceKey
 
 data class PreferenceRestoreResult(
     val restored: Int = 0,

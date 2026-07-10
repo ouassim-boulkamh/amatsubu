@@ -145,9 +145,7 @@
     <string name="disabled">关闭</string>
     <string name="services">平台</string>
     <string name="pref_create_backup">创建备份</string>
-    <string name="pref_create_backup_summ">可以用来还原当前书架内容</string>
     <string name="pref_restore_backup">还原备份</string>
-    <string name="pref_restore_backup_summ">从备份文件中还原书架内容</string>
     <string name="pref_backup_interval">自动备份频率</string>
     <string name="backup_created">已创建备份</string>
     <string name="restore_completed">还原完毕</string>
@@ -430,7 +428,6 @@
     <string name="pref_dual_page_split">拆分双页</string>
     <string name="pref_dual_page_invert">拆分双页时交换顺序</string>
     <string name="pref_dual_page_invert_summary">拆分双页的顺序与阅读方向不符时可以开启</string>
-    <string name="backup_restore_content_full">可能需要安装缺失的插件并重新登录进度记录平台。</string>
     <string name="nav_zone_right">往右</string>
     <string name="nav_zone_left">往左</string>
     <string name="nav_zone_next">下一页</string>

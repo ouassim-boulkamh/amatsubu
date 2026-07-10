@@ -86,15 +86,15 @@ import coil3.request.crossfade
 import com.mikepenz.markdown.model.markdownAnnotator
 import com.mikepenz.markdown.model.markdownAnnotatorConfig
 import com.mikepenz.markdown.utils.getUnescapedTextInNode
-import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.components.DropdownMenu
 import eu.kanade.tachiyomi.R
-import eu.kanade.tachiyomi.source.model.SManga
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import org.intellij.markdown.MarkdownElementTypes
 import org.intellij.markdown.MarkdownTokenTypes
 import org.intellij.markdown.ast.findChildOfType
-import tachiyomi.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.MangaStatus
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.DISABLED_ALPHA
 import tachiyomi.presentation.core.components.material.TextButton
@@ -103,8 +103,6 @@ import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.clickableNoIndication
 import tachiyomi.presentation.core.util.secondaryItemAlpha
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import kotlin.math.roundToInt
@@ -515,13 +513,13 @@ private fun ColumnScope.MangaContentInfo(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = when (status) {
-                SManga.ONGOING.toLong() -> Icons.Outlined.Schedule
-                SManga.COMPLETED.toLong() -> Icons.Outlined.DoneAll
-                SManga.LICENSED.toLong() -> Icons.Outlined.AttachMoney
-                SManga.PUBLISHING_FINISHED.toLong() -> Icons.Outlined.Done
-                SManga.CANCELLED.toLong() -> Icons.Outlined.Close
-                SManga.ON_HIATUS.toLong() -> Icons.Outlined.Pause
+            imageVector = when (MangaStatus.from(status)) {
+                MangaStatus.ONGOING -> Icons.Outlined.Schedule
+                MangaStatus.COMPLETED -> Icons.Outlined.DoneAll
+                MangaStatus.LICENSED -> Icons.Outlined.AttachMoney
+                MangaStatus.PUBLISHING_FINISHED -> Icons.Outlined.Done
+                MangaStatus.CANCELLED -> Icons.Outlined.Close
+                MangaStatus.ON_HIATUS -> Icons.Outlined.Pause
                 else -> Icons.Outlined.Block
             },
             contentDescription = null,
@@ -531,13 +529,13 @@ private fun ColumnScope.MangaContentInfo(
         )
         ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
             Text(
-                text = when (status) {
-                    SManga.ONGOING.toLong() -> stringResource(MR.strings.ongoing)
-                    SManga.COMPLETED.toLong() -> stringResource(MR.strings.completed)
-                    SManga.LICENSED.toLong() -> stringResource(MR.strings.licensed)
-                    SManga.PUBLISHING_FINISHED.toLong() -> stringResource(MR.strings.publishing_finished)
-                    SManga.CANCELLED.toLong() -> stringResource(MR.strings.cancelled)
-                    SManga.ON_HIATUS.toLong() -> stringResource(MR.strings.on_hiatus)
+                text = when (MangaStatus.from(status)) {
+                    MangaStatus.ONGOING -> stringResource(MR.strings.ongoing)
+                    MangaStatus.COMPLETED -> stringResource(MR.strings.completed)
+                    MangaStatus.LICENSED -> stringResource(MR.strings.licensed)
+                    MangaStatus.PUBLISHING_FINISHED -> stringResource(MR.strings.publishing_finished)
+                    MangaStatus.CANCELLED -> stringResource(MR.strings.cancelled)
+                    MangaStatus.ON_HIATUS -> stringResource(MR.strings.on_hiatus)
                     else -> stringResource(MR.strings.unknown)
                 },
                 overflow = TextOverflow.Ellipsis,
@@ -619,7 +617,8 @@ private fun MangaSummary(
     onEditNotesClicked: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
-    val preferences = remember { Injekt.get<UiPreferences>() }
+    val context = LocalContext.current
+    val preferences = remember(context) { context.appDependencies.uiPreferences }
     val loadImages = remember { preferences.imagesInDescription.get() }
     val animProgress by animateFloatAsState(
         targetValue = if (expanded) 1f else 0f,

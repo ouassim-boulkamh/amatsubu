@@ -24,7 +24,7 @@ abstract class PageLoader {
 
     /**
      * Loads the page. May also preload other pages.
-     * Progress of the page loading should be followed via [page.statusFlow].
+     * Progress of the page loading should be followed via [ReaderPage.statusFlow].
      * [loadPage] is not currently guaranteed to complete, so it should be launched asynchronously.
      */
     open suspend fun loadPage(page: ReaderPage) {}

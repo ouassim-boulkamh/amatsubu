@@ -10,7 +10,7 @@ import android.widget.Toast
 import androidx.core.net.toUri
 import eu.kanade.presentation.webview.WebViewScreenContent
 import eu.kanade.tachiyomi.R
-import eu.kanade.tachiyomi.network.NetworkHelper
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
 import eu.kanade.tachiyomi.util.system.WebViewUtil
 import eu.kanade.tachiyomi.util.system.openInBrowser
@@ -20,11 +20,10 @@ import eu.kanade.tachiyomi.util.view.setComposeContent
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
-import uy.kohesive.injekt.injectLazy
 
 class WebViewActivity : BaseActivity() {
 
-    private val network: NetworkHelper by injectLazy()
+    private val network get() = appDependencies.networkHelper
 
     private var assistUrl: String? = null
 

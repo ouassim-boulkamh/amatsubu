@@ -300,7 +300,6 @@
     <string name="services">ट्र्याकर</string>
     <string name="invalid_backup_file">अवैध ब्याकअप फाइल:</string>
     <string name="backup_created">ब्याकअप सिर्जना गरियो</string>
-    <string name="backup_restore_content_full">तपाईंले कुनै पनि छुटेको एक्सटेन्शनहरू स्थापना गर्न र तिनीहरूलाई प्रयोग गर्न पछि ट्र्याकिङ सेवाहरूमा लगइन गर्न आवश्यक हुनेछ।</string>
     <string name="restore_in_progress">रिस्टोर पहिले नै प्रगतिमा छ</string>
     <string name="label_network">नेटवर्किङ</string>
     <string name="restoring_backup_error">ब्याकअप रिस्टोर असफल भयो</string>
@@ -335,7 +334,6 @@
     <string name="pref_clear_chapter_cache">अध्याय cache खाली गर्नुहोस्</string>
     <string name="pref_remove_exclude_categories">बहिष्कृत वर्गहरू</string>
     <string name="pref_create_backup">ब्याकअप सिर्जना गर्नुहोस्</string>
-    <string name="pref_create_backup_summ">हालको पुस्तकालय रिस्टोर गर्न प्रयोग गर्न सकिन्छ</string>
     <string name="cookies_cleared">कुकीहरू खाली गरियो</string>
     <string name="label_data">डेटा</string>
     <string name="cache_delete_error">खाली गर्दा त्रुटि भयो</string>
@@ -357,7 +355,6 @@
     <string name="extension_api_error">एक्सटेन्शनहरूको सूची प्राप्त गर्न असफल भयो</string>
     <string name="zoom_start_right">दायाँ</string>
     <string name="pref_restore_backup">ब्याकअप रिस्टोर गर्नुहोस्</string>
-    <string name="pref_restore_backup_summ">ब्याकअप फाइलबाट पुस्तकालय रिस्टोर गर्नुहोस्</string>
     <string name="invalid_backup_file_missing_manga">ब्याकअपमा कुनै पनि पुस्तकालयका इन्ट्री समावेश छैन।</string>
     <string name="pref_backup_interval">स्वचालित ब्याकअप फ्रिक्वेन्सी</string>
     <string name="used_cache">प्रयोग गरिएको: %1$s</string>

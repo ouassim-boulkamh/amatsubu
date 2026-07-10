@@ -34,6 +34,8 @@ import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiExtensionStoreDto
+import eu.kanade.tachiyomi.data.suwayomi.serverExtensionStoreAffectedEntities
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.util.system.AuthenticatorUtil.authenticate
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import kotlinx.coroutines.launch
@@ -41,8 +43,6 @@ import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import java.net.URI
 
 object SettingsBrowseScreen : SearchableSettings {
@@ -56,7 +56,7 @@ object SettingsBrowseScreen : SearchableSettings {
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
 
-        val sourcePreferences = remember { Injekt.get<SourcePreferences>() }
+        val sourcePreferences = remember(context) { context.appDependencies.sourcePreferences }
 
         return listOf(
             Preference.PreferenceGroup(
@@ -105,7 +105,7 @@ private class ServerExtensionReposScreen : Screen() {
         val navigator = LocalNavigator.currentOrThrow
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
-        val provider = remember { SuwayomiClientProvider() }
+        val provider = remember(context) { context.appDependencies.suwayomiClientProvider }
         var reloadVersion by remember { mutableIntStateOf(0) }
         var errorMessage by remember { mutableStateOf<String?>(null) }
         var showAddDialog by rememberSaveable { mutableStateOf(false) }
@@ -130,7 +130,7 @@ private class ServerExtensionReposScreen : Screen() {
                         provider.graphQlClient.addExtensionStore(indexUrl)
                     }
                 }.onSuccess {
-                    ServerStateSync.requestRefresh()
+                    ServerStateSync.requestRefresh(*serverExtensionStoreAffectedEntities().toTypedArray())
                     reloadVersion++
                 }.onFailure { error ->
                     errorMessage = error.message ?: context.stringResource(MR.strings.server_sources_load_error)
@@ -145,7 +145,7 @@ private class ServerExtensionReposScreen : Screen() {
                         provider.graphQlClient.removeExtensionStore(indexUrl)
                     }
                 }.onSuccess {
-                    ServerStateSync.requestRefresh()
+                    ServerStateSync.requestRefresh(*serverExtensionStoreAffectedEntities().toTypedArray())
                     reloadVersion++
                 }.onFailure { error ->
                     errorMessage = error.message ?: context.stringResource(MR.strings.server_sources_load_error)

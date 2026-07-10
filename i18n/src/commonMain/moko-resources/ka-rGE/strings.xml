@@ -173,9 +173,7 @@
     <string name="disabled">გამორთული</string>
     <string name="services">სერვისები</string>
     <string name="pref_create_backup">რეზერვის შექმნა</string>
-    <string name="pref_create_backup_summ">შესაძლებელია გამოყენებულ იქნას ახლანდელი ბიბლიოთეკის ასადგენად</string>
     <string name="pref_restore_backup">რეზერვის აღდგენა</string>
-    <string name="pref_restore_backup_summ">ბიბლიოთეკის აღდგენა რეზერვიდან</string>
     <string name="pref_backup_interval">რეზერვის შექმნის სიხშირე</string>
     <string name="backup_created">რეზერვი შექმნილია</string>
     <string name="invalid_backup_file">არასწორი სარეზერვო ფაილი</string>

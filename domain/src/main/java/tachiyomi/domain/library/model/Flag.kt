@@ -1,4 +1,4 @@
-package tachiyomi.domain.library.model
+package eu.kanade.domain.library.model
 
 interface Flag {
     val flag: Long

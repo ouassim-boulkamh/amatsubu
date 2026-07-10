@@ -114,9 +114,7 @@
     <string name="restore_completed">ಮರುಸ್ಥಾಪನೆ ಪೂರ್ಣಗೊಂಡಿದೆ</string>
     <string name="backup_created">ಬ್ಯಾಕಪ್ ರಚಿಸಲಾಗಿದೆ</string>
     <string name="pref_backup_interval">ಬ್ಯಾಕಪ್ ಆವರ್ತನ</string>
-    <string name="pref_restore_backup_summ">ಬ್ಯಾಕಪ್ ಫೈಲ್‌ನಿಂದ ಗ್ರಂಥಾಲಯವನ್ನು ಮರುಸ್ಥಾಪಿಸಿ</string>
     <string name="pref_restore_backup">ಬ್ಯಾಕಪ್ ಮರುಸ್ಥಾಪಿಸಿ</string>
-    <string name="pref_create_backup_summ">ಪ್ರಸ್ತುತ ಗ್ರಂಥಾಲಯವನ್ನು ಪುನಃಸ್ಥಾಪಿಸಲು ಬಳಸಬಹುದು</string>
     <string name="pref_create_backup">ಬ್ಯಾಕಪ್ ರಚಿಸಿ</string>
     <string name="tracking_info">ಟ್ರ್ಯಾಕಿಂಗ್ ಸೇವೆಗಳಲ್ಲಿ ಅಧ್ಯಾಯದ ಪ್ರಗತಿಯನ್ನು ನವೀಕರಿಸಲು ಏಕಮುಖ ಸಿಂಕ್. ಅವರ ಟ್ರ್ಯಾಕಿಂಗ್ ಬಟನ್ ನಿಂದ ಪ್ರತ್ಯೇಕ ಮಾಂಗಾ ನಮೂದುಗಳಿಗಾಗಿ ಟ್ರ್ಯಾಕಿಂಗ್ ಅನ್ನು ಹೊಂದಿಸಿ.</string>
     <string name="services">ಸೇವೆಗಳು</string>
@@ -426,9 +424,6 @@
     <string name="pref_dump_crash_logs_summary">ಡೆವಲಪರ್‌ಗಳೊಂದಿಗೆ ಹಂಚಿಕೊಳ್ಳಲು ದೋಷದೆ ಲಾಗ್‌ಗಳನ್ನು ಫೈಲ್‌ಗೆ ಸೇರಿಸಿ</string>
     <string name="pref_dump_crash_logs">ಕ್ರ್ಯಾಶ್ ಲಾಗ್‌ಗಳನ್ನು ಡಂಪ್ ಮಾಡಿ</string>
     <string name="pref_dns_over_https">HTTPS ಮೇಲೆ DNS ಬಳಸಿ</string>
-    <string name="backup_restore_content_full">ಬ್ಯಾಕಪ್ ಫೈಲ್‌ನಿಂದ ಡೇಟಾವನ್ನು ಮರುಸ್ಥಾಪಿಸಲಾಗುತ್ತದೆ.
-\n
-\nಕಾಣೆಯಾದ ಯಾವುದೇ ವಿಸ್ತರಣೆಗಳನ್ನು ನೀವು ಪುನಃ ಸ್ಥಾಪಿಸಬೇಕಾಗುತ್ತದೆ ಮತ್ತು ಅವುಗಳನ್ನು ಬಳಸಲು ಟ್ರ್ಯಾಕಿಂಗ್ ಸೇವೆಗಳಿಗೆ ಲಾಗ್ ಇನ್ ಮಾಡಬೇಕಾಗುತ್ತದೆ.</string>
     <string name="pref_category_auto_download">ಸ್ವಯಂ ಡೌನ್‌ಲೋಡ್</string>
     <string name="pref_viewer_nav">ನ್ಯಾವಿಗೇಶನ್ ಲೇಔಟ್</string>
     <string name="nav_zone_right">ಬಲಕ್ಕೆ</string>

@@ -17,7 +17,9 @@ internal fun isValidSuwayomiServerPort(value: String): Boolean {
 }
 
 internal fun isValidSuwayomiAuthType(value: String): Boolean {
-    return value == SuwayomiPreferences.AUTH_NONE || value == SuwayomiPreferences.AUTH_BASIC
+    return value == SuwayomiPreferences.AUTH_NONE ||
+        value == SuwayomiPreferences.AUTH_BASIC ||
+        value == SuwayomiPreferences.AUTH_TOKEN
 }
 
 internal fun isValidSuwayomiTimeoutSeconds(value: Int): Boolean {

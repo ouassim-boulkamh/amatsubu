@@ -3,16 +3,16 @@ package eu.kanade.tachiyomi.data.cache
 import android.content.Context
 import android.text.format.Formatter
 import com.jakewharton.disklrucache.DiskLruCache
-import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.util.storage.DiskUtil
 import eu.kanade.tachiyomi.util.storage.saveTo
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import logcat.LogPriority
 import okhttp3.Response
 import okio.buffer
 import okio.sink
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.chapter.model.Chapter
+import eu.kanade.domain.chapter.model.Chapter
 import java.io.File
 import java.io.IOException
 
@@ -60,7 +60,7 @@ class ChapterCache(
      * @param chapter the chapter.
      * @return the list of pages.
      */
-    fun getPageListFromCache(chapter: Chapter): List<Page> {
+    fun getPageListFromCache(chapter: Chapter): List<CachedChapterPage> {
         // Get the key for the chapter.
         val key = DiskUtil.hashKeyForDisk(getKey(chapter))
 
@@ -76,7 +76,7 @@ class ChapterCache(
      * @param chapter the chapter.
      * @param pages list of pages.
      */
-    fun putPageListToCache(chapter: Chapter, pages: List<Page>) {
+    fun putPageListToCache(chapter: Chapter, pages: List<CachedChapterPage>) {
         // Convert list of pages to json string.
         val cachedValue = json.encodeToString(pages)
 
@@ -211,3 +211,10 @@ private const val PARAMETER_VALUE_COUNT = 1
 
 /** The maximum number of bytes this cache should use to store.  */
 private const val PARAMETER_CACHE_SIZE = 100L * 1024 * 1024
+
+@Serializable
+data class CachedChapterPage(
+    val index: Int,
+    val url: String,
+    val imageUrl: String? = null,
+)

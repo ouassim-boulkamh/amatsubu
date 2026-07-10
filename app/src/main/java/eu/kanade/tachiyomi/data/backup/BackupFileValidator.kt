@@ -10,15 +10,14 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 class BackupFileValidator(
     private val context: Context,
+    private val decoder: BackupDecoder,
 ) {
 
     fun validate(uri: Uri): Results {
-        BackupDecoder(context).decode(uri)
+        decoder.decode(uri)
         return Results()
     }
 
@@ -28,13 +27,11 @@ class BackupFileValidator(
     )
 }
 
-class ServerBackupFileValidator(
+internal class ServerBackupFileValidator(
     private val context: Context,
-
-    private val json: Json = Injekt.get(),
+    private val json: Json,
+    private val suwayomiProvider: SuwayomiClientProvider,
 ) {
-    private val suwayomiProvider = SuwayomiClientProvider()
-
     suspend fun validateOnServer(uri: Uri): Results {
         return validateBytes(readBackupBytes(uri))
     }

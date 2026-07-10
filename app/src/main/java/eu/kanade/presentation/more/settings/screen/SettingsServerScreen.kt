@@ -25,6 +25,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.more.settings.Preference
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.presentation.more.settings.screen.data.ServerCreateBackupScreen
 import eu.kanade.presentation.more.settings.screen.data.ServerRestoreBackupScreen
 import eu.kanade.presentation.more.settings.widget.EditTextPreferenceWidget
@@ -36,15 +37,18 @@ import eu.kanade.tachiyomi.data.suwayomi.SUWAYOMI_PORT_MAX
 import eu.kanade.tachiyomi.data.suwayomi.SUWAYOMI_PORT_MIN
 import eu.kanade.tachiyomi.data.suwayomi.SUWAYOMI_TIMEOUT_MAX_SECONDS
 import eu.kanade.tachiyomi.data.suwayomi.SUWAYOMI_TIMEOUT_MIN_SECONDS
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateEntity
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiPreferences
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiPreferences.Companion.AUTH_BASIC
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiPreferences.Companion.AUTH_NONE
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiPreferences.Companion.AUTH_TOKEN
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiServerAboutDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiServerSettingsDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiWebUiAboutDto
 import eu.kanade.tachiyomi.data.suwayomi.isValidSuwayomiServerPort
+import eu.kanade.tachiyomi.data.suwayomi.serverSettingsAffectedEntities
 import eu.kanade.tachiyomi.data.suwayomi.successMessage
 import eu.kanade.tachiyomi.data.suwayomi.userMessage
 import eu.kanade.tachiyomi.util.system.DeviceUtil
@@ -58,8 +62,6 @@ import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import java.text.DateFormat
 import java.util.Date
 
@@ -76,7 +78,7 @@ object SettingsServerScreen : SearchableSettings {
         val navigator = LocalNavigator.currentOrThrow
         val uriHandler = LocalUriHandler.current
         val lifecycleOwner = LocalLifecycleOwner.current
-        val provider = remember { SuwayomiClientProvider() }
+        val provider = remember(context) { context.appDependencies.suwayomiClientProvider }
         val preferences = provider.preferences
         val client = provider.graphQlClient
 
@@ -89,6 +91,7 @@ object SettingsServerScreen : SearchableSettings {
         val timeoutSeconds by preferences.timeoutSeconds.collectAsState()
         val testSuccessTitle = stringResource(MR.strings.pref_server_test_connection_success)
         val testFailureTitle = stringResource(MR.strings.pref_server_test_connection_failed)
+        val logoutSuccessTitle = stringResource(MR.strings.logout_success)
         val settingsFailureTitle = stringResource(MR.strings.internal_error)
 
         val connectionKey = RemoteSettingsConnectionKey(
@@ -128,8 +131,10 @@ object SettingsServerScreen : SearchableSettings {
         }
 
         LaunchedEffect(Unit) {
-            ServerStateSync.refreshes.collectLatest {
-                reloadKey++
+            ServerStateSync.invalidations.collectLatest { invalidation ->
+                if (invalidation.affectsAny(ServerStateEntity.ServerSettings)) {
+                    reloadKey++
+                }
             }
         }
 
@@ -203,7 +208,7 @@ object SettingsServerScreen : SearchableSettings {
                 val updatedSettings = withIOContext { client.setSettings(buildJsonObject(block)) }
                 remoteSettings = updatedSettings
                 remoteSettingsConnectionKey = connectionKey
-                ServerStateSync.requestRefresh()
+                ServerStateSync.requestRefresh(*serverSettingsAffectedEntities().toTypedArray())
                 true
             }.onFailure {
                 dialog = TestConnectionDialog(
@@ -279,6 +284,7 @@ object SettingsServerScreen : SearchableSettings {
                                 entries = mapOf(
                                     AUTH_NONE to stringResource(MR.strings.pref_server_auth_none),
                                     AUTH_BASIC to stringResource(MR.strings.pref_server_auth_basic),
+                                    AUTH_TOKEN to "Token",
                                 ),
                                 title = stringResource(MR.strings.pref_server_auth_type),
                             ),
@@ -302,6 +308,42 @@ object SettingsServerScreen : SearchableSettings {
                                     },
                                 ),
                             )
+                            if (authType == AUTH_TOKEN) {
+                                add(
+                                    Preference.PreferenceItem.TextPreference(
+                                        title = stringResource(MR.strings.pref_server_test_connection),
+                                        subtitle = "Sign in and verify the token connection",
+                                        onClick = {
+                                            scope.launch {
+                                                dialog = runCatching {
+                                                    withIOContext {
+                                                        provider.tokenAuth.login(username, password)
+                                                        preferences.clearTokenLoginPassword()
+                                                        client.testConnection()
+                                                    }
+                                                }.fold(
+                                                    onSuccess = { TestConnectionDialog(testSuccessTitle, it.successMessage()) },
+                                                    onFailure = { TestConnectionDialog(testFailureTitle, it.userMessage()) },
+                                                )
+                                            }
+                                        },
+                                    ),
+                                )
+                                add(
+                                    Preference.PreferenceItem.TextPreference(
+                                        title = stringResource(MR.strings.logout),
+                                        subtitle = "Remove this server's saved token",
+                                        onClick = {
+                                            provider.tokenAuth.logout()
+                                            preferences.clearTokenLoginPassword()
+                                            dialog = TestConnectionDialog(
+                                                title = logoutSuccessTitle,
+                                                message = "The saved token was removed.",
+                                            )
+                                        },
+                                    ),
+                                )
+                            }
                         }
                     },
                 ),

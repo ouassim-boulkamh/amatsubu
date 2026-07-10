@@ -14,11 +14,11 @@ import logcat.LogPriority
 import mihon.core.common.utils.mutate
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.Manga
 
 internal class MigrateMangaScreenModel(
     private val sourceId: String,
-    private val provider: SuwayomiClientProvider = SuwayomiClientProvider(),
+    private val provider: SuwayomiClientProvider,
 ) : StateScreenModel<MigrateMangaScreenModel.State>(State()) {
 
     private val _events: Channel<MigrationMangaEvent> = Channel()

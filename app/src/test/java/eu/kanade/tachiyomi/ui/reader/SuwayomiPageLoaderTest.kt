@@ -1,7 +1,6 @@
 package eu.kanade.tachiyomi.ui.reader
 
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiGraphQlClient
-import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.ui.reader.loader.SuwayomiPageLoader
 import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
@@ -19,7 +18,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import tachiyomi.domain.chapter.model.Chapter
+import eu.kanade.domain.chapter.model.Chapter
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -35,7 +34,7 @@ class SuwayomiPageLoaderTest {
 
         loader.loadPage(page)
 
-        assertEquals(Page.State.Ready, page.status)
+        assertEquals(ReaderPage.State.Ready, page.status)
         assertEquals("first image", page.stream!!.invoke().bufferedReader().use { it.readText() })
         assertEquals("first image", page.stream!!.invoke().bufferedReader().use { it.readText() })
     }
@@ -48,12 +47,12 @@ class SuwayomiPageLoaderTest {
         loader.loadPage(page)
         loader.retryPage(page)
 
-        assertEquals(Page.State.Queue, page.status)
+        assertEquals(ReaderPage.State.Queue, page.status)
         assertNull(page.stream)
 
         loader.loadPage(page)
 
-        assertEquals(Page.State.Ready, page.status)
+        assertEquals(ReaderPage.State.Ready, page.status)
         assertEquals("fresh image", page.stream!!.invoke().bufferedReader().use { it.readText() })
         assertTrue(tempDir.listFiles().orEmpty().single().isFile)
     }

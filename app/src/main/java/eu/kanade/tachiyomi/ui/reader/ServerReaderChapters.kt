@@ -6,9 +6,9 @@ import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.util.chapter.removeDuplicates
 import kotlinx.serialization.json.JsonObject
 import mihon.core.common.extensions.EMPTY
-import tachiyomi.domain.chapter.model.Chapter
-import tachiyomi.domain.chapter.service.getChapterSort
-import tachiyomi.domain.manga.model.Manga
+import eu.kanade.domain.chapter.model.Chapter
+import eu.kanade.domain.chapter.service.getChapterSort
+import eu.kanade.domain.manga.model.Manga
 
 data class ServerReaderChapterList(
     val chapters: List<ReaderChapter>,
@@ -21,13 +21,13 @@ data class ServerDeviceCopyReaderChapters(
 )
 
 /**
- * Normalizes Suwayomi chapter data before it reaches Mihon's viewer layer.
+ * Normalizes Suwayomi chapter data before it reaches the reader viewer layer.
  *
  * Invariants:
  * - one [ReaderChapter] per unique chapter id
  * - the selected chapter appears exactly once when it is available after downloaded-only filtering
  * - adjacent reader windows built from this list must never point prev/current/next at the same id
- * - sorting follows Mihon's reader navigation order, not display order
+ * - sorting follows reader navigation order, not display order
  * - server page loading must preserve stable [ReaderPage] objects
  * - the reader's current page must be derived from the active `State.currentChapter.pages`
  */

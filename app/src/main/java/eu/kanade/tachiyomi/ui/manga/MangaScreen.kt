@@ -29,7 +29,6 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.domain.manga.model.hasCustomCover
-import eu.kanade.domain.manga.model.toSManga
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
 import eu.kanade.presentation.components.NavigatorAdaptiveSheet
 import eu.kanade.presentation.manga.ChapterSettingsDialog
@@ -44,9 +43,7 @@ import eu.kanade.presentation.util.AssistContentScreen
 import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.util.isTabletUi
 import eu.kanade.tachiyomi.data.suwayomi.SUWAYOMI_MANGA_REAL_URL_META_KEY
-import eu.kanade.tachiyomi.source.Source
-import eu.kanade.tachiyomi.source.isLocalOrStub
-import eu.kanade.tachiyomi.source.online.HttpSource
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.ui.browse.ServerGlobalSearchScreen
 import eu.kanade.tachiyomi.ui.browse.migration.search.ServerMigrateSearchScreen
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
@@ -63,13 +60,13 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import logcat.LogPriority
-import mihon.feature.migration.dialog.MigrateMangaDialog
+import eu.kanade.presentation.migration.MigrateMangaDialog
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.chapter.model.Chapter
-import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.manga.model.Manga
+import eu.kanade.domain.chapter.model.Chapter
+import eu.kanade.domain.library.service.LibraryPreferences
+import eu.kanade.domain.manga.model.Manga
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.EmptyScreenAction
@@ -94,7 +91,13 @@ class MangaScreen(
         val scope = rememberCoroutineScope()
         val lifecycleOwner = LocalLifecycleOwner.current
         val screenModel = rememberScreenModel {
-            MangaScreenModel(context, mangaId, fromSource, fetchChaptersOnOpen)
+            MangaScreenModel(
+                context = context,
+                mangaId = mangaId,
+                isFromSource = fromSource,
+                fetchChaptersOnOpen = fetchChaptersOnOpen,
+                dependencies = context.appDependencies,
+            )
         }
 
         val state by screenModel.state.collectAsStateWithLifecycle()
@@ -119,7 +122,6 @@ class MangaScreen(
         }
 
         val successState = state as MangaScreenModel.State.Success
-        val isHttpSource = successState.source is HttpSource
         val isServerBacked = successState.isServerBacked
         val isOfflineSnapshot = successState.staleSnapshot != null
         fun hasFreshDeviceCopy(chapter: Chapter): Boolean {
@@ -159,10 +161,10 @@ class MangaScreen(
         }
 
         LaunchedEffect(successState.manga, screenModel.source) {
-            if (isHttpSource || isServerBacked) {
+            if (isServerBacked) {
                 try {
                     withIOContext {
-                        assistUrl = getMangaUrl(screenModel.manga, screenModel.source, isServerBacked)
+                        assistUrl = getMangaUrl(screenModel.manga, isServerBacked)
                     }
                 } catch (e: Exception) {
                     logcat(LogPriority.ERROR, e) { "Failed to get manga URL" }
@@ -190,7 +192,7 @@ class MangaScreen(
                 }
             },
             onDownloadChapter = screenModel::runChapterDownloadActions.takeIf {
-                isServerBacked || !successState.source.isLocalOrStub()
+                isServerBacked
             },
             onAddToLibraryClicked = if (isServerBacked) {
                 {
@@ -215,18 +217,16 @@ class MangaScreen(
                 openMangaInWebView(
                     navigator,
                     screenModel.manga,
-                    screenModel.source,
                     isServerBacked,
                 )
-            }.takeIf { !isOfflineSnapshot && (isHttpSource || isServerBacked) },
+            }.takeIf { !isOfflineSnapshot && isServerBacked },
             onWebViewLongClicked = {
                 copyMangaUrl(
                     context,
                     screenModel.manga,
-                    screenModel.source,
                     isServerBacked,
                 )
-            }.takeIf { !isOfflineSnapshot && (isHttpSource || isServerBacked) },
+            }.takeIf { !isOfflineSnapshot && isServerBacked },
             onTrackingClicked = if (isServerBacked) {
                 {
                     if (isOfflineSnapshot) {
@@ -242,7 +242,7 @@ class MangaScreen(
             } else {
                 null
             },
-            onTagSearch = { scope.launch { performGenreSearch(navigator, it, screenModel.source!!) } },
+            onTagSearch = { scope.launch { performGenreSearch(navigator, it) } },
             onFilterButtonClicked = screenModel::showSettingsDialog,
             onRefresh = if (isServerBacked) {
                 {
@@ -274,10 +274,10 @@ class MangaScreen(
             onSearch = { query, global -> scope.launch { performSearch(navigator, query, global) } },
             onCoverClicked = screenModel::showCoverDialog,
             onShareClicked = {
-                shareManga(context, screenModel.manga, screenModel.source, isServerBacked)
-            }.takeIf { !isOfflineSnapshot && (isHttpSource || isServerBacked) },
+                shareManga(context, screenModel.manga, isServerBacked)
+            }.takeIf { !isOfflineSnapshot && isServerBacked },
             onDownloadActionClicked = screenModel::runDownloadAction.takeIf {
-                !isOfflineSnapshot && (isServerBacked || !successState.source.isLocalOrStub())
+                !isOfflineSnapshot && isServerBacked
             },
             onEditCategoryClicked = screenModel::showChangeCategoryDialog.takeIf {
                 successState.manga.favorite && !isOfflineSnapshot
@@ -290,7 +290,7 @@ class MangaScreen(
             }.takeIf { successState.manga.favorite && isServerBacked && !isOfflineSnapshot },
             onEditNotesClicked = {
                 navigator.push(MangaNotesScreen(manga = successState.manga))
-            }.takeIf { isServerBacked && !isOfflineSnapshot },
+            }.takeIf { isServerBacked },
             onMultiBookmarkClicked = { chapters, bookmarked ->
                 if (!isOfflineSnapshot) screenModel.bookmarkChapters(chapters, bookmarked)
             },
@@ -362,6 +362,7 @@ class MangaScreen(
             }
             MangaScreenModel.Dialog.SettingsSheet -> ChapterSettingsDialog(
                 onDismissRequest = onDismissRequest,
+                basePreferences = context.appDependencies.basePreferences,
                 manga = successState.manga,
                 onDownloadFilterChanged = screenModel::setDownloadedFilter,
                 onLocalDownloadFilterChanged = screenModel::setLocalDownloadedFilter,
@@ -387,10 +388,16 @@ class MangaScreen(
                 )
             }
             MangaScreenModel.Dialog.FullCover -> {
+                val appDependencies = context.appDependencies
                 val sm = rememberScreenModel {
                     MangaCoverScreenModel(
                         initialManga = successState.manga,
+                        imageSaver = appDependencies.imageSaver,
+                        coverCache = appDependencies.coverCache,
                     )
+                }
+                LaunchedEffect(successState.manga) {
+                    sm.updateManga(successState.manga)
                 }
                 val manga by sm.state.collectAsState()
                 if (manga != null) {
@@ -401,9 +408,14 @@ class MangaScreen(
                     MangaCoverDialog(
                         manga = manga!!,
                         snackbarHostState = sm.snackbarHostState,
-                        isCustomCover = remember(manga) { manga!!.hasCustomCover() },
+                        isCustomCover = remember(manga) { manga!!.hasCustomCover(appDependencies.coverCache) },
                         onShareClick = { sm.shareCover(context) },
                         onSaveClick = { sm.saveCover(context) },
+                        onRefreshClick = if (successState.isServerBacked) {
+                            { screenModel.refreshServerManga(clearCoverCache = true) }
+                        } else {
+                            null
+                        },
                         onEditClick = if (successState.isServerBacked) {
                             null
                         } else {
@@ -449,7 +461,7 @@ class MangaScreen(
         context.startActivity(ReaderActivity.newIntent(context, chapter.mangaId, chapter.id, isServerBacked))
     }
 
-    private fun getMangaUrl(manga_: Manga?, source_: Source?, isServerBacked: Boolean = false): String? {
+    private fun getMangaUrl(manga_: Manga?, isServerBacked: Boolean = false): String? {
         val manga = manga_ ?: return null
         if (isServerBacked) {
             manga.memo[SUWAYOMI_MANGA_REAL_URL_META_KEY]
@@ -462,35 +474,28 @@ class MangaScreen(
                 .takeIf { it.startsWith("http://") || it.startsWith("https://") }
                 ?.let { return it }
         }
-        val source = source_ as? HttpSource ?: return null
-
-        return try {
-            source.getMangaUrl(manga.toSManga())
-        } catch (e: Exception) {
-            null
-        }
+        return null
     }
 
     private fun openMangaInWebView(
         navigator: Navigator,
         manga_: Manga?,
-        source_: Source?,
         isServerBacked: Boolean = false,
     ) {
-        getMangaUrl(manga_, source_, isServerBacked)?.let { url ->
+        getMangaUrl(manga_, isServerBacked)?.let { url ->
             navigator.push(
                 WebViewScreen(
                     url = url,
                     initialTitle = manga_?.title,
-                    sourceId = source_?.id.takeUnless { isServerBacked },
+                    sourceId = null,
                 ),
             )
         }
     }
 
-    private fun shareManga(context: Context, manga_: Manga?, source_: Source?, isServerBacked: Boolean = false) {
+    private fun shareManga(context: Context, manga_: Manga?, isServerBacked: Boolean = false) {
         try {
-            getMangaUrl(manga_, source_, isServerBacked)?.let { url ->
+            getMangaUrl(manga_, isServerBacked)?.let { url ->
                 val intent = url.toUri().toShareIntent(context, type = "text/plain")
                 context.startActivity(intent)
             }
@@ -527,7 +532,7 @@ class MangaScreen(
      *
      * @param genreName the search genre to the parent controller
      */
-    private suspend fun performGenreSearch(navigator: Navigator, genreName: String, source: Source) {
+    private suspend fun performGenreSearch(navigator: Navigator, genreName: String) {
         if (navigator.size < 2) {
             return
         }
@@ -541,10 +546,9 @@ class MangaScreen(
     private fun copyMangaUrl(
         context: Context,
         manga_: Manga?,
-        source_: Source?,
         isServerBacked: Boolean = false,
     ) {
-        val url = getMangaUrl(manga_, source_, isServerBacked) ?: return
+        val url = getMangaUrl(manga_, isServerBacked) ?: return
         context.copyToClipboard(url, url)
     }
 }

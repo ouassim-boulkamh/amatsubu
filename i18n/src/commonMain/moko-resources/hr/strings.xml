@@ -145,9 +145,7 @@
     <string name="restore_completed">Obnavljanje je završeno</string>
     <string name="backup_created">Sigurnosna kopija je stvorena</string>
     <string name="pref_backup_interval">Učestalost automatskog spremanja sigurnosnih kopija</string>
-    <string name="pref_restore_backup_summ">Obnovi biblioteku iz sigurnosne kopije</string>
     <string name="pref_restore_backup">Obnovi sigurnosnu kopiju</string>
-    <string name="pref_create_backup_summ">Može se koristiti za obnavljanje trenutačne biblioteke</string>
     <string name="pref_create_backup">Stvori sigurnosnu kopiju</string>
     <string name="services">Usluge praćenja</string>
     <string name="disabled">Deaktivirano</string>
@@ -427,7 +425,6 @@
     <string name="action_filter_tracked">Praćeno</string>
     <string name="right_and_left_nav">Desno i lijevo</string>
     <string name="action_display_show_number_of_items">Prikaži broj elemenata</string>
-    <string name="backup_restore_content_full">Možda ćeš morati instalirati sva nedostajuća proširenja i naknadno se prijaviti na usluge praćenja za njihovo korištenje.</string>
     <string name="pref_dual_page_invert_summary">Ako se položaj rastavljenih širokih stranica ne podudara sa smjerom čitanja</string>
     <string name="pref_dual_page_invert">Obrni položaj rastavljene stranice</string>
     <string name="pref_dual_page_split">Rastavi široke stranice</string>

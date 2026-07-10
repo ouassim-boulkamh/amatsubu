@@ -24,19 +24,21 @@ import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.Manga
 import tachiyomi.i18n.MR
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import java.time.Instant
 
 class MangaCoverScreenModel(
     initialManga: Manga? = null,
-    private val imageSaver: ImageSaver = Injekt.get(),
-    private val coverCache: CoverCache = Injekt.get(),
+    private val imageSaver: ImageSaver,
+    private val coverCache: CoverCache,
 
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
 ) : StateScreenModel<Manga?>(initialManga) {
+
+    fun updateManga(manga: Manga) {
+        mutableState.update { manga }
+    }
 
     fun saveCover(context: Context) {
         screenModelScope.launch {

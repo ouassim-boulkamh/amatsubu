@@ -2,7 +2,7 @@ package eu.kanade.tachiyomi.data.backup.models
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoNumber
-import tachiyomi.domain.history.model.History
+import eu.kanade.domain.history.model.History
 import java.util.Date
 
 @Serializable

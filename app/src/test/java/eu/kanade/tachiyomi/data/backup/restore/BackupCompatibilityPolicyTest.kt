@@ -235,4 +235,94 @@ class BackupCompatibilityPolicyTest {
         assertEquals(listOf("display_download_badge"), result.restorable.appPreferences.map { it.key })
         assertEquals(BackupCompatibilityDecisionType.RESTORE_DIRECT, result.summary.decisions.single().decision)
     }
+
+    @Test
+    fun `restore scope keeps client owned settings and rejects server owned legacy settings`() {
+        val appStateKey = "__APP_STATE_last_used_source"
+        val backup = Backup(
+            backupManga = emptyList(),
+            backupPreferences = listOf(
+                BackupPreference("amatsubu_server_url", StringPreferenceValue("http://127.0.0.1:4567")),
+                BackupPreference("show_nsfw_source", BooleanPreferenceValue(false)),
+                BackupPreference("migration_flags", IntPreferenceValue(3)),
+                BackupPreference("download_new", BooleanPreferenceValue(true)),
+                BackupPreference("track_1_token", StringPreferenceValue("token")),
+                BackupPreference(appStateKey, LongPreferenceValue(1L)),
+                BackupPreference("legacy_local_library_authority", BooleanPreferenceValue(true)),
+            ),
+        )
+        val policy = BackupCompatibilityPolicy(
+            appPreferences = ClientPreferenceRestoreSchema.defaultsWith(backup.backupPreferences.map { it.key }),
+            sourcePreferences = emptyMap(),
+        )
+
+        val result = policy.evaluate(backup, RestoreOptions(appSettings = true))
+
+        assertEquals(
+            listOf("amatsubu_server_url", "show_nsfw_source", "migration_flags"),
+            result.restorable.appPreferences.map { it.key },
+        )
+        assertTrue(
+            result.summary.decisions.any {
+                it.section == "backupPreferences:download_new" &&
+                    it.decision == BackupCompatibilityDecisionType.IGNORE_RECORDED
+            },
+        )
+        assertTrue(
+            result.summary.decisions.any {
+                it.section == "backupPreferences:track_1_token" &&
+                    it.decision == BackupCompatibilityDecisionType.IGNORE_RECORDED
+            },
+        )
+        assertTrue(
+            result.summary.decisions.any {
+                it.section == "backupPreferences:$appStateKey" &&
+                    it.decision == BackupCompatibilityDecisionType.IGNORE_RECORDED
+            },
+        )
+        assertTrue(
+            result.summary.decisions.any {
+                it.section == "backupPreferences:legacy_local_library_authority" &&
+                    it.decision == BackupCompatibilityDecisionType.UNSUPPORTED_RECORDED
+            },
+        )
+    }
+
+    @Test
+    fun `legacy library and category restore options do not make server owned sections restorable`() {
+        val backup = Backup(
+            backupManga = listOf(
+                BackupManga(
+                    source = 1,
+                    url = "/manga",
+                    title = "Manga",
+                    chapters = listOf(BackupChapter(url = "/chapter", name = "Chapter")),
+                    categories = listOf(1),
+                    tracking = listOf(BackupTracking(syncId = 1, libraryId = 1)),
+                    history = listOf(BackupHistory(url = "/chapter", lastRead = 1)),
+                ),
+            ),
+            backupCategories = listOf(BackupCategory(name = "Default")),
+            backupSources = listOf(BackupSource(name = "Source", sourceId = 1)),
+        )
+        val policy = BackupCompatibilityPolicy(
+            appPreferences = emptyMap<String, Any>(),
+            sourcePreferences = emptyMap<String, Map<String, Any>>(),
+        )
+
+        val result = policy.evaluate(
+            backup,
+            RestoreOptions(
+                libraryEntries = true,
+                categories = true,
+                appSettings = false,
+                sourceSettings = false,
+            ),
+        )
+
+        assertTrue(result.restorable.appPreferences.isEmpty())
+        assertTrue(result.restorable.sourcePreferences.isEmpty())
+        assertEquals(7, result.summary.ignoredCount)
+        assertTrue(result.summary.decisions.all { it.decision == BackupCompatibilityDecisionType.IGNORE_RECORDED })
+    }
 }

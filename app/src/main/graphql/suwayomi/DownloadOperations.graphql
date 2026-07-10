@@ -1,0 +1,63 @@
+fragment AmatsubuDownloadStatus on DownloadStatus {
+  state
+  queue {
+    ...AmatsubuDownload
+  }
+}
+
+fragment AmatsubuDownload on DownloadType {
+  chapter {
+    id
+    name
+    chapterNumber
+    uploadDate
+    sourceOrder
+    isDownloaded
+  }
+  manga {
+    id
+    title
+    downloadCount
+    thumbnailUrl
+  }
+  progress
+  state
+  tries
+  position
+}
+
+query GetDownloadStatus {
+  downloadStatus { ...AmatsubuDownloadStatus }
+}
+
+mutation EnqueueChapterDownloads($input: EnqueueChapterDownloadsInput!) {
+  enqueueChapterDownloads(input: $input) { __typename }
+}
+
+mutation DequeueChapterDownload($input: DequeueChapterDownloadInput!) {
+  dequeueChapterDownload(input: $input) { __typename }
+}
+
+mutation DequeueChapterDownloads($input: DequeueChapterDownloadsInput!) {
+  dequeueChapterDownloads(input: $input) { downloadStatus { ...AmatsubuDownloadStatus } }
+}
+
+mutation StartDownloader($input: StartDownloaderInput!) {
+  startDownloader(input: $input) { __typename }
+}
+
+mutation StopDownloader($input: StopDownloaderInput!) {
+  stopDownloader(input: $input) { __typename }
+}
+
+mutation ClearDownloader($input: ClearDownloaderInput!) {
+  clearDownloader(input: $input) { __typename }
+}
+
+mutation ReorderChapterDownload($input: ReorderChapterDownloadInput!) {
+  reorderChapterDownload(input: $input) { downloadStatus { ...AmatsubuDownloadStatus } }
+}
+
+mutation DeleteDownloadedChapters($input: DeleteDownloadedChaptersInput!) {
+  deleteDownloadedChapters(input: $input) { chapters { ...AmatsubuChapter } }
+}

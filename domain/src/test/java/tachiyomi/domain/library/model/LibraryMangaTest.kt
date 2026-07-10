@@ -1,10 +1,10 @@
-package tachiyomi.domain.library.model
+package eu.kanade.domain.library.model
 
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
-import tachiyomi.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.Manga
 
 @Execution(ExecutionMode.CONCURRENT)
 class LibraryMangaTest {

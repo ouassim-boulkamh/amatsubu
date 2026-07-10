@@ -118,9 +118,7 @@
     <string name="disabled">معطل</string>
     <string name="services">المتتبِّعات</string>
     <string name="pref_create_backup">إنشاء نسخة إحتياطية</string>
-    <string name="pref_create_backup_summ">يمكن استخدامها لإستعادة المكتبة الحالية</string>
     <string name="pref_restore_backup">إستعادة النسخة الإحتياطية</string>
-    <string name="pref_restore_backup_summ">إستعادة مكتبة من ملف نسخة إحتياطية</string>
     <string name="pref_backup_interval">معدل النسخ الاحتياطي التلقائي</string>
     <string name="backup_created">أُنشئت نسخة احتياطية</string>
     <string name="restore_completed">اكتملت الاستعادة</string>
@@ -431,7 +429,6 @@
     <string name="action_order_by_upload_date">حسب تاريخ الرفع</string>
     <string name="action_order_by_chapter_number">حسب رقم الفصل</string>
     <string name="pref_dns_over_https">إستخدام DNS عبر HTTPS (DoH)</string>
-    <string name="backup_restore_content_full">قد تحتاج إلى تثبيت أي إضافات مفقودة وتسجيل الدخول إلى خدمات التتبع بعد ذلك لاستخدامها.</string>
     <string name="nav_zone_right">يمين</string>
     <string name="nav_zone_left">يسار</string>
     <string name="nav_zone_next">التالي</string>

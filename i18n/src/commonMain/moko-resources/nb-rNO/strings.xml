@@ -141,9 +141,7 @@
     <string name="disabled">Avskrudd</string>
     <string name="services">Sporere</string>
     <string name="pref_create_backup">Opprett sikkerhetskopi</string>
-    <string name="pref_create_backup_summ">Kan brukes til å gjenopprette nåværende bibliotek</string>
     <string name="pref_restore_backup">Gjenopprett sikkerhetskopi</string>
-    <string name="pref_restore_backup_summ">Gjenopprett bibliotek fra sikkerhetskopifil</string>
     <string name="pref_backup_interval">Sikkerhetskopieringsfrekvens</string>
     <string name="backup_created">Sikkerhetskopi opprettet</string>
     <string name="restore_completed">Gjenoppretting fullført</string>
@@ -429,7 +427,6 @@
     <string name="pref_dual_page_invert">Invertert sideoppsett for delte sider</string>
     <string name="pref_dual_page_split">Del brede sider</string>
     <string name="pref_show_navigation_mode">Vis overlay for navigasjonsoppsett</string>
-    <string name="backup_restore_content_full">Du vil måtte installere manglende utvidelser og logge inn på sporings-tjenester etterpå for å bruke dem.</string>
     <string name="pref_show_navigation_mode_summary">Vis tap-bare områder når leseren åpnes</string>
     <string name="none">Ingen</string>
     <string name="pref_dns_over_https">DNS over HTTPS (DoH)</string>

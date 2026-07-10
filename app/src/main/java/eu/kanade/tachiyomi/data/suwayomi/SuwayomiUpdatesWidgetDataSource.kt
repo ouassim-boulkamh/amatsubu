@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.data.suwayomi
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
@@ -10,7 +11,7 @@ import tachiyomi.presentation.widget.UpdatesWidgetDataSource
 import tachiyomi.presentation.widget.UpdatesWidgetItem
 
 internal class SuwayomiUpdatesWidgetDataSource(
-    private val clientProvider: SuwayomiClientProvider = SuwayomiClientProvider(),
+    private val clientProvider: SuwayomiClientProvider,
 ) : UpdatesWidgetDataSource {
 
     override fun subscribe(limit: Int): Flow<List<UpdatesWidgetItem>> {
@@ -20,7 +21,9 @@ internal class SuwayomiUpdatesWidgetDataSource(
 
         return merge(
             flowOf(Unit),
-            ServerStateSync.refreshes.map { Unit },
+            ServerStateSync.invalidations
+                .filter(ServerStateInvalidation::affectsUpdatesWidget)
+                .map { Unit },
         ).map {
             runCatching {
                 loadUpdates(limit)
@@ -43,4 +46,11 @@ internal class SuwayomiUpdatesWidgetDataSource(
                 )
             }
     }
+}
+
+private fun ServerStateInvalidation.affectsUpdatesWidget(): Boolean {
+    return affectsAny(
+        ServerStateEntity.Updates,
+        ServerStateEntity.Library,
+    )
 }

@@ -192,9 +192,7 @@
     <string name="pref_crop_borders">Изрязвай границите</string>
     <string name="pref_read_with_volume_keys_inverted">Обърнати бутони за звука</string>
     <string name="pref_create_backup">Създай резервно копие</string>
-    <string name="pref_create_backup_summ">Може да се използва за възстановяване на текущата библиотека</string>
     <string name="pref_restore_backup">Възстанови резервно копие</string>
-    <string name="pref_restore_backup_summ">Възстанови библиотеката от резервно копие</string>
     <string name="pref_backup_interval">Честота на запазване</string>
     <string name="backup_created">Резервно копие създадено</string>
     <string name="restore_completed">Възстановяването завършено</string>
@@ -404,9 +402,6 @@
     <string name="date">Дата</string>
     <string name="pref_dark_theme_pure_black">Чисто черен режим</string>
     <string name="label_default">По подразбиране</string>
-    <string name="backup_restore_content_full">Ще бъдат възстановени данните от резервното копие.
-\n
-\nТрябва да инсталирате липсващи разширения, ако има такива, и да се впишете в услугите за тракинг, за да ги ползвате.</string>
     <string name="action_track">Проследи</string>
     <string name="restore_miui_warning">Съхраняването/възстановяването може да не функционира правилно, ако MIUI Optimization е изключено.</string>
     <string name="about_dont_kill_my_app">Някои производители ограничават приложенията, за да убият задноплановите услуги. Следният уебсайт съдържа информация за разрешаването на проблема.</string>

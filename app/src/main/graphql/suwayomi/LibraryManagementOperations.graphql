@@ -1,0 +1,52 @@
+query GetServerStats {
+  statisticsMangas: mangas(filter: { inLibrary: { equalTo: true } }, first: 10000) {
+    totalCount
+    nodes {
+      id status unreadCount downloadCount initialized sourceId updateStrategy
+      latestReadChapter { lastReadAt }
+      categories { nodes { id includeInUpdate } }
+      trackRecords { nodes { trackerId score } }
+    }
+  }
+  totalChapters: chapters(filter: { inLibrary: { equalTo: true } }) { totalCount }
+  readChapters: chapters(filter: { inLibrary: { equalTo: true }, isRead: { equalTo: true } }) { totalCount }
+  downloadedChapters: chapters(filter: { inLibrary: { equalTo: true }, isDownloaded: { equalTo: true } }) { totalCount }
+  settings { excludeCompleted excludeEntryWithUnreadChapters excludeNotStarted excludeUnreadChapters }
+  trackers { nodes { id name isLoggedIn } }
+}
+
+mutation UpdateMangasCategories($input: UpdateMangasCategoriesInput!) {
+  updateMangasCategories(input: $input) { mangas { ...AmatsubuManga } }
+}
+
+mutation UpdateMangaLibrary($input: UpdateMangaInput!) {
+  updateManga(input: $input) { manga { ...AmatsubuManga } }
+}
+
+mutation UpdateLibraryMangas($input: UpdateLibraryMangaInput!) {
+  updateLibraryManga(input: $input) { updateStatus { isRunning } }
+}
+
+mutation UpdateCategoryMangas($input: UpdateCategoryMangaInput!) {
+  updateCategoryManga(input: $input) { updateStatus { isRunning } }
+}
+
+query LibraryUpdateStatus {
+  libraryUpdateStatus {
+    categoryUpdates { category { ...AmatsubuCategory } status }
+    mangaUpdates { manga { ...AmatsubuManga } status }
+    jobsInfo { isRunning totalJobs finishedJobs skippedCategoriesCount skippedMangasCount }
+  }
+}
+
+mutation StopLibraryUpdate($input: UpdateStopInput!) {
+  updateStop(input: $input) { __typename }
+}
+
+query LastSyncStatus { lastSyncStatus { state startDate endDate backupRestoreId errorMessage } }
+
+mutation StartSync($input: StartSyncInput!) { startSync(input: $input) { result } }
+
+mutation SetMangaMeta($input: SetMangaMetaInput!) {
+  setMangaMeta(input: $input) { meta { key mangaId value } }
+}

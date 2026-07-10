@@ -1,0 +1,20 @@
+mutation LoginTrackerOAuth($input: LoginTrackerOAuthInput!) {
+  loginTrackerOAuth(input: $input) {
+    isLoggedIn
+    tracker {
+      id
+      name
+      icon
+      isLoggedIn
+      authUrl
+      supportsTrackDeletion
+      supportsReadingDates
+      supportsPrivateTracking
+      statuses {
+        value
+        name
+      }
+      scores
+    }
+  }
+}

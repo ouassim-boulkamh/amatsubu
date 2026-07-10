@@ -29,6 +29,45 @@ class BackupOptionsTest {
     }
 
     @Test
+    fun `client backup defaults keep legacy server owned sections disabled`() {
+        val options = BackupOptions()
+
+        assertFalse(options.libraryEntries)
+        assertFalse(options.categories)
+        assertFalse(options.chapters)
+        assertFalse(options.tracking)
+        assertFalse(options.history)
+        assertFalse(options.readEntries)
+    }
+
+    @Test
+    fun `boolean array decoding ignores legacy server owned backup sections`() {
+        val options = BackupOptions.fromBooleanArray(
+            booleanArrayOf(
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                true,
+            ),
+        )
+
+        assertFalse(options.libraryEntries)
+        assertFalse(options.categories)
+        assertFalse(options.chapters)
+        assertFalse(options.tracking)
+        assertFalse(options.history)
+        assertFalse(options.readEntries)
+        assertTrue(options.appSettings)
+        assertFalse(options.sourceSettings)
+        assertTrue(options.privateSettings)
+    }
+
+    @Test
     fun `private backup option is enabled only when a settings section is selected`() {
         val privateOption = BackupOptions.settingsOptions.single { it.label == MR.strings.private_settings }
 

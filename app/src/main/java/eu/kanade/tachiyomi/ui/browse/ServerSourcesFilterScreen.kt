@@ -31,6 +31,7 @@ import eu.kanade.tachiyomi.data.suwayomi.SuwayomiSourceDto
 import eu.kanade.tachiyomi.data.suwayomi.hasNsfwContent
 import eu.kanade.tachiyomi.data.suwayomi.isLocalFolderSource
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.util.system.LocaleHelper
 import tachiyomi.core.common.preference.getAndSet
 import tachiyomi.core.common.util.lang.withIOContext
@@ -39,8 +40,6 @@ import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import kotlin.math.absoluteValue
 
 data class ServerSourcesFilterScreen(
@@ -50,15 +49,16 @@ data class ServerSourcesFilterScreen(
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val context = LocalContext.current
         val snackbarHostState = remember { SnackbarHostState() }
-        val sourcePreferences = remember { Injekt.get<SourcePreferences>() }
+        val sourcePreferences = remember(context) { context.appDependencies.sourcePreferences }
         val enabledLanguages by sourcePreferences.enabledLanguages.changes()
             .collectAsState(sourcePreferences.enabledLanguages.get())
         val disabledSources by sourcePreferences.disabledSources.changes()
             .collectAsState(sourcePreferences.disabledSources.get())
         val showNsfwSources by sourcePreferences.showNsfwSource.changes()
             .collectAsState(sourcePreferences.showNsfwSource.get())
-        val provider = remember { SuwayomiClientProvider() }
+        val provider = remember(context) { context.appDependencies.suwayomiClientProvider }
         val baseUrl = remember { provider.baseUrl() }
         val errorMessage = stringResource(MR.strings.server_sources_load_error)
         val state by produceState<ServerSourcesFilterState>(

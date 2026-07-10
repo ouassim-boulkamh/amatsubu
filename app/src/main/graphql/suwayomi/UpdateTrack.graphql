@@ -1,0 +1,7 @@
+mutation UpdateTrack($input: UpdateTrackInput!) {
+  updateTrack(input: $input) {
+    trackRecord {
+      ...AmatsubuTrackRecord
+    }
+  }
+}

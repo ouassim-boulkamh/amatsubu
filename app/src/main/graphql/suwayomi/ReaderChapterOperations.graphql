@@ -1,0 +1,55 @@
+fragment AmatsubuReaderChapter on ChapterType {
+  chapterNumber
+  fetchedAt
+  id
+  isDownloaded
+  isBookmarked
+  isRead
+  lastPageRead
+  lastReadAt
+  mangaId
+  name
+  realUrl
+  scanlator
+  sourceOrder
+  uploadDate
+  url
+}
+
+mutation FetchChapters($input: FetchChaptersInput!) {
+  fetchChapters(input: $input) {
+    chapters { ...AmatsubuReaderChapter }
+  }
+}
+
+query GetCachedChapters($mangaId: Int!) {
+  chapters(
+    filter: { mangaId: { equalTo: $mangaId } }
+    first: 10000
+    order: [{ by: SOURCE_ORDER, byType: ASC }]
+  ) {
+    nodes { ...AmatsubuReaderChapter }
+  }
+}
+
+mutation FetchChapterPages($input: FetchChapterPagesInput!) {
+  fetchChapterPages(input: $input) {
+    pages
+    chapter {
+      ...AmatsubuReaderChapter
+      pageCount
+    }
+  }
+}
+
+mutation UpdateReaderChapter($input: UpdateChapterInput!) {
+  updateChapter(input: $input) {
+    chapter { ...AmatsubuReaderChapter }
+  }
+}
+
+mutation UpdateReaderChapters($input: UpdateChaptersInput!) {
+  updateChapters(input: $input) {
+    chapters { ...AmatsubuReaderChapter }
+  }
+}

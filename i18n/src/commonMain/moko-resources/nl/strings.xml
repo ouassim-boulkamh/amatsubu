@@ -102,9 +102,7 @@
     <string name="color_filter_a_value">Alfa</string>
     <string name="services">Trackers</string>
     <string name="pref_create_backup">Back-up maken</string>
-    <string name="pref_create_backup_summ">Kan worden gebruikt om de huidige bibliotheek te herstellen</string>
     <string name="pref_restore_backup">Back-up herstellen</string>
-    <string name="pref_restore_backup_summ">Herstellen van back-up bestand</string>
     <string name="pref_backup_interval">Frequentie van automatische back-ups</string>
     <string name="backup_created">Back-up gemaakt</string>
     <string name="restore_completed">Herstellen voltooid</string>
@@ -426,7 +424,6 @@
     <string name="action_filter_tracked">Getracked</string>
     <string name="right_and_left_nav">Rechts en links</string>
     <string name="pref_dual_page_split">Brede pagina\'s opsplitsen</string>
-    <string name="backup_restore_content_full">Je zal mogelijk missende extensies opnieuw moeten installeren en opnieuw moeten inloggen bij trackingdiensten om deze weer te gebruiken.</string>
     <string name="nav_zone_right">Rechts</string>
     <string name="nav_zone_left">Links</string>
     <string name="nav_zone_next">Volgende</string>

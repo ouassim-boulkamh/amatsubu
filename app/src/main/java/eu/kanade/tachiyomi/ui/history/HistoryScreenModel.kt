@@ -9,15 +9,19 @@ import eu.kanade.presentation.history.HistoryUiModel
 import eu.kanade.tachiyomi.data.suwayomi.MangaStatus
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiCategoryDto
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateEntity
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterWithMangaDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaDto
 import eu.kanade.tachiyomi.data.suwayomi.isSuwayomiServerUnavailable
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
-import eu.kanade.tachiyomi.source.model.SManga
+import eu.kanade.tachiyomi.data.suwayomi.serverHistoryClearAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.serverHistoryRefreshAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.serverHistoryLibraryAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.serverHistoryReadAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.toDomainStatus
 import eu.kanade.tachiyomi.util.lang.toLocalDate
-import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -38,22 +42,21 @@ import tachiyomi.core.common.preference.mapAsCheckboxState
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.category.model.Category
-import tachiyomi.domain.chapter.model.Chapter
-import tachiyomi.domain.history.model.HistoryWithRelations
-import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.manga.model.Manga
-import tachiyomi.domain.manga.model.MangaCover
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
+import eu.kanade.domain.category.model.Category
+import eu.kanade.domain.chapter.model.Chapter
+import eu.kanade.domain.history.model.HistoryWithRelations
+import eu.kanade.domain.library.service.LibraryPreferences
+import eu.kanade.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.MangaCover
+import eu.kanade.domain.manga.model.UpdateStrategy
 import java.util.Date
 
-class HistoryScreenModel(
-    private val libraryPreferences: LibraryPreferences = Injekt.get(),
+class HistoryScreenModel internal constructor(
+    private val libraryPreferences: LibraryPreferences,
+    private val suwayomiProvider: SuwayomiClientProvider,
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
 ) : StateScreenModel<HistoryScreenModel.State>(State()) {
 
-    private val suwayomiProvider = SuwayomiClientProvider()
     private val suwayomiClient = suwayomiProvider.graphQlClient
     private val serverHistoryRefreshes = MutableStateFlow(0)
 
@@ -85,8 +88,12 @@ class HistoryScreenModel(
                 .collect { newList -> mutableState.update { it.copy(list = newList) } }
         }
 
-        ServerStateSync.refreshes
-            .onEach { serverHistoryRefreshes.update { it + 1 } }
+        ServerStateSync.invalidations
+            .onEach { invalidation ->
+                if (invalidation.affectsAny(ServerStateEntity.History, ServerStateEntity.Library)) {
+                    serverHistoryRefreshes.update { it + 1 }
+                }
+            }
             .launchIn(screenModelScope)
     }
 
@@ -111,7 +118,7 @@ class HistoryScreenModel(
             mutableState.update { it.copy(isRefreshing = true) }
             val result = runCatching {
                 suwayomiClient.testConnection()
-                ServerStateSync.requestRefresh()
+                ServerStateSync.requestRefresh(*serverHistoryRefreshAffectedEntities().toTypedArray())
             }
             mutableState.update { it.copy(isRefreshing = false) }
             result.onSuccess {
@@ -131,7 +138,9 @@ class HistoryScreenModel(
             runCatching {
                 suwayomiClient.updateChapterRead(history.chapterId.toInt(), isRead = false)
                 serverHistoryRefreshes.update { it + 1 }
-                ServerStateSync.requestRefresh()
+                ServerStateSync.requestRefresh(
+                    *serverHistoryReadAffectedEntities(listOf(history.mangaId.toInt())).toTypedArray(),
+                )
             }.onFailure { error ->
                 logcat(LogPriority.ERROR, error) { "Failed to remove Suwayomi history entry" }
                 _events.send(if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError)
@@ -148,7 +157,7 @@ class HistoryScreenModel(
                         suwayomiClient.updateChaptersRead(chapterIds, isRead = false)
                     }
                 serverHistoryRefreshes.update { it + 1 }
-                ServerStateSync.requestRefresh()
+                ServerStateSync.requestRefresh(*serverHistoryClearAffectedEntities().toTypedArray())
                 _events.send(Event.HistoryCleared)
             }.onFailure { error ->
                 logcat(LogPriority.ERROR, error) { "Failed to clear Suwayomi reading history" }
@@ -281,7 +290,7 @@ class HistoryScreenModel(
                     categoryIds = categories.toServerCategoryIds(),
                 )
                 serverHistoryRefreshes.update { it + 1 }
-                ServerStateSync.requestRefresh()
+                ServerStateSync.requestRefresh(*serverHistoryLibraryAffectedEntities(manga.id.toInt()).toTypedArray())
                 mutableState.update { it.copy(dialog = null) }
             }.onFailure { error ->
                 logcat(LogPriority.ERROR, error) { "Failed to add Suwayomi history manga to categories" }
@@ -330,7 +339,9 @@ class HistoryScreenModel(
                             categoryIds = listOf(defaultCategory.id).toServerCategoryIds(),
                         )
                         serverHistoryRefreshes.update { it + 1 }
-                        ServerStateSync.requestRefresh()
+                        ServerStateSync.requestRefresh(
+                            *serverHistoryLibraryAffectedEntities(manga.id.toInt()).toTypedArray(),
+                        )
                         mutableState.update { it.copy(dialog = null) }
                     }
 
@@ -340,7 +351,9 @@ class HistoryScreenModel(
                             inLibrary = true,
                         )
                         serverHistoryRefreshes.update { it + 1 }
-                        ServerStateSync.requestRefresh()
+                        ServerStateSync.requestRefresh(
+                            *serverHistoryLibraryAffectedEntities(manga.id.toInt()).toTypedArray(),
+                        )
                         mutableState.update { it.copy(dialog = null) }
                     }
 
@@ -407,18 +420,6 @@ class HistoryScreenModel(
             updateStrategy = UpdateStrategy.ALWAYS_UPDATE,
             initialized = initialized,
         )
-    }
-
-    private fun MangaStatus.toDomainStatus(): Long {
-        return when (this) {
-            MangaStatus.UNKNOWN -> SManga.UNKNOWN
-            MangaStatus.ONGOING -> SManga.ONGOING
-            MangaStatus.COMPLETED -> SManga.COMPLETED
-            MangaStatus.LICENSED -> SManga.LICENSED
-            MangaStatus.PUBLISHING_FINISHED -> SManga.PUBLISHING_FINISHED
-            MangaStatus.CANCELLED -> SManga.CANCELLED
-            MangaStatus.ON_HIATUS -> SManga.ON_HIATUS
-        }.toLong()
     }
 
     @Immutable

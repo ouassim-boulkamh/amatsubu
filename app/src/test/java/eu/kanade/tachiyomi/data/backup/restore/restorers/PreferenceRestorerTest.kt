@@ -119,6 +119,12 @@ class PreferenceRestorerTest {
         assertEquals(true, sourceStore.value("enabled"))
     }
 
+    @Test
+    fun `source preference restore keeps historical file names`() {
+        assertEquals("source_1", restoredSourcePreferenceFileName("source_1"))
+        assertEquals("local", restoredSourcePreferenceFileName("local"))
+    }
+
     private class MutablePreferenceStore(
         vararg initialValues: Pair<String, Any>,
     ) : PreferenceStore {

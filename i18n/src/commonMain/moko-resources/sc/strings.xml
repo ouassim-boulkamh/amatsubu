@@ -144,9 +144,7 @@
     <string name="disabled">Disabilitadu</string>
     <string name="services">Arrastadores</string>
     <string name="pref_create_backup">Crea una còpia de seguresa</string>
-    <string name="pref_create_backup_summ">Podet èssere impreada pro ripristinare sa biblioteca atuale</string>
     <string name="pref_restore_backup">Riprìstina una còpia de seguresa</string>
-    <string name="pref_restore_backup_summ">Riprìstina sa biblioteca dae una còpia de seguresa</string>
     <string name="pref_backup_interval">Frecuèntzia de sarvatàgiu de sas còpias de seguresa</string>
     <string name="backup_created">Còpia de seguresa creada</string>
     <string name="restore_completed">Riprìstinu acabadu</string>
@@ -428,7 +426,6 @@
     <string name="pref_dual_page_split">Partzi sas pàginas largas</string>
     <string name="pref_dual_page_invert_summary">Si sa positzione de sas pàginas largas partzidas non currispondet a sa diretzione de leghidura</string>
     <string name="pref_dual_page_invert">Fùrria su positzionamentu de sas pàginas partzidas</string>
-    <string name="backup_restore_content_full">A pustis dias pòdere dèpere installare sas estensiones chi mancant e atzèdere a sos servìtzios de arrastamentu pro los pòdere impreare.</string>
     <string name="nav_zone_right">Destra</string>
     <string name="nav_zone_left">Manca</string>
     <string name="nav_zone_next">Imbeniente</string>

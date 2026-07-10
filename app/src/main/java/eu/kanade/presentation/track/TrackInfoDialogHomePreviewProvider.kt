@@ -2,21 +2,25 @@ package eu.kanade.presentation.track
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
-import eu.kanade.tachiyomi.ui.manga.track.TrackItem
-import eu.kanade.test.DummyTracker
-import tachiyomi.domain.track.model.Track
+import eu.kanade.tachiyomi.R
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
 internal class TrackInfoDialogHomePreviewProvider :
     PreviewParameterProvider<@Composable () -> Unit> {
 
-    private val aTrack = Track(
+    private val tracker = ServerTrackerPresentation(
         id = 1L,
-        mangaId = 2L,
-        trackerId = 3L,
-        remoteId = 4L,
-        libraryId = null,
+        name = "Example Tracker",
+        logoRes = R.drawable.brand_anilist,
+        supportsReadingDates = false,
+        supportsPrivateTracking = true,
+        supportsTrackDeletion = false,
+        statuses = emptyList(),
+        scores = (0..10).map(Int::toString),
+    )
+    private val aTrack = ServerTrackRecord(
+        id = 1L,
         title = "Manage Name On Tracker Site",
         lastChapterRead = 2.0,
         totalChapters = 12L,
@@ -28,26 +32,17 @@ internal class TrackInfoDialogHomePreviewProvider :
         private = false,
     )
     private val privateTrack = aTrack.copy(private = true)
-    private val trackItemWithoutTrack = TrackItem(
+    private val trackItemWithoutTrack = ServerTrackItem(
         track = null,
-        tracker = DummyTracker(
-            id = 1L,
-            name = "Example Tracker",
-        ),
+        tracker = tracker,
     )
-    private val trackItemWithTrack = TrackItem(
+    private val trackItemWithTrack = ServerTrackItem(
         track = aTrack,
-        tracker = DummyTracker(
-            id = 2L,
-            name = "Example Tracker 2",
-        ),
+        tracker = tracker,
     )
-    private val trackItemWithPrivateTrack = TrackItem(
+    private val trackItemWithPrivateTrack = ServerTrackItem(
         track = privateTrack,
-        tracker = DummyTracker(
-            id = 2L,
-            name = "Example Tracker 2",
-        ),
+        tracker = tracker,
     )
 
     private val trackersWithAndWithoutTrack = @Composable {

@@ -4,26 +4,30 @@ import androidx.compose.runtime.Immutable
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import dev.icerock.moko.resources.StringResource
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiCategoryDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiCategoryFlag
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
+import eu.kanade.tachiyomi.di.AppDependencies
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.category.model.Category
+import eu.kanade.domain.category.model.Category
 import tachiyomi.i18n.MR
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
-class CategoryScreenModel : StateScreenModel<CategoryScreenState>(CategoryScreenState.Loading) {
+class CategoryScreenModel private constructor(
+    private val suwayomiProvider: SuwayomiClientProvider,
+) : StateScreenModel<CategoryScreenState>(CategoryScreenState.Loading) {
+
+    internal constructor(dependencies: AppDependencies) : this(dependencies.suwayomiClientProvider)
 
     private val _events: Channel<CategoryEvent> = Channel()
     val events = _events.receiveAsFlow()
 
-    private val suwayomiClient = SuwayomiClientProvider().graphQlClient
+    private val suwayomiClient = suwayomiProvider.graphQlClient
 
     init {
         screenModelScope.launchIO {
@@ -33,41 +37,37 @@ class CategoryScreenModel : StateScreenModel<CategoryScreenState>(CategoryScreen
 
     fun createCategory(name: String) {
         screenModelScope.launchIO {
-            runServerCategoryAction {
+            runServerCategoryMutation {
                 val nextOrder = successState?.categories
                     ?.maxOfOrNull { it.order }
                     ?.plus(1)
                     ?.toInt()
                     ?: 0
                 suwayomiClient.createCategory(name = name, order = nextOrder)
-                refreshCategories()
             }
         }
     }
 
     fun deleteCategory(categoryId: Long) {
         screenModelScope.launchIO {
-            runServerCategoryAction {
+            runServerCategoryMutation {
                 suwayomiClient.deleteCategory(categoryId.toInt())
-                refreshCategories()
             }
         }
     }
 
     fun changeOrder(category: Category, newIndex: Int) {
         screenModelScope.launchIO {
-            runServerCategoryAction {
+            runServerCategoryMutation {
                 suwayomiClient.updateCategoryOrder(category.id.toInt(), newIndex)
-                refreshCategories()
             }
         }
     }
 
     fun renameCategory(category: Category, name: String) {
         screenModelScope.launchIO {
-            runServerCategoryAction {
+            runServerCategoryMutation {
                 suwayomiClient.updateCategoryName(category.id.toInt(), name)
-                refreshCategories()
             }
         }
     }
@@ -78,13 +78,12 @@ class CategoryScreenModel : StateScreenModel<CategoryScreenState>(CategoryScreen
         includeInDownload: SuwayomiCategoryFlag,
     ) {
         screenModelScope.launchIO {
-            runServerCategoryAction {
+            runServerCategoryMutation {
                 suwayomiClient.updateCategoryFlags(
                     categoryId = category.id.toInt(),
                     includeInUpdate = includeInUpdate,
                     includeInDownload = includeInDownload,
                 )
-                refreshCategories()
             }
         }
     }
@@ -113,15 +112,7 @@ class CategoryScreenModel : StateScreenModel<CategoryScreenState>(CategoryScreen
     private suspend fun refreshCategories() {
         runServerCategoryAction {
             val serverCategories = suwayomiClient.getCategories()
-            mutableState.update {
-                CategoryScreenState.Success(
-                    categories = serverCategories
-                        .map { category -> category.toCategory() },
-                    categoryFlags = serverCategories.associate { category ->
-                        category.id.toLong() to category.toFlags()
-                    },
-                )
-            }
+            applyCategories(serverCategories)
         }
     }
 
@@ -131,6 +122,43 @@ class CategoryScreenModel : StateScreenModel<CategoryScreenState>(CategoryScreen
         } catch (e: Throwable) {
             logcat(LogPriority.ERROR, e) { "Failed to update Suwayomi categories" }
             _events.send(CategoryEvent.InternalError)
+        }
+    }
+
+    private suspend fun runServerCategoryMutation(mutation: suspend () -> Unit) {
+        when (
+            val result = runCategoryMutationWithSharedRefresh(
+                mutation = mutation,
+                refetchCategories = suwayomiClient::getCategories,
+                applyCategories = ::applyCategories,
+                requestSharedRefresh = { affected ->
+                    ServerStateSync.requestRefresh(*affected.toTypedArray())
+                },
+            )
+        ) {
+            CategoryMutationRefreshResult.AcceptedFresh -> Unit
+            is CategoryMutationRefreshResult.AcceptedRefreshFailed -> {
+                logcat(LogPriority.ERROR, result.error) {
+                    "Suwayomi accepted category mutation but category refresh failed"
+                }
+                _events.send(CategoryEvent.InternalError)
+            }
+            is CategoryMutationRefreshResult.MutationFailed -> {
+                logcat(LogPriority.ERROR, result.error) { "Failed to update Suwayomi categories" }
+                _events.send(CategoryEvent.InternalError)
+            }
+        }
+    }
+
+    private fun applyCategories(serverCategories: List<SuwayomiCategoryDto>) {
+        mutableState.update {
+            CategoryScreenState.Success(
+                categories = serverCategories
+                    .map { category -> category.toCategory() },
+                categoryFlags = serverCategories.associate { category ->
+                    category.id.toLong() to category.toFlags()
+                },
+            )
         }
     }
 

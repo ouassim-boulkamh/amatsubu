@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.rememberScreenModel
@@ -37,6 +38,8 @@ import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopy
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyOrphanManager
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyStore
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
+import eu.kanade.tachiyomi.di.AppDependencies
+import eu.kanade.tachiyomi.di.appDependencies
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -48,8 +51,6 @@ import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import java.io.File
 import java.text.DateFormat
 import java.util.Date
@@ -59,7 +60,8 @@ object ClientDeviceCopiesScreen : Screen() {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val screenModel = rememberScreenModel { ClientDeviceCopiesScreenModel() }
+        val dependencies = LocalContext.current.appDependencies
+        val screenModel = rememberScreenModel { ClientDeviceCopiesScreenModel(dependencies) }
         val state by screenModel.state.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
         var pendingRemoval by remember { mutableStateOf<ClientDeviceChapterCopy?>(null) }
@@ -213,10 +215,15 @@ private fun ClientDeviceCopyItem(
 }
 
 private class ClientDeviceCopiesScreenModel(
-    private val store: ClientDeviceChapterCopyStore = Injekt.get(),
+    private val store: ClientDeviceChapterCopyStore,
+    private val provider: SuwayomiClientProvider,
 ) : StateScreenModel<ClientDeviceCopiesScreenModel.State>(State.Loading) {
 
-    private val provider = SuwayomiClientProvider()
+    constructor(dependencies: AppDependencies) : this(
+        store = dependencies.clientDeviceChapterCopyStore,
+        provider = dependencies.suwayomiClientProvider,
+    )
+
     private val orphanManager = ClientDeviceChapterCopyOrphanManager(
         store = store,
         client = provider.graphQlClient,

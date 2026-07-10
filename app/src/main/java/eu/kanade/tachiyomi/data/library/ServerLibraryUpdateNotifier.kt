@@ -16,9 +16,9 @@ import kotlin.coroutines.cancellation.CancellationException
 
 internal class ServerLibraryUpdateNotifier(
     private val context: Context,
-    private val clientProvider: SuwayomiClientProvider = SuwayomiClientProvider(),
-    private val renderer: ServerNotificationRenderer = ServerNotificationRenderer(context),
-    private val checkpoints: ServerNotificationCheckpointStore = ServerNotificationCheckpointStore(),
+    private val clientProvider: SuwayomiClientProvider,
+    private val renderer: ServerNotificationRenderer,
+    private val checkpoints: ServerNotificationCheckpointStore,
     private val reconciler: ServerNotificationReconciler = ServerNotificationReconciler(renderer, checkpoints),
 ) {
     fun init(scope: CoroutineScope) {
@@ -26,7 +26,7 @@ internal class ServerLibraryUpdateNotifier(
             .onEach { status ->
                 val result = reconciler.reconcileLibraryUpdate(
                     client = clientProvider.graphQlClient,
-                    serverIdentity = clientProvider.baseUrl(),
+                    serverIdentity = clientProvider.serverIdentity().notificationCheckpointKey,
                     status = status,
                 )
                 if (result.started) {
@@ -43,7 +43,7 @@ internal class ServerLibraryUpdateNotifier(
         clientProvider.liveStatusClient.downloadStatusFlow()
             .onEach { status ->
                 reconciler.reconcileDownloadStatus(
-                    serverIdentity = clientProvider.baseUrl(),
+                    serverIdentity = clientProvider.serverIdentity().notificationCheckpointKey,
                     status = status,
                 )
             }
@@ -57,7 +57,7 @@ internal class ServerLibraryUpdateNotifier(
         clientProvider.liveStatusClient.syncStatusFlow()
             .onEach { status ->
                 reconciler.reconcileSyncYomiStatus(
-                    serverIdentity = clientProvider.baseUrl(),
+                    serverIdentity = clientProvider.serverIdentity().notificationCheckpointKey,
                     status = status,
                 )
             }

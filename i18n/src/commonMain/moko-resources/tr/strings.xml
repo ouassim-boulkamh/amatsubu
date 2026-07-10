@@ -145,9 +145,7 @@
     <string name="disabled">Devre dışı</string>
     <string name="services">İzleyiciler</string>
     <string name="pref_create_backup">Yedek oluştur</string>
-    <string name="pref_create_backup_summ">Şu anki kitaplığı geri yüklemek için kullanılabilir</string>
     <string name="pref_restore_backup">Yedeği geri yükle</string>
-    <string name="pref_restore_backup_summ">Kitaplığı yedek dosyasından geri yükle</string>
     <string name="pref_backup_interval">Otomatik yedekleme sıklığı</string>
     <string name="backup_created">Yedek oluşturuldu</string>
     <string name="restore_completed">Geri yükleme tamamlandı</string>
@@ -430,7 +428,6 @@
     <string name="pref_dual_page_split">Geniş sayfaları böl</string>
     <string name="pref_dual_page_invert_summary">Bölünmüş geniş sayfaların sırası okuma yönüyle uyuşmuyorsa</string>
     <string name="pref_dual_page_invert">Bölünmüş sayfa sırasını ters çevir</string>
-    <string name="backup_restore_content_full">Daha sonra kullanmak için eksik uzantıları yüklemeniz ve izleyici hizmetlerinde oturum açmanız gerekebilir.</string>
     <string name="nav_zone_right">Sağ</string>
     <string name="nav_zone_left">Sol</string>
     <string name="nav_zone_next">Sonraki</string>

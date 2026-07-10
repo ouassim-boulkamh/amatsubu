@@ -192,10 +192,8 @@
     <string name="no_more_results">Больше нет результатов</string>
     <string name="pref_backup_interval">Частота автоматических резервных копий</string>
     <string name="pref_create_backup">Создать резервную копию</string>
-    <string name="pref_create_backup_summ">Можно использовать для восстановления текущей библиотеки</string>
     <string name="pref_crop_borders">Обрезать поля</string>
     <string name="pref_restore_backup">Восстановить из резервной копии</string>
-    <string name="pref_restore_backup_summ">Восстановить библиотеку из резервной копии</string>
     <string name="restore_completed">Восстановление завершено</string>
     <string name="restoring_backup">Восстановление из резервной копии</string>
     <string name="snack_categories_deleted">Категории удалены</string>
@@ -430,7 +428,6 @@
     <string name="pref_dual_page_split">Разделение широких страниц</string>
     <string name="pref_dual_page_invert">Разделение широких страниц наоборот</string>
     <string name="pref_dual_page_invert_summary">Если разделение широких страниц не соответствует направлению чтения</string>
-    <string name="backup_restore_content_full">Вам будет нужно установить все недостающие расширения и после этого авторизоваться в сервисах отслеживания для их использования.</string>
     <string name="nav_zone_left">Слева</string>
     <string name="nav_zone_right">Справа</string>
     <string name="nav_zone_next">Следующая</string>

@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
-import tachiyomi.domain.chapter.model.Chapter
-import tachiyomi.domain.manga.model.Manga
+import eu.kanade.domain.chapter.model.Chapter
+import eu.kanade.domain.manga.model.Manga
 
 class ServerReaderChaptersTest {
 
@@ -307,7 +307,7 @@ class ServerReaderChaptersTest {
     }
 
     private fun ServerReaderChapterList.chapterIds(): List<Long> {
-        return chapters.map { it.chapter.id!! }
+        return chapters.map { it.chapter.id }
     }
 
     private fun chapter(

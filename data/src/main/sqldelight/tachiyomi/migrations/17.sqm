@@ -1,0 +1,21 @@
+CREATE TABLE server_reader_intent_pending(
+    server_key TEXT NOT NULL,
+    manga_id INTEGER NOT NULL,
+    chapter_id INTEGER NOT NULL,
+    intent_type TEXT NOT NULL,
+    baseline_is_read INTEGER NOT NULL,
+    baseline_last_page_read INTEGER NOT NULL,
+    baseline_is_bookmarked INTEGER NOT NULL,
+    desired_is_read INTEGER,
+    desired_last_page_read INTEGER,
+    desired_is_bookmarked INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY(server_key, manga_id, chapter_id, intent_type)
+);
+
+CREATE INDEX server_reader_intent_pending_server_manga_index
+ON server_reader_intent_pending(server_key, manga_id);
+
+CREATE INDEX server_reader_intent_pending_server_updated_index
+ON server_reader_intent_pending(server_key, updated_at);

@@ -36,4 +36,19 @@ class SuwayomiMappingsTest {
             resolveServerUrl("http://192.0.2.10:4567", "api/v1/chapter/2/page/1"),
         )
     }
+
+    @Test
+    fun `Suwayomi page assets keep server path and resolved image URL separate`() {
+        val pages = listOf("/api/v1/chapter/2/page/1")
+            .toSuwayomiPageAssets("http://192.0.2.10:4567")
+
+        assertEquals(
+            SuwayomiPageAsset(
+                index = 0,
+                url = "/api/v1/chapter/2/page/1",
+                imageUrl = "http://192.0.2.10:4567/api/v1/chapter/2/page/1",
+            ),
+            pages.single(),
+        )
+    }
 }

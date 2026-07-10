@@ -124,9 +124,7 @@
     <string name="disabled">নিষ্ক্রিয়</string>
     <string name="services">সেবা সমূহ</string>
     <string name="pref_create_backup">ব্যাকআপ তৈরী করুন</string>
-    <string name="pref_create_backup_summ">বর্তমান সংগ্রহশালা পুনরুদ্ধারের জন্য ব্যাবহার করা যাবে</string>
     <string name="pref_restore_backup">ব্যাকআপ পুনরুদ্ধার</string>
-    <string name="pref_restore_backup_summ">ব্যাকআপ ফাইল থেকে সংগ্রহশালা পুনরুদ্ধার করুন</string>
     <string name="pref_backup_interval">ব্যাকআপ ফ্রিকোয়েন্সি</string>
     <string name="backup_created">ব্যাকআপ তৈরী হয়েছে</string>
     <string name="restore_completed">পুনরুদ্ধার সম্পন্ন হয়েছে</string>
@@ -442,7 +440,6 @@
     <string name="pref_dump_crash_logs">ক্র্যাশ লগ শেয়ার</string>
     <string name="pref_dns_over_https">এইচটিটিপিএস এর উপর ডিএনএস</string>
     <string name="restore_miui_warning">এমআইইউআই অপ্টিমাইজেশন নিষ্ক্রিয় থাকলে ব্যাকআপ/রিস্টোর সঠিকভাবে কাজ নাও করতে পারে।</string>
-    <string name="backup_restore_content_full">সম্ভবত অনুপস্থিত এক্সটেনশন ইনস্টল করতে হবে এবং ট্র্যাকিং সার্ভিসগুলোতে পরে লগইন করতে হবে এগুলো ব্যবহার করতে।</string>
     <string name="action_track">ট্র্যাক</string>
     <string name="enhanced_tracking_info">নির্দিষ্ট উৎসের জন্য উন্নত বৈশিষ্ট্য প্রদান করে এমন পরিষেবা। আপনার লাইব্রেরিতে যোগ করা হলে মাঙ্গা স্বয়ংক্রিয়ভাবে ট্র্যাক করা হয়।</string>
     <string name="enhanced_services">উন্নত সেবা</string>

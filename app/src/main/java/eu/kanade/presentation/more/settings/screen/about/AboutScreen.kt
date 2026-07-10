@@ -14,6 +14,7 @@ import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
 import eu.kanade.presentation.util.LocalBackPress
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.BuildConfig
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.util.CrashLogUtil
 import eu.kanade.tachiyomi.util.lang.toDateTimestampString
 import eu.kanade.tachiyomi.util.system.copyToClipboard
@@ -25,11 +26,11 @@ import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.icons.CustomIcons
 import tachiyomi.presentation.core.icons.Github
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 object AboutScreen : Screen() {
 
@@ -41,6 +42,7 @@ object AboutScreen : Screen() {
         val uriHandler = LocalUriHandler.current
         val handleBack = LocalBackPress.current
         val navigator = LocalNavigator.currentOrThrow
+        val dateFormat = UiPreferences.dateFormat(context.appDependencies.uiPreferences.dateFormat.get())
 
         Scaffold(
             topBar = { scrollBehavior ->
@@ -63,7 +65,7 @@ object AboutScreen : Screen() {
                 item {
                     TextPreferenceWidget(
                         title = stringResource(MR.strings.version),
-                        subtitle = getVersionName(withBuildDate = true),
+                        subtitle = getVersionName(withBuildDate = true, dateFormat = dateFormat),
                         onPreferenceClick = {
                             val deviceInfo = CrashLogUtil(context).getDebugInfo()
                             context.copyToClipboard("Debug information", deviceInfo)
@@ -73,7 +75,7 @@ object AboutScreen : Screen() {
 
                 item {
                     TextPreferenceWidget(
-                        title = "Based on Mihon",
+                        title = "Mihon upstream base",
                         subtitle = "${BuildConfig.MIHON_BASE_VERSION} (${BuildConfig.MIHON_BASE_COMMIT})",
                     )
                 }
@@ -105,12 +107,15 @@ object AboutScreen : Screen() {
         }
     }
 
-    fun getVersionName(withBuildDate: Boolean): String {
+    fun getVersionName(
+        withBuildDate: Boolean,
+        dateFormat: DateTimeFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT),
+    ): String {
         return when {
             BuildConfig.DEBUG -> {
                 "${BuildConfig.VERSION_NAME} debug ${BuildConfig.COMMIT_SHA}".let {
                     if (withBuildDate) {
-                        "$it (${getFormattedBuildTime()})"
+                        "$it (${getFormattedBuildTime(dateFormat)})"
                     } else {
                         it
                     }
@@ -119,7 +124,7 @@ object AboutScreen : Screen() {
             isPreviewBuildType -> {
                 "${BuildConfig.VERSION_NAME} preview r${BuildConfig.COMMIT_COUNT}".let {
                     if (withBuildDate) {
-                        "$it (${BuildConfig.COMMIT_SHA}, ${getFormattedBuildTime()})"
+                        "$it (${BuildConfig.COMMIT_SHA}, ${getFormattedBuildTime(dateFormat)})"
                     } else {
                         "$it (${BuildConfig.COMMIT_SHA})"
                     }
@@ -128,7 +133,7 @@ object AboutScreen : Screen() {
             else -> {
                 BuildConfig.VERSION_NAME.let {
                     if (withBuildDate) {
-                        "$it (${getFormattedBuildTime()})"
+                        "$it (${getFormattedBuildTime(dateFormat)})"
                     } else {
                         it
                     }
@@ -137,17 +142,15 @@ object AboutScreen : Screen() {
         }
     }
 
-    internal fun getFormattedBuildTime(): String {
+    internal fun getFormattedBuildTime(
+        dateFormat: DateTimeFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT),
+    ): String {
         return try {
             LocalDateTime.ofInstant(
                 Instant.parse(BuildConfig.BUILD_TIME),
                 ZoneId.systemDefault(),
             )
-                .toDateTimestampString(
-                    UiPreferences.dateFormat(
-                        Injekt.get<UiPreferences>().dateFormat.get(),
-                    ),
-                )
+                .toDateTimestampString(dateFormat)
         } catch (e: Exception) {
             BuildConfig.BUILD_TIME
         }

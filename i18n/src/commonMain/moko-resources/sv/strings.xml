@@ -145,9 +145,7 @@
     <string name="disabled">Inaktiverad</string>
     <string name="services">Spårare</string>
     <string name="pref_create_backup">Skapa säkerhetskopia</string>
-    <string name="pref_create_backup_summ">Kan användas för att återställa biblioteket</string>
     <string name="pref_restore_backup">Återställ säkerhetskopia</string>
-    <string name="pref_restore_backup_summ">Återställ biblioteket från en säkerhetskopia</string>
     <string name="pref_backup_interval">Automatisk säkerhetskopieringsfrekvens</string>
     <string name="backup_created">Säkerhetskopia skapad</string>
     <string name="restore_completed">Återställning slutförd</string>
@@ -428,7 +426,6 @@
     <string name="right_and_left_nav">Höger och Vänster</string>
     <string name="action_display_show_number_of_items">Visa antal objekt</string>
     <string name="pref_dual_page_split">Delning av breda sidor</string>
-    <string name="backup_restore_content_full">Du måste installera eventuella tillägg som saknas och logga in på spårningstjänster efteråt för att kunna använda dem.</string>
     <string name="nav_zone_right">Höger</string>
     <string name="nav_zone_left">Vänster</string>
     <string name="nav_zone_next">Nästa</string>

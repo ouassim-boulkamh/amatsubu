@@ -12,6 +12,7 @@ import androidx.work.WorkerParameters
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.HttpException
 import eu.kanade.tachiyomi.network.awaitSuccess
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.util.storage.DiskUtil
 import eu.kanade.tachiyomi.util.system.workManager
 import kotlinx.coroutines.delay
@@ -19,8 +20,6 @@ import logcat.LogPriority
 import okhttp3.OkHttpClient
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import java.io.File
 import java.io.IOException
 import java.security.MessageDigest
@@ -161,11 +160,7 @@ internal class ClientDeviceChapterCopyDownloader(
     private fun chapterDirectory(serverKey: String, manifest: SuwayomiChapterPageManifest): File {
         return File(
             rootDirectory(),
-            listOf(
-                DiskUtil.hashKeyForDisk(serverKey),
-                manifest.chapter.mangaId.toString(),
-                manifest.chapter.id.toString(),
-            ).joinToString(File.separator),
+            ClientDeviceChapterCopyPathPolicy.relativeChapterPath(serverKey, manifest),
         )
     }
 
@@ -173,7 +168,19 @@ internal class ClientDeviceChapterCopyDownloader(
         return File(chapterDirectory(serverKey, manifest).parentFile, "${manifest.chapter.id}.tmp")
     }
 
-    private fun pageFileName(index: Int): String = "page-${index.toString().padStart(4, '0')}.img"
+    private fun pageFileName(index: Int): String = ClientDeviceChapterCopyPathPolicy.pageFileName(index)
+}
+
+internal object ClientDeviceChapterCopyPathPolicy {
+    fun relativeChapterPath(serverKey: String, manifest: SuwayomiChapterPageManifest): String {
+        return listOf(
+            DiskUtil.hashKeyForDisk(serverKey),
+            manifest.chapter.mangaId.toString(),
+            manifest.chapter.id.toString(),
+        ).joinToString(File.separator)
+    }
+
+    fun pageFileName(index: Int): String = "page-${index.toString().padStart(4, '0')}.img"
 }
 
 private fun Throwable.isTransientPageDownloadFailure(): Boolean {
@@ -245,9 +252,25 @@ internal class ClientDeviceChapterCopyWorker(
             return Result.failure()
         }
         return try {
-            val provider = SuwayomiClientProvider()
+            val provider = context.appDependencies.suwayomiClientProvider
+            when (val identityCheck = EnqueueBoundServerIdentity.check(inputData, provider.serverKey())) {
+                is EnqueueBoundServerIdentityCheck.Matched -> Unit
+                EnqueueBoundServerIdentityCheck.Missing -> {
+                    logcat(LogPriority.ERROR) {
+                        "Client device chapter copy worker missing enqueue-bound server identity"
+                    }
+                    return Result.failure()
+                }
+                is EnqueueBoundServerIdentityCheck.Mismatched -> {
+                    logcat(LogPriority.ERROR) {
+                        "Client device chapter copy worker server identity mismatch " +
+                            "enqueued=${identityCheck.enqueuedServerKey} current=${identityCheck.currentServerKey}"
+                    }
+                    return Result.failure()
+                }
+            }
             val downloader = ClientDeviceChapterCopyDownloader(
-                store = Injekt.get<ClientDeviceChapterCopyStore>(),
+                store = context.appDependencies.clientDeviceChapterCopyStore,
                 pageFetcher = SuwayomiClientDeviceChapterPageFetcher(
                     graphQlClient = provider.graphQlClient,
                     baseUrl = provider::baseUrl,
@@ -310,11 +333,11 @@ internal class ClientDeviceChapterCopyWorker(
             val request = OneTimeWorkRequestBuilder<ClientDeviceChapterCopyWorker>()
                 .addTag(TAG)
                 .setInputData(
-                    Data.Builder()
-                        .putString(KEY_ACTION, ACTION_SAVE)
-                        .putString(KEY_MANGA_TITLE, mangaTitle)
-                        .putInt(KEY_CHAPTER_ID, chapterId)
-                        .build(),
+                    buildSaveInputData(
+                        serverKey = context.appDependencies.suwayomiClientProvider.serverKey(),
+                        mangaTitle = mangaTitle,
+                        chapterId = chapterId,
+                    ),
                 )
                 .setConstraints(
                     Constraints.Builder()
@@ -334,11 +357,11 @@ internal class ClientDeviceChapterCopyWorker(
             val request = OneTimeWorkRequestBuilder<ClientDeviceChapterCopyWorker>()
                 .addTag(TAG)
                 .setInputData(
-                    Data.Builder()
-                        .putString(KEY_ACTION, ACTION_REMOVE)
-                        .putInt(KEY_MANGA_ID, mangaId)
-                        .putInt(KEY_CHAPTER_ID, chapterId)
-                        .build(),
+                    buildRemoveInputData(
+                        serverKey = context.appDependencies.suwayomiClientProvider.serverKey(),
+                        mangaId = mangaId,
+                        chapterId = chapterId,
+                    ),
                 )
                 .build()
 
@@ -355,6 +378,36 @@ internal class ClientDeviceChapterCopyWorker(
 
         fun defaultRootDirectory(context: Context): File {
             return File(context.filesDir, "client-chapter-copies")
+        }
+
+        internal fun buildSaveInputData(
+            serverKey: String,
+            mangaTitle: String?,
+            chapterId: Int,
+        ): Data {
+            return EnqueueBoundServerIdentity.put(
+                Data.Builder(),
+                serverKey,
+            )
+                .putString(KEY_ACTION, ACTION_SAVE)
+                .putString(KEY_MANGA_TITLE, mangaTitle)
+                .putInt(KEY_CHAPTER_ID, chapterId)
+                .build()
+        }
+
+        internal fun buildRemoveInputData(
+            serverKey: String,
+            mangaId: Int,
+            chapterId: Int,
+        ): Data {
+            return EnqueueBoundServerIdentity.put(
+                Data.Builder(),
+                serverKey,
+            )
+                .putString(KEY_ACTION, ACTION_REMOVE)
+                .putInt(KEY_MANGA_ID, mangaId)
+                .putInt(KEY_CHAPTER_ID, chapterId)
+                .build()
         }
     }
 }

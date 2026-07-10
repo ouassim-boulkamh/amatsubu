@@ -78,6 +78,46 @@ class SuwayomiPreferencesTest {
     }
 
     @Test
+    fun `token login password is cleared without changing basic auth credentials`() {
+        val preferences = SuwayomiPreferences(InMemoryPreferenceStore())
+        preferences.password.set("token-password")
+        preferences.authType.set(SuwayomiPreferences.AUTH_TOKEN)
+
+        preferences.clearTokenLoginPassword()
+
+        assertEquals("", preferences.password.get())
+        preferences.password.set("basic-password")
+        preferences.authType.set(SuwayomiPreferences.AUTH_BASIC)
+
+        preferences.clearTokenLoginPassword()
+
+        assertEquals("basic-password", preferences.password.get())
+    }
+
+    @Test
+    fun `token auth is applied only to the configured server`() {
+        val serverKey = SuwayomiServerIdentity.fromBaseUrl("http://example.org/suwayomi").serverKey
+        val tokenStore = FakeTokenStore().apply {
+            write(serverKey, SuwayomiTokens("access-token", "refresh-token"))
+        }
+        val preferences = SuwayomiPreferences(InMemoryPreferenceStore(), tokenStore)
+        preferences.serverUrl.set("http://example.org/suwayomi")
+        preferences.authType.set(SuwayomiPreferences.AUTH_TOKEN)
+
+        val sameServerHeader = captureAuthorizationHeader(
+            preferences = preferences,
+            requestUrl = "http://example.org/suwayomi/api/graphql",
+        )
+        val externalHeader = captureAuthorizationHeader(
+            preferences = preferences,
+            requestUrl = "https://cdn.example.net/cover.jpg",
+        )
+
+        assertEquals("Bearer access-token", sameServerHeader)
+        assertNull(externalHeader)
+    }
+
+    @Test
     fun `basic auth is applied to configured suwayomi asset urls`() {
         val preferences = SuwayomiPreferences(InMemoryPreferenceStore())
         preferences.serverUrl.set("https://example.org/suwayomi")
@@ -340,8 +380,14 @@ class SuwayomiPreferencesTest {
                             "sources": {
                               "nodes": [
                                 {
+                                  "baseUrl": "https://example.org",
+                                  "contentWarning": "SAFE",
                                   "displayName": "Source",
+                                  "homeUrl": "https://example.org",
+                                  "iconUrl": "https://example.org/icon.png",
                                   "id": "1",
+                                  "isConfigurable": false,
+                                  "isNsfw": false,
                                   "lang": "en",
                                   "name": "Source",
                                   "supportsLatest": true
@@ -358,7 +404,6 @@ class SuwayomiPreferencesTest {
             .build()
         val graphQlClient = SuwayomiGraphQlClient(
             client = client,
-            json = Json { ignoreUnknownKeys = true },
             endpoint = { "http://example.org/api/graphql" },
         )
 
@@ -408,5 +453,19 @@ class SuwayomiPreferencesTest {
             .message("OK")
             .body(body.toResponseBody("application/json".toMediaType()))
             .build()
+    }
+
+    private class FakeTokenStore : SuwayomiTokenStore {
+        private val tokens = mutableMapOf<String, SuwayomiTokens>()
+
+        override fun read(serverKey: String): SuwayomiTokens? = tokens[serverKey]
+
+        override fun write(serverKey: String, tokens: SuwayomiTokens) {
+            this.tokens[serverKey] = tokens
+        }
+
+        override fun clear(serverKey: String) {
+            tokens.remove(serverKey)
+        }
     }
 }

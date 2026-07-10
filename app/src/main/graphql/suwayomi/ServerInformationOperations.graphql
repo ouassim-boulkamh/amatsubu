@@ -1,0 +1,98 @@
+fragment AmatsubuServerSettings on SettingsType {
+  authMode
+  authPassword
+  authUsername
+  autoDownloadIgnoreReUploads
+  autoDownloadNewChapters
+  autoDownloadNewChaptersLimit
+  autoBackupIncludeCategories
+  autoBackupIncludeChapters
+  autoBackupIncludeClientData
+  autoBackupIncludeHistory
+  autoBackupIncludeManga
+  autoBackupIncludeServerSettings
+  autoBackupIncludeTracking
+  backupInterval
+  backupPath
+  backupTTL
+  backupTime
+  basicAuthEnabled
+  basicAuthPassword
+  basicAuthUsername
+  ip
+  port
+  downloadAsCbz
+  downloadsPath
+  electronPath
+  excludeCompleted
+  excludeEntryWithUnreadChapters
+  excludeNotStarted
+  excludeUnreadChapters
+  extensionRepos
+  flareSolverrAsResponseFallback
+  globalUpdateInterval
+  initialOpenInBrowserEnabled
+  localSourcePath
+  maxLogFileSize
+  maxLogFiles
+  maxLogFolderSize
+  maxSourcesInParallel
+  socksProxyEnabled
+  socksProxyHost
+  socksProxyPassword
+  socksProxyPort
+  socksProxyUsername
+  socksProxyVersion
+  flareSolverrEnabled
+  flareSolverrSessionName
+  flareSolverrSessionTtl
+  flareSolverrTimeout
+  flareSolverrUrl
+  debugLogsEnabled
+  systemTrayEnabled
+  updateMangas
+  webUIChannel
+  webUIFlavor
+  webUIInterface
+  webUIUpdateCheckInterval
+}
+
+query ServerAbout {
+  aboutServer {
+    name
+    version
+    revision
+    buildType
+    buildTime
+    github
+    discord
+  }
+}
+
+query WebUiAbout {
+  aboutWebUI {
+    channel
+    tag
+    updateTimestamp
+  }
+}
+
+query ServerSettings {
+  settings {
+    ...AmatsubuServerSettings
+  }
+}
+
+query TestConnectionSettings {
+  settings {
+    port
+  }
+}
+
+mutation SetSettings($settings: PartialSettingsTypeInput!) {
+  setSettings(input: { settings: $settings }) {
+    settings {
+      ...AmatsubuServerSettings
+    }
+  }
+}

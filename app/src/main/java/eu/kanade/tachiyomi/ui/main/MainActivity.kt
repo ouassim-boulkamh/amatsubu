@@ -59,6 +59,7 @@ import eu.kanade.presentation.util.AssistContentScreen
 import eu.kanade.presentation.util.DefaultNavigatorScreenTransition
 import eu.kanade.tachiyomi.data.cache.ChapterCache
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
 import eu.kanade.tachiyomi.ui.browse.ServerGlobalSearchScreen
 import eu.kanade.tachiyomi.ui.deeplink.DeepLinkScreen
@@ -74,21 +75,19 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import mihon.core.migration.Migrator
+import eu.kanade.amatsubu.migration.Migrator
 import tachiyomi.core.common.Constants
 import tachiyomi.core.common.util.lang.launchIO
-import tachiyomi.domain.library.service.LibraryPreferences
+import eu.kanade.domain.library.service.LibraryPreferences
 import tachiyomi.presentation.core.components.material.Scaffold
-import uy.kohesive.injekt.injectLazy
 
 class MainActivity : BaseActivity() {
 
-    private val libraryPreferences: LibraryPreferences by injectLazy()
-    private val preferences: BasePreferences by injectLazy()
-
-    private val chapterCache: ChapterCache by injectLazy()
-
-    private val getIncognitoState: GetIncognitoState by injectLazy()
+    private val dependencies get() = applicationContext.appDependencies
+    private val libraryPreferences: LibraryPreferences get() = dependencies.libraryPreferences
+    private val preferences: BasePreferences get() = dependencies.basePreferences
+    private val chapterCache: ChapterCache get() = dependencies.chapterCache
+    private val getIncognitoState: GetIncognitoState get() = dependencies.getIncognitoState
 
     // To be checked by splash screen. If true then splash screen will be removed.
     var ready = false

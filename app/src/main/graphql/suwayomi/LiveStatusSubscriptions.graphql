@@ -1,0 +1,80 @@
+fragment AmatsubuLiveStatusCategory on CategoryType {
+  id
+  name
+  order
+  includeInDownload
+  includeInUpdate
+}
+
+fragment AmatsubuLiveStatusManga on MangaType {
+  artist
+  author
+  description
+  downloadCount
+  genre
+  id
+  inLibrary
+  inLibraryAt
+  initialized
+  latestFetchedChapter { fetchedAt }
+  latestReadChapter { lastReadAt }
+  latestUploadedChapter { uploadDate }
+  meta { key mangaId value }
+  sourceId
+  status
+  thumbnailUrl
+  title
+  unreadCount
+  updateStrategy
+  url
+}
+
+fragment AmatsubuLiveStatusDownload on DownloadType {
+  chapter { id name chapterNumber uploadDate sourceOrder isDownloaded }
+  manga { id title downloadCount thumbnailUrl }
+  progress
+  state
+  tries
+  position
+}
+
+fragment AmatsubuLiveStatusLibraryUpdateStatus on LibraryUpdateStatus {
+  categoryUpdates { category { ...AmatsubuLiveStatusCategory } status }
+  mangaUpdates { manga { ...AmatsubuLiveStatusManga } status }
+  jobsInfo { isRunning totalJobs finishedJobs skippedCategoriesCount skippedMangasCount }
+}
+
+fragment AmatsubuLiveStatusLibraryUpdateUpdates on UpdaterUpdates {
+  categoryUpdates { category { ...AmatsubuLiveStatusCategory } status }
+  mangaUpdates { manga { ...AmatsubuLiveStatusManga } status }
+  initial { ...AmatsubuLiveStatusLibraryUpdateStatus }
+  jobsInfo { isRunning totalJobs finishedJobs skippedCategoriesCount skippedMangasCount }
+  omittedUpdates
+}
+
+fragment AmatsubuLiveStatusSyncStatus on SyncStatus {
+  state
+  startDate
+  endDate
+  backupRestoreId
+  errorMessage
+}
+
+subscription DownloadStatusChanged($input: DownloadChangedInput!) {
+  downloadStatusChanged(input: $input) {
+    state
+    omittedUpdates
+    updates { type download { ...AmatsubuLiveStatusDownload } }
+    initial { ...AmatsubuLiveStatusDownload }
+  }
+}
+
+subscription LibraryUpdateStatusChanged($input: LibraryUpdateStatusChangedInput!) {
+  libraryUpdateStatusChanged(input: $input) {
+    ...AmatsubuLiveStatusLibraryUpdateUpdates
+  }
+}
+
+subscription SyncStatusChanged {
+  syncStatusChanged { ...AmatsubuLiveStatusSyncStatus }
+}

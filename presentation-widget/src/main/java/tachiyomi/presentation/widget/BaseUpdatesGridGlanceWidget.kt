@@ -1,6 +1,5 @@
 package tachiyomi.presentation.widget
 
-import android.app.Application
 import android.content.Context
 import android.graphics.Bitmap
 import android.os.Build
@@ -30,7 +29,6 @@ import coil3.request.transformations
 import coil3.size.Precision
 import coil3.size.Scale
 import coil3.transform.RoundedCornersTransformation
-import eu.kanade.tachiyomi.core.security.SecurityPreferences
 import eu.kanade.tachiyomi.util.system.dpToPx
 import kotlinx.coroutines.flow.map
 import tachiyomi.core.common.util.lang.withIOContext
@@ -40,14 +38,8 @@ import tachiyomi.presentation.widget.components.LockedWidget
 import tachiyomi.presentation.widget.components.UpdatesWidget
 import tachiyomi.presentation.widget.util.appWidgetBackgroundRadius
 import tachiyomi.presentation.widget.util.calculateRowAndColumnCount
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
-abstract class BaseUpdatesGridGlanceWidget(
-    private val context: Context = Injekt.get<Application>(),
-    private val dataSource: UpdatesWidgetDataSource = Injekt.get(),
-    private val preferences: SecurityPreferences = Injekt.get(),
-) : GlanceAppWidget() {
+abstract class BaseUpdatesGridGlanceWidget : GlanceAppWidget() {
 
     override val sizeMode = SizeMode.Exact
 
@@ -57,7 +49,8 @@ abstract class BaseUpdatesGridGlanceWidget(
     abstract val bottomPadding: Dp
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val locked = preferences.useAuthenticator.get()
+        val dependencies = context.updatesWidgetDependencies
+        val locked = dependencies.isWidgetLocked()
         val containerModifier = GlanceModifier
             .fillMaxSize()
             .background(background)
@@ -83,10 +76,10 @@ abstract class BaseUpdatesGridGlanceWidget(
             }
 
             val flow = remember {
-                dataSource
+                dependencies.updatesWidgetDataSource()
                     .subscribe(rowCount * columnCount)
                     .map { rawData ->
-                        rawData.prepareData(rowCount, columnCount)
+                        rawData.prepareData(context, rowCount, columnCount)
                     }
             }
             val data by flow.collectAsState(initial = null)
@@ -102,6 +95,7 @@ abstract class BaseUpdatesGridGlanceWidget(
 
     @OptIn(ExperimentalCoilApi::class)
     private suspend fun List<UpdatesWidgetItem>.prepareData(
+        context: Context,
         rowCount: Int,
         columnCount: Int,
     ): List<Pair<Long, Bitmap?>> {

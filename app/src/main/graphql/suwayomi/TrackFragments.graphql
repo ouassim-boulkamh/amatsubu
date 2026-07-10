@@ -1,0 +1,57 @@
+fragment AmatsubuTracker on TrackerType {
+  id
+  name
+  icon
+  isLoggedIn
+  authUrl
+  supportsTrackDeletion
+  supportsReadingDates
+  supportsPrivateTracking
+  statuses {
+    value
+    name
+  }
+  scores
+}
+
+fragment AmatsubuTrackRecord on TrackRecordType {
+  id
+  mangaId
+  trackerId
+  remoteId
+  libraryId
+  title
+  lastChapterRead
+  totalChapters
+  status
+  score
+  displayScore
+  remoteUrl
+  startDate
+  finishDate
+  private
+  tracker {
+    ...AmatsubuTracker
+  }
+}
+
+fragment AmatsubuTrackSearch on TrackSearchType {
+  id
+  trackerId
+  remoteId
+  libraryId
+  title
+  lastChapterRead
+  totalChapters
+  trackingUrl
+  coverUrl
+  summary
+  publishingStatus
+  publishingType
+  startDate
+  status
+  score
+  startedReadingDate
+  finishedReadingDate
+  private
+}

@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.util.fastMap
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
@@ -15,15 +16,14 @@ import eu.kanade.presentation.category.visualName
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiCategoryDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
-import tachiyomi.domain.category.model.Category
-import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.library.service.LibraryPreferences.Companion.MARK_DUPLICATE_CHAPTER_READ_EXISTING
+import eu.kanade.domain.category.model.Category
+import eu.kanade.domain.library.service.LibraryPreferences
+import eu.kanade.domain.library.service.LibraryPreferences.Companion.MARK_DUPLICATE_CHAPTER_READ_EXISTING
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 object SettingsLibraryScreen : SearchableSettings {
 
@@ -33,8 +33,9 @@ object SettingsLibraryScreen : SearchableSettings {
 
     @Composable
     override fun getPreferences(): List<Preference> {
-        val libraryPreferences = remember { Injekt.get<LibraryPreferences>() }
-        val suwayomiClient = remember { SuwayomiClientProvider().graphQlClient }
+        val context = LocalContext.current
+        val libraryPreferences = remember(context) { context.appDependencies.libraryPreferences }
+        val suwayomiClient = remember(context) { context.appDependencies.suwayomiClientProvider.graphQlClient }
         var allCategories by remember { mutableStateOf<List<Category>>(emptyList()) }
 
         LaunchedEffect(Unit) {

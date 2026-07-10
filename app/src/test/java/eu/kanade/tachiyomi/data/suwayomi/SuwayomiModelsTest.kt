@@ -44,6 +44,18 @@ class SuwayomiModelsTest {
     }
 
     @Test
+    fun `server notes read from stable Amatsubu manga metadata key`() {
+        val manga = suwayomiManga(genre = emptyList()).copy(
+            meta = listOf(
+                SuwayomiMangaMetaDto(key = "other", mangaId = 1, value = "ignored"),
+                SuwayomiMangaMetaDto(key = SERVER_MANGA_NOTES_META_KEY, mangaId = 1, value = "Synced note"),
+            ),
+        )
+
+        assertEquals("Synced note", manga.serverNotes())
+    }
+
+    @Test
     fun `fetch chapter pages response accepts null payload with GraphQL errors`() {
         val response = json.decodeFromString(
             GraphQlResponse.serializer(FetchChapterPagesData.serializer()),

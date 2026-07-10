@@ -7,15 +7,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.browse.ExtensionFilterScreen
 import eu.kanade.presentation.browse.ExtensionFilterState
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.hasNsfwContent
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.util.system.LocaleHelper
 import tachiyomi.core.common.preference.getAndSet
 import tachiyomi.core.common.util.lang.withIOContext
@@ -24,8 +25,6 @@ import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 data class ServerExtensionsFilterScreen(
     private val refreshKey: Int = 0,
@@ -34,12 +33,13 @@ data class ServerExtensionsFilterScreen(
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val sourcePreferences = remember { Injekt.get<SourcePreferences>() }
+        val context = LocalContext.current
+        val sourcePreferences = remember(context) { context.appDependencies.sourcePreferences }
         val enabledLanguages by sourcePreferences.enabledLanguages.changes()
             .collectAsState(sourcePreferences.enabledLanguages.get())
         val showNsfwSources by sourcePreferences.showNsfwSource.changes()
             .collectAsState(sourcePreferences.showNsfwSource.get())
-        val provider = remember { SuwayomiClientProvider() }
+        val provider = remember(context) { context.appDependencies.suwayomiClientProvider }
         val state by produceState<ServerExtensionsFilterState>(
             initialValue = ServerExtensionsFilterState.Loading,
             key1 = showNsfwSources,

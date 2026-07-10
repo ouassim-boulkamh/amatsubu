@@ -122,9 +122,7 @@
     <string name="disabled">Desativado</string>
     <string name="services">Monitoradores</string>
     <string name="pref_create_backup">Criar backup</string>
-    <string name="pref_create_backup_summ">Pode ser usado para restaurar a biblioteca atual</string>
     <string name="pref_restore_backup">Restaurar backup</string>
-    <string name="pref_restore_backup_summ">Restaura a biblioteca de um arquivo de backup</string>
     <string name="pref_backup_interval">Frequência de backup automático</string>
     <string name="backup_created">Backup criado</string>
     <string name="restore_completed">Restauração concluída</string>
@@ -430,7 +428,6 @@
     <string name="pref_dual_page_split">Dividir as páginas longas</string>
     <string name="pref_dual_page_invert_summary">Se a posição das páginas longas divididas não se adequar ao modo de leitura</string>
     <string name="pref_dual_page_invert">Inverter a posição das páginas divididas</string>
-    <string name="backup_restore_content_full">Você precisará instalar quaisquer extensões que estejam faltando e depois realizar o login nos serviços de monitoramento para utilizá-los.</string>
     <string name="pref_show_navigation_mode_summary">Mostra rapidamente quando o leitor for aberto</string>
     <string name="pref_show_navigation_mode">Mostrar a sobreposição das zonas de toque</string>
     <string name="nav_zone_right">Direita</string>

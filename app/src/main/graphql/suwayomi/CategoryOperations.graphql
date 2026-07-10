@@ -1,0 +1,35 @@
+fragment AmatsubuCategory on CategoryType {
+  id
+  name
+  order
+  includeInDownload
+  includeInUpdate
+}
+
+query AllCategories {
+  categories(orderBy: ORDER, orderByType: ASC) { nodes { ...AmatsubuCategory } }
+}
+
+mutation CreateCategory($input: CreateCategoryInput!) {
+  createCategory(input: $input) { category { ...AmatsubuCategory } }
+}
+
+mutation UpdateCategory($input: UpdateCategoryInput!) {
+  updateCategory(input: $input) { category { ...AmatsubuCategory } }
+}
+
+mutation UpdateCategoryOrder($input: UpdateCategoryOrderInput!) {
+  updateCategoryOrder(input: $input) { categories { ...AmatsubuCategory } }
+}
+
+mutation DeleteCategory($input: DeleteCategoryInput!) {
+  deleteCategory(input: $input) { category { ...AmatsubuCategory } }
+}
+
+query GetMangaCategories($id: Int!) {
+  manga(id: $id) { categories { nodes { ...AmatsubuCategory } } }
+}
+
+mutation UpdateMangaCategories($input: UpdateMangaCategoriesInput!) {
+  updateMangaCategories(input: $input) { manga { categories { nodes { ...AmatsubuCategory } } } }
+}

@@ -14,6 +14,7 @@ import eu.kanade.core.util.addOrRemove
 import eu.kanade.core.util.insertSeparators
 import eu.kanade.domain.manga.model.chaptersFiltered
 import eu.kanade.domain.manga.model.downloadedFilter
+import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.manga.model.localDownloadedFilter
 import eu.kanade.presentation.manga.DownloadAction
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
@@ -27,6 +28,11 @@ import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyWorker
 import eu.kanade.tachiyomi.data.suwayomi.MangaStatus
 import eu.kanade.tachiyomi.data.suwayomi.SUWAYOMI_MANGA_REAL_URL_META_KEY
 import eu.kanade.tachiyomi.data.suwayomi.ServerReadStatePendingStore
+import eu.kanade.tachiyomi.data.suwayomi.ServerReaderIntentBaseline
+import eu.kanade.tachiyomi.data.suwayomi.ServerMangaRefreshMode
+import eu.kanade.tachiyomi.data.suwayomi.ServerReaderIntentPendingStore
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateEntity
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateInvalidation
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiCategoryDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterDto
@@ -41,11 +47,22 @@ import eu.kanade.tachiyomi.data.suwayomi.estimateFetchInterval
 import eu.kanade.tachiyomi.data.suwayomi.isSuwayomiServerUnavailable
 import eu.kanade.tachiyomi.data.suwayomi.normalizedGenre
 import eu.kanade.tachiyomi.data.suwayomi.oldestPositive
+import eu.kanade.tachiyomi.data.suwayomi.replayPendingReaderIntents
+import eu.kanade.tachiyomi.data.suwayomi.replayPendingReadStates
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
+import eu.kanade.tachiyomi.data.suwayomi.refreshServerMangaFromSource
 import eu.kanade.tachiyomi.data.suwayomi.serverCoverLastModified
 import eu.kanade.tachiyomi.data.suwayomi.syncTrackerProgressAfterReadStateChange
-import eu.kanade.tachiyomi.source.Source
-import eu.kanade.tachiyomi.source.model.SManga
+import eu.kanade.tachiyomi.data.suwayomi.serverChapterBookmarkAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.serverChapterDownloadAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.serverChapterReadAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.serverMangaCategoryAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.serverMangaLibraryAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.serverMangaSettingsAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.serverNotes
+import eu.kanade.tachiyomi.data.suwayomi.toDomainStatus
+import eu.kanade.tachiyomi.data.suwayomi.toDomainUpdateStrategy
+import eu.kanade.tachiyomi.di.AppDependencies
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.util.chapter.getNextUnread
 import eu.kanade.tachiyomi.util.system.toast
@@ -70,36 +87,54 @@ import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.category.model.Category
-import tachiyomi.domain.chapter.model.Chapter
-import tachiyomi.domain.chapter.service.calculateChapterGap
-import tachiyomi.domain.chapter.service.getChapterSort
-import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.manga.model.Manga
-import tachiyomi.domain.manga.model.MangaWithChapterCount
-import tachiyomi.domain.manga.model.applyFilter
+import eu.kanade.domain.category.model.Category
+import eu.kanade.domain.chapter.model.Chapter
+import eu.kanade.domain.chapter.service.calculateChapterGap
+import eu.kanade.domain.chapter.service.getChapterSort
+import eu.kanade.domain.library.service.LibraryPreferences
+import eu.kanade.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.MangaWithChapterCount
+import eu.kanade.domain.manga.model.applyFilter
 import tachiyomi.i18n.MR
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import kotlin.math.floor
 import kotlin.time.Duration.Companion.seconds
-import eu.kanade.tachiyomi.data.suwayomi.UpdateStrategy as SuwayomiUpdateStrategy
-import eu.kanade.tachiyomi.ui.browse.migration.SERVER_MIGRATION_NOTES_META_KEY as SERVER_MANGA_NOTES_META_KEY
 
-class MangaScreenModel(
+class MangaScreenModel private constructor(
     private val context: Context,
     private val mangaId: Long,
     private val isFromSource: Boolean,
     private val fetchChaptersOnOpen: Boolean = isFromSource,
-    private val libraryPreferences: LibraryPreferences = Injekt.get(),
-    readerPreferences: ReaderPreferences = Injekt.get(),
+    private val basePreferences: BasePreferences,
+    private val libraryPreferences: LibraryPreferences,
+    readerPreferences: ReaderPreferences,
+    private val suwayomiProvider: SuwayomiClientProvider,
+    private val clientDeviceChapterCopyStore: ClientDeviceChapterCopyStore,
+    private val pendingReadStateStore: ServerReadStatePendingStore,
+    private val pendingReaderIntentStore: ServerReaderIntentPendingStore,
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
 ) : StateScreenModel<MangaScreenModel.State>(State.Loading) {
 
-    private val suwayomiProvider = SuwayomiClientProvider()
+    internal constructor(
+        context: Context,
+        mangaId: Long,
+        isFromSource: Boolean,
+        fetchChaptersOnOpen: Boolean = isFromSource,
+        dependencies: AppDependencies,
+    ) : this(
+        context = context,
+        mangaId = mangaId,
+        isFromSource = isFromSource,
+        fetchChaptersOnOpen = fetchChaptersOnOpen,
+        basePreferences = dependencies.basePreferences,
+        libraryPreferences = dependencies.libraryPreferences,
+        readerPreferences = dependencies.readerPreferences,
+        suwayomiProvider = dependencies.suwayomiClientProvider,
+        clientDeviceChapterCopyStore = dependencies.clientDeviceChapterCopyStore,
+        pendingReadStateStore = dependencies.serverReadStatePendingStore,
+        pendingReaderIntentStore = dependencies.serverReaderIntentPendingStore,
+    )
+
     private val suwayomiClient = suwayomiProvider.graphQlClient
-    private val clientDeviceChapterCopyStore: ClientDeviceChapterCopyStore = Injekt.get()
-    private val pendingReadStateStore: ServerReadStatePendingStore = Injekt.get()
     private var serverActiveDownloadsByChapterId: Map<Long, SuwayomiDownloadDto> = emptyMap()
     private var deviceCopyStatesByChapterId: Map<Long, DeviceCopyState> = emptyMap()
     private var deviceCopyProgressByChapterId: Map<Long, Int> = emptyMap()
@@ -111,7 +146,7 @@ class MangaScreenModel(
     val manga: Manga?
         get() = successState?.manga
 
-    val source: Source?
+    val source: SuwayomiDisplaySource?
         get() = successState?.source
 
     private val isFavorited: Boolean
@@ -148,9 +183,9 @@ class MangaScreenModel(
     }
 
     init {
-        ServerStateSync.refreshes
-            .onEach {
-                if (successState?.isServerBacked == true) {
+        ServerStateSync.invalidations
+            .onEach { invalidation ->
+                if (successState?.isServerBacked == true && invalidation.affectsMangaDetail()) {
                     refreshServerManga()
                 }
             }
@@ -179,16 +214,31 @@ class MangaScreenModel(
         }
     }
 
-    private suspend fun loadServerMangaState(fetchChapters: Boolean = false): List<String> {
+    private fun ServerStateInvalidation.affectsMangaDetail(): Boolean {
+        val serverMangaId = mangaId.toInt()
+        return affectsAny(
+            ServerStateEntity.Library,
+            ServerStateEntity.Categories,
+            ServerStateEntity.Downloads,
+            ServerStateEntity.Manga(serverMangaId),
+            ServerStateEntity.Chapters(serverMangaId),
+            ServerStateEntity.Trackers(serverMangaId),
+            ServerStateEntity.Notes(serverMangaId),
+        )
+    }
+
+    private suspend fun loadServerMangaState(
+        fetchChapters: Boolean = false,
+        refreshMode: ServerMangaRefreshMode = ServerMangaRefreshMode.Metadata,
+    ): List<String> {
         val partialErrors: List<String>
         val serverManga: SuwayomiMangaDto
         val serverChapters: List<SuwayomiChapterDto>
         val staleSnapshot: SuwayomiStaleSnapshotState? = null
         if (fetchChapters) {
-            val partialResponse = suwayomiClient.fetchMangaAndChaptersPartial(
+            val partialResponse = suwayomiClient.refreshServerMangaFromSource(
                 mangaId = mangaId.toInt(),
-                fetchManga = true,
-                fetchChapters = true,
+                mode = refreshMode,
             )
             val payload = partialResponse.data ?: error("Suwayomi server returned no manga or chapters")
             partialErrors = partialResponse.errorMessages
@@ -199,7 +249,9 @@ class MangaScreenModel(
             serverManga = suwayomiClient.getManga(mangaId.toInt())
             serverChapters = suwayomiClient.getCachedChapters(mangaId.toInt())
         }
-        val pushedPendingCount = pushPendingReadStates()
+        val pushedPendingReaderIntentCount = pushPendingReaderIntents(serverChapters)
+        val pushedPendingReadStateCount = pushPendingReadStates()
+        val pushedPendingCount = pushedPendingReaderIntentCount + pushedPendingReadStateCount
         val effectiveServerChapters = if (pushedPendingCount > 0) {
             suwayomiClient.getCachedChapters(mangaId.toInt())
         } else {
@@ -266,7 +318,7 @@ class MangaScreenModel(
         val serverSource = serverSources.firstOrNull { it.id == serverManga.sourceId }
         val source = serverSource?.let { SuwayomiDisplaySource(it, manga.source) }
             ?: SuwayomiDisplaySource(
-                sourceId = manga.source,
+                id = manga.source,
                 name = serverManga.sourceId,
                 lang = "",
                 supportsLatest = false,
@@ -286,6 +338,7 @@ class MangaScreenModel(
             State.Success(
                 manga = manga,
                 source = source,
+                basePreferences = basePreferences,
                 isFromSource = isFromSource,
                 isServerBacked = true,
                 chapters = chapters,
@@ -331,24 +384,56 @@ class MangaScreenModel(
 
     private suspend fun pushPendingReadStates(): Int {
         val pending = pendingReadStateStore.getForServer(suwayomiProvider.serverKey())
+        return replayPendingReadStates(
+            pending = pending,
+            updateChaptersRead = suwayomiClient::updateChaptersRead,
+            deletePendingReadState = {
+                pendingReadStateStore.delete(
+                    serverKey = it.serverKey,
+                    mangaId = it.mangaId,
+                    chapterId = it.chapterId,
+                )
+            },
+        )
+    }
+
+    private suspend fun pushPendingReaderIntents(serverChapters: List<SuwayomiChapterDto>): Int {
+        val pending = pendingReaderIntentStore.getForManga(suwayomiProvider.serverKey(), mangaId.toInt())
         if (pending.isEmpty()) return 0
 
-        var pushed = 0
-        pending
-            .groupBy { it.isRead }
-            .forEach { (isRead, states) ->
-                val chapterIds = states.map { it.chapterId }
-                suwayomiClient.updateChaptersRead(chapterIds = chapterIds, isRead = isRead)
-                states.forEach {
-                    pendingReadStateStore.delete(
-                        serverKey = it.serverKey,
-                        mangaId = it.mangaId,
-                        chapterId = it.chapterId,
-                    )
-                }
-                pushed += states.size
+        val currentByChapterId = serverChapters.associateBy { it.id }
+        val replayable = pending.filter { it.chapterId in currentByChapterId }
+        val missing = pending.size - replayable.size
+        if (missing > 0) {
+            logcat(LogPriority.ERROR) {
+                "Retained $missing pending reader intents because current Suwayomi chapter state was missing"
             }
-        return pushed
+        }
+
+        val result = replayPendingReaderIntents(
+            pending = replayable,
+            currentBaseline = { intent -> currentByChapterId.getValue(intent.chapterId).toReaderIntentBaseline() },
+            updateProgress = { intent ->
+                suwayomiClient.updateChapterProgress(
+                    chapterId = intent.chapterId,
+                    isRead = intent.desiredIsRead ?: intent.baseline.isRead,
+                    lastPageRead = intent.desiredLastPageRead ?: intent.baseline.lastPageRead,
+                )
+            },
+            updateBookmark = { intent ->
+                suwayomiClient.updateChapterBookmark(
+                    chapterId = intent.chapterId,
+                    isBookmarked = intent.desiredIsBookmarked ?: intent.baseline.isBookmarked,
+                )
+            },
+            deletePendingIntent = pendingReaderIntentStore::delete,
+        )
+        if (result.conflicted.isNotEmpty()) {
+            logcat(LogPriority.ERROR) {
+                "Retained ${result.conflicted.size} pending reader intents because Suwayomi state changed first"
+            }
+        }
+        return result.pushed
     }
 
     private fun applyServerDownloadStatus(downloadStatus: SuwayomiDownloadStatusDto) {
@@ -392,11 +477,18 @@ class MangaScreenModel(
         }
     }
 
-    fun refreshServerManga() {
+    fun refreshServerManga(clearCoverCache: Boolean = false) {
         screenModelScope.launchIO {
             updateSuccessState { it.copy(isRefreshingData = true) }
             try {
-                val errors = loadServerMangaState(fetchChapters = true)
+                val errors = loadServerMangaState(
+                    fetchChapters = true,
+                    refreshMode = if (clearCoverCache) {
+                        ServerMangaRefreshMode.MetadataAndCover
+                    } else {
+                        ServerMangaRefreshMode.Metadata
+                    },
+                )
                 if (errors.isNotEmpty()) {
                     val message = errors.joinToString("; ")
                     logcat(LogPriority.ERROR) { "Server manga refresh returned partial data: $message" }
@@ -447,7 +539,7 @@ class MangaScreenModel(
                 val currentEstimate = state.manga.fetchEstimate()
                 it.copy(manga = updatedManga.toDomainManga(currentEstimate), staleSnapshot = null)
             }
-            ServerStateSync.requestRefresh()
+            ServerStateSync.requestRefresh(*serverMangaLibraryAffectedEntities(mangaId.toInt()).toTypedArray())
             if (removeFromLibrary) {
                 promptDeleteServerDownloads()
             }
@@ -567,7 +659,7 @@ class MangaScreenModel(
                     }
                 }
                 loadServerMangaState()
-                ServerStateSync.requestRefresh()
+                ServerStateSync.requestRefresh(*serverMangaCategoryAffectedEntities(mangaId.toInt()).toTypedArray())
             }.onFailure { error ->
                 logcat(LogPriority.ERROR, error) { "Failed to add Suwayomi manga to categories" }
                 withUIContext {
@@ -595,7 +687,7 @@ class MangaScreenModel(
                     categoryIds = categoryIds.toServerCategoryIds(),
                 )
                 loadServerMangaState()
-                ServerStateSync.requestRefresh()
+                ServerStateSync.requestRefresh(*serverMangaCategoryAffectedEntities(mangaId.toInt()).toTypedArray())
             }.onFailure { error ->
                 logcat(LogPriority.ERROR, error) { "Failed to update Suwayomi manga categories" }
                 withUIContext {
@@ -741,9 +833,6 @@ class MangaScreenModel(
         }
     }
 
-    private fun SuwayomiMangaDto.serverNotes(): String {
-        return meta.firstOrNull { it.key == SERVER_MANGA_NOTES_META_KEY }?.value.orEmpty()
-    }
 
     private fun SuwayomiChapterDto.toDomainChapter(): Chapter {
         return Chapter(
@@ -762,6 +851,14 @@ class MangaScreenModel(
             lastModifiedAt = 0L,
             version = 0L,
             memo = JsonObject.EMPTY,
+        )
+    }
+
+    private fun SuwayomiChapterDto.toReaderIntentBaseline(): ServerReaderIntentBaseline {
+        return ServerReaderIntentBaseline(
+            isRead = isRead,
+            lastPageRead = lastPageRead,
+            isBookmarked = isBookmarked,
         )
     }
 
@@ -795,25 +892,6 @@ class MangaScreenModel(
 
     private fun Long.setChapterFlag(flag: Long, mask: Long): Long {
         return this and mask.inv() or (flag and mask)
-    }
-
-    private fun MangaStatus.toDomainStatus(): Long {
-        return when (this) {
-            MangaStatus.UNKNOWN -> SManga.UNKNOWN
-            MangaStatus.ONGOING -> SManga.ONGOING
-            MangaStatus.COMPLETED -> SManga.COMPLETED
-            MangaStatus.LICENSED -> SManga.LICENSED
-            MangaStatus.PUBLISHING_FINISHED -> SManga.PUBLISHING_FINISHED
-            MangaStatus.CANCELLED -> SManga.CANCELLED
-            MangaStatus.ON_HIATUS -> SManga.ON_HIATUS
-        }.toLong()
-    }
-
-    private fun SuwayomiUpdateStrategy.toDomainUpdateStrategy(): eu.kanade.tachiyomi.source.model.UpdateStrategy {
-        return when (this) {
-            SuwayomiUpdateStrategy.ALWAYS_UPDATE -> eu.kanade.tachiyomi.source.model.UpdateStrategy.ALWAYS_UPDATE
-            SuwayomiUpdateStrategy.ONLY_FETCH_ONCE -> eu.kanade.tachiyomi.source.model.UpdateStrategy.ONLY_FETCH_ONCE
-        }
     }
 
     /**
@@ -869,7 +947,7 @@ class MangaScreenModel(
         } else {
             successState.chapters
         }
-        return chapterItems.getNextUnread(successState.manga)
+        return chapterItems.getNextUnread(successState.manga, basePreferences)
     }
 
     private fun getUnreadChapters(): List<Chapter> {
@@ -1077,7 +1155,7 @@ class MangaScreenModel(
                         },
                     )
                     loadServerMangaState()
-                    ServerStateSync.requestRefresh()
+                    ServerStateSync.requestRefresh(*serverChapterReadAffectedEntities(mangaId.toInt()).toTypedArray())
                 }
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
@@ -1146,7 +1224,7 @@ class MangaScreenModel(
                     isBookmarked = bookmarked,
                 )
                 loadServerMangaState()
-                ServerStateSync.requestRefresh()
+                ServerStateSync.requestRefresh(*serverChapterBookmarkAffectedEntities(mangaId.toInt()).toTypedArray())
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
                 logcat(LogPriority.ERROR, e) { "Failed to update server chapter bookmark state" }
@@ -1184,7 +1262,7 @@ class MangaScreenModel(
             action()
             loadServerMangaState()
             toggleAllSelection(false)
-            ServerStateSync.requestRefresh()
+            ServerStateSync.requestRefresh(*serverChapterDownloadAffectedEntities(mangaId.toInt()).toTypedArray())
         } catch (e: Throwable) {
             if (e is CancellationException) throw e
             logcat(LogPriority.ERROR, e) { "Failed to update Suwayomi download state" }
@@ -1315,7 +1393,7 @@ class MangaScreenModel(
                     value = chapterFlags.toString(),
                 )
                 updateSuccessState { it.copy(manga = it.manga.copy(chapterFlags = chapterFlags)) }
-                ServerStateSync.requestRefresh()
+                ServerStateSync.requestRefresh(*serverMangaSettingsAffectedEntities(mangaId.toInt()).toTypedArray())
             }.onFailure { error ->
                 logcat(LogPriority.ERROR, error) { "Failed to update Suwayomi manga chapter settings" }
                 snackbarHostState.showSnackbar(
@@ -1472,7 +1550,7 @@ class MangaScreenModel(
                     ),
                 )
                 updateSuccessState { it.copy(excludedScanlators = excludedScanlators) }
-                ServerStateSync.requestRefresh()
+                ServerStateSync.requestRefresh(*serverMangaSettingsAffectedEntities(mangaId.toInt()).toTypedArray())
             }.onFailure { error ->
                 logcat(LogPriority.ERROR, error) { "Failed to update Suwayomi manga excluded scanlators" }
                 snackbarHostState.showSnackbar(
@@ -1501,7 +1579,8 @@ class MangaScreenModel(
         @Immutable
         data class Success(
             val manga: Manga,
-            val source: Source,
+            val source: SuwayomiDisplaySource,
+            val basePreferences: BasePreferences,
             val isFromSource: Boolean,
             val isServerBacked: Boolean,
             val chapters: List<ChapterList.Item>,
@@ -1561,7 +1640,7 @@ class MangaScreenModel(
                 get() = excludedScanlators.intersect(availableScanlators).isNotEmpty()
 
             val filterActive: Boolean
-                get() = scanlatorFilterActive || manga.chaptersFiltered()
+                get() = scanlatorFilterActive || manga.chaptersFiltered(basePreferences)
 
             /**
              * Applies the view filters to the list of chapters obtained from the database.
@@ -1569,7 +1648,7 @@ class MangaScreenModel(
              */
             private fun List<ChapterList.Item>.applyFilters(manga: Manga): Sequence<ChapterList.Item> {
                 val unreadFilter = manga.unreadFilter
-                val downloadedFilter = manga.downloadedFilter
+                val downloadedFilter = manga.downloadedFilter(basePreferences)
                 val localDownloadedFilter = manga.localDownloadedFilter
                 val bookmarkedFilter = manga.bookmarkedFilter
                 return asSequence()

@@ -383,7 +383,6 @@
     <string name="restore_in_progress">Restaŭro jam estas farata</string>
     <string name="backup_in_progress">Savkopio jam estas farata</string>
     <string name="pref_backup_interval">Ofteco de aŭtomata savkopio</string>
-    <string name="pref_restore_backup_summ">Restaŭri bibliotekon de savkopia dosiero</string>
     <string name="pref_restore_backup">Restaŭri savkopion</string>
     <string name="action_track">Sekvi</string>
     <string name="services">Sekviloj</string>
@@ -639,7 +638,6 @@
     <string name="syncing_library">Biblioteka sinkronigo</string>
     <string name="pref_storage_location">Konserveja loko</string>
     <string name="enhanced_tracking_info">Provizas plibonigitajn funkciojn por specifaj fontoj. Elementoj estas aŭtomate sekvataj kiam aldonitaj al via biblioteko.</string>
-    <string name="backup_restore_content_full">Vi devos instali mankantajn etendaĵojn kaj ensaluti al sekvadaj servoj poste por uzi ilin.</string>
     <string name="pref_reset_user_agent_string">Restarigi defaŭltan ĉenon por \"user agent\"</string>
     <string name="extensionRepo_settings">Etendaĵaj deponejoj</string>
     <string name="private_settings">Inkluzivi konfidencajn agordojn (ekz. ensalutajn ĵetonojn de sekvilo)</string>
@@ -654,7 +652,6 @@
     <string name="missing_storage_permission">Konservejaj permesoj ne donitaj</string>
     <string name="pref_hide_in_library_items">Kaŝi elementojn jam en biblioteko</string>
     <string name="pref_storage_location_info">Uzata por aŭtomataj savkopioj, ĉapitraj elŝutoj kaj lokaj fontoj.</string>
-    <string name="pref_create_backup_summ">Povas esti uzita por restaŭri aktualan bibliotekon</string>
     <string name="create_backup_file_error">Ne eblis krei savkopian dosieron</string>
     <string name="restore_miui_warning">Savkopiado/restaŭro ne funkcios ĝuste se MIUI-optimumigo estas malŝaltita.</string>
     <string name="last_auto_backup_info">Lasta aŭtomata ĝisdatigo: %s</string>

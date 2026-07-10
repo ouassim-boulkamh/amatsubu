@@ -323,10 +323,8 @@
     <string name="services">Mga serbisyo</string>
     <string name="pref_viewer_nav">Pag-tap sa mga zone</string>
     <string name="pref_create_backup">Paghimo og backup</string>
-    <string name="pref_create_backup_summ">Mahimong gamiton aron mapasig-uli ang kasamtangan nga librarya</string>
     <string name="pref_image_scale_type">Uri sa sukdanan sa hulagway</string>
     <string name="pref_restore_backup">Ibalik ang backup</string>
-    <string name="pref_restore_backup_summ">Ibalik ang librarya gikan sa backup file</string>
     <string name="backup_created">Gihimo ang backup</string>
     <string name="pref_backup_interval">Kadaghanon sa pag-backup</string>
     <string name="invalid_backup_file">Dili balido nga backup file</string>
@@ -345,9 +343,6 @@
     <string name="backup_in_progress">Ang pag-backup nagpadayon na</string>
     <string name="restore_duration">%1$02d minuto , %2$02d ikaduha</string>
     <string name="backup_choice">Unsa ang gusto nimo i-backup?</string>
-    <string name="backup_restore_content_full">Ang datos gikan sa backup file mapasig-uli.
-\n
-\nKinahanglan nimo nga i-install ang bisan unsang nawala nga mga extension ug mag-log in sa mga serbisyo sa pagsubay pagkahuman aron magamit kini.</string>
     <string name="restore_completed">Nakompleto ang pag-uli</string>
     <string name="creating_backup">Paghimo og backup</string>
     <string name="backup_restore_missing_trackers">Ang mga tracker wala naka-log in:</string>

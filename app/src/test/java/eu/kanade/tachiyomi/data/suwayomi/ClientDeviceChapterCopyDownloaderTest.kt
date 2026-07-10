@@ -4,12 +4,14 @@ import eu.kanade.tachiyomi.network.HttpException
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.security.MessageDigest
 
@@ -114,6 +116,74 @@ class ClientDeviceChapterCopyDownloaderTest {
         assertNull(store.getCopy("http://server.test/api/graphql", manifest.chapter.mangaId, manifest.chapter.id))
     }
 
+    @Test
+    fun `device copy storage path is independent of manga and chapter titles`() = runTest {
+        val store = FakeClientDeviceChapterCopyRepository()
+        val manifest = manifest(
+            pageCount = 1,
+            chapterName = "Chapter / unsafe 日本語 title",
+        )
+        val downloader = downloader(
+            store = store,
+            fetcher = FakeClientDeviceChapterPageFetcher(manifest),
+        )
+
+        val copy = downloader.saveToDevice(
+            serverKey = "http://server.test/api/graphql?name=日本語",
+            mangaTitle = "Manga : unsafe 日本語 title",
+            chapterId = manifest.chapter.id,
+        )
+
+        val relativePath = File(copy.storagePath!!).relativeTo(tempDir.toFile()).path
+        assertEquals(ClientDeviceChapterCopyPathPolicy.relativeChapterPath(copy.serverKey, manifest), relativePath)
+        assertFalse(relativePath.contains("Manga"))
+        assertFalse(relativePath.contains("Chapter"))
+        assertFalse(relativePath.contains("日本語"))
+        assertEquals(listOf("page-0000.img"), copy.pages.map { it.fileName })
+    }
+
+    @Test
+    fun `device copy generated path segments are ascii compatible and bounded`() {
+        val manifest = manifest(
+            pageCount = 10_000,
+            mangaId = Int.MAX_VALUE,
+            chapterId = Int.MAX_VALUE - 1,
+            chapterName = "Very long unicode chapter title 日本語 ".repeat(20),
+        )
+
+        val relativePath = ClientDeviceChapterCopyPathPolicy.relativeChapterPath(
+            serverKey = "https://example.test/with/unicode/日本語/and/a/very/long/query?x=${"z".repeat(256)}",
+            manifest = manifest,
+        )
+        val pageName = ClientDeviceChapterCopyPathPolicy.pageFileName(9_999)
+
+        val segments = relativePath.split(File.separatorChar) + pageName
+        assertTrue(segments.all { segment -> segment.all { it.code in 0..127 } })
+        assertTrue(segments.all { it.toByteArray(StandardCharsets.UTF_8).size <= 255 })
+        assertEquals(listOf(Int.MAX_VALUE.toString(), (Int.MAX_VALUE - 1).toString()), segments.drop(1).take(2))
+        assertEquals("page-9999.img", pageName)
+    }
+
+    @Test
+    fun `device copy path policy separates expected server manga and chapter identities`() {
+        val manifest = manifest(pageCount = 1, mangaId = 20, chapterId = 10)
+
+        val baseline = ClientDeviceChapterCopyPathPolicy.relativeChapterPath("server-a", manifest)
+        val differentServer = ClientDeviceChapterCopyPathPolicy.relativeChapterPath("server-b", manifest)
+        val differentManga = ClientDeviceChapterCopyPathPolicy.relativeChapterPath(
+            "server-a",
+            manifest(pageCount = 1, mangaId = 21, chapterId = 10),
+        )
+        val differentChapter = ClientDeviceChapterCopyPathPolicy.relativeChapterPath(
+            "server-a",
+            manifest(pageCount = 1, mangaId = 20, chapterId = 11),
+        )
+
+        assertNotEquals(baseline, differentServer)
+        assertNotEquals(baseline, differentManga)
+        assertNotEquals(baseline, differentChapter)
+    }
+
     private fun downloader(
         store: ClientDeviceChapterCopyRepository,
         fetcher: ClientDeviceChapterPageFetcher,
@@ -126,13 +196,18 @@ class ClientDeviceChapterCopyDownloaderTest {
         )
     }
 
-    private fun manifest(pageCount: Int): SuwayomiChapterPageManifest {
+    private fun manifest(
+        pageCount: Int,
+        mangaId: Int = 20,
+        chapterId: Int = 10,
+        chapterName: String = "Chapter 1",
+    ): SuwayomiChapterPageManifest {
         return SuwayomiChapterPageManifest(
             pages = List(pageCount) { index -> "page-$index" },
             chapter = SuwayomiChapterDto(
-                id = 10,
-                mangaId = 20,
-                name = "Chapter 1",
+                id = chapterId,
+                mangaId = mangaId,
+                name = chapterName,
                 url = "/chapter/1",
                 realUrl = "https://example.test/chapter/1",
                 sourceOrder = 30,

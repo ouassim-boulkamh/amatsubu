@@ -10,7 +10,5 @@ android {
 }
 
 dependencies {
-    implementation(projects.sourceApi)
-
     implementation(libs.bundles.serialization)
 }

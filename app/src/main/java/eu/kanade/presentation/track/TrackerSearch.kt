@@ -73,7 +73,6 @@ import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.DropdownMenu
 import eu.kanade.presentation.manga.components.MangaCover
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
-import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.util.system.openInBrowser
 import kotlinx.coroutines.launch
 import tachiyomi.i18n.MR
@@ -91,9 +90,9 @@ import tachiyomi.presentation.core.util.secondaryItemAlpha
 fun TrackerSearch(
     state: TextFieldState,
     onDispatchQuery: () -> Unit,
-    queryResult: Result<List<TrackSearch>>?,
-    selected: TrackSearch?,
-    onSelectedChange: (TrackSearch) -> Unit,
+    queryResult: Result<List<ServerTrackSearchResult>>?,
+    selected: ServerTrackSearchResult?,
+    onSelectedChange: (ServerTrackSearchResult) -> Unit,
     onConfirmSelection: (private: Boolean) -> Unit,
     onDismissRequest: () -> Unit,
     supportsPrivateTracking: Boolean,
@@ -238,15 +237,15 @@ fun TrackerSearch(
 
 @Composable
 private fun SearchResultItem(
-    trackSearch: TrackSearch,
+    trackSearch: ServerTrackSearchResult,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
     val context = LocalContext.current
     val clipboard: Clipboard = LocalClipboard.current
     val focusManager = LocalFocusManager.current
-    val type = trackSearch.publishing_type.toLowerCase(Locale.current).capitalize(Locale.current)
-    val status = trackSearch.publishing_status.toLowerCase(Locale.current).capitalize(Locale.current)
+    val type = trackSearch.publishingType.toLowerCase(Locale.current).capitalize(Locale.current)
+    val status = trackSearch.publishingStatus.toLowerCase(Locale.current).capitalize(Locale.current)
     val description = trackSearch.summary.trim()
     val shape = RoundedCornerShape(16.dp)
     val borderColor = if (selected) MaterialTheme.colorScheme.outline else Color.Transparent
@@ -283,7 +282,7 @@ private fun SearchResultItem(
         Column {
             Row {
                 MangaCover.Book(
-                    data = trackSearch.cover_url,
+                    data = trackSearch.coverUrl,
                     modifier = Modifier.height(96.dp),
                 )
                 Spacer(modifier = Modifier.width(12.dp))
@@ -308,7 +307,7 @@ private fun SearchResultItem(
                             }
                         },
                         onOpenInBrowser = {
-                            val url = trackSearch.tracking_url
+                            val url = trackSearch.trackingUrl
                             if (url.isNotBlank()) {
                                 context.openInBrowser(url)
                             }
@@ -329,10 +328,10 @@ private fun SearchResultItem(
                             text = type,
                         )
                     }
-                    if (trackSearch.start_date.isNotBlank()) {
+                    if (trackSearch.startDate.isNotBlank()) {
                         SearchResultItemDetails(
                             title = stringResource(MR.strings.label_started),
-                            text = trackSearch.start_date,
+                            text = trackSearch.startDate,
                         )
                     }
                     if (status.isNotBlank()) {

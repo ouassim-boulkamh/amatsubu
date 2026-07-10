@@ -302,7 +302,6 @@
     <string name="enhanced_services">विवृद्धसेवाः</string>
     <string name="action_track">अनुप्रजानातु</string>
     <string name="pref_create_backup">प्रतिलेखनं निर्मातु</string>
-    <string name="pref_create_backup_summ">एतत् उपयुज्य वर्तमानग्रन्थालयं समादातुं शक्यते</string>
     <string name="pref_restore_backup">प्रतिलेखनं समाददातु</string>
     <string name="pref_backup_interval">प्रतिलेखनस्य आवर्तनता</string>
     <string name="backup_in_progress">प्रतिलेखनं पूर्वमेव प्रगतौ अस्ति</string>
@@ -315,7 +314,6 @@
     <string name="restore_completed">प्रतिसंस्कारं समापितम्</string>
     <string name="restore_miui_warning">यदि MIUI वृद्धिकरणम् अशक्तं कृतं तर्हि प्रतिलेखनम्/प्रतिसंस्कारः क्रियां युक्तं न कुर्यात्।</string>
     <string name="backup_info">स्वयङ्कृतप्रतिलेखनानि अतीव निर्दिशितानि। त्वया अन्यस्थानेषु अपि प्रतिकृतीनां स्थापनम् उचितं भविष्यति॥</string>
-    <string name="pref_restore_backup_summ">प्रतिलेखनसञ्चिकायाः ग्रन्थालयं समाददातु</string>
     <string name="backup_created">प्रतिलेखनं निर्मितम्</string>
     <string name="invalid_backup_file">अनाप्ता प्रतिलेखनसञ्चिका</string>
     <string name="invalid_backup_file_missing_manga">प्रतिलेखने काऽपि माङ्गा नास्ति।</string>

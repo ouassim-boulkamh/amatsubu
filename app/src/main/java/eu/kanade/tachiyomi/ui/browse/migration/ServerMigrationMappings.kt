@@ -5,10 +5,11 @@ import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaDto
 import eu.kanade.tachiyomi.data.suwayomi.normalizedGenre
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
 import eu.kanade.tachiyomi.data.suwayomi.serverCoverLastModified
-import eu.kanade.tachiyomi.source.model.SManga
-import eu.kanade.tachiyomi.source.model.UpdateStrategy
+import eu.kanade.tachiyomi.data.suwayomi.serverNotes
+import eu.kanade.tachiyomi.data.suwayomi.toDomainStatus
+import eu.kanade.tachiyomi.data.suwayomi.toDomainUpdateStrategy
 import kotlinx.serialization.json.JsonObject
-import tachiyomi.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.Manga
 import kotlin.time.Duration.Companion.seconds
 
 internal fun SuwayomiMangaDto.toMigrationManga(
@@ -35,29 +36,12 @@ internal fun SuwayomiMangaDto.toMigrationManga(
         genre = normalizedGenre(),
         status = status.toDomainStatus(),
         thumbnailUrl = thumbnailUrl?.let { resolveServerUrl(provider.baseUrl(), it) },
-        updateStrategy = when (updateStrategy) {
-            eu.kanade.tachiyomi.data.suwayomi.UpdateStrategy.ALWAYS_UPDATE -> UpdateStrategy.ALWAYS_UPDATE
-            eu.kanade.tachiyomi.data.suwayomi.UpdateStrategy.ONLY_FETCH_ONCE -> UpdateStrategy.ONLY_FETCH_ONCE
-        },
+        updateStrategy = updateStrategy.toDomainUpdateStrategy(),
         initialized = initialized,
         lastModifiedAt = 0L,
         favoriteModifiedAt = null,
         version = 0L,
-        notes = meta.firstOrNull { it.key == SERVER_MIGRATION_NOTES_META_KEY }?.value.orEmpty(),
+        notes = serverNotes(),
         memo = JsonObject(emptyMap()),
     )
 }
-
-private fun eu.kanade.tachiyomi.data.suwayomi.MangaStatus.toDomainStatus(): Long {
-    return when (this) {
-        eu.kanade.tachiyomi.data.suwayomi.MangaStatus.UNKNOWN -> SManga.UNKNOWN
-        eu.kanade.tachiyomi.data.suwayomi.MangaStatus.ONGOING -> SManga.ONGOING
-        eu.kanade.tachiyomi.data.suwayomi.MangaStatus.COMPLETED -> SManga.COMPLETED
-        eu.kanade.tachiyomi.data.suwayomi.MangaStatus.LICENSED -> SManga.LICENSED
-        eu.kanade.tachiyomi.data.suwayomi.MangaStatus.PUBLISHING_FINISHED -> SManga.PUBLISHING_FINISHED
-        eu.kanade.tachiyomi.data.suwayomi.MangaStatus.CANCELLED -> SManga.CANCELLED
-        eu.kanade.tachiyomi.data.suwayomi.MangaStatus.ON_HIATUS -> SManga.ON_HIATUS
-    }.toLong()
-}
-
-internal const val SERVER_MIGRATION_NOTES_META_KEY = "amatsubu.notes"

@@ -191,9 +191,7 @@
     <string name="color_filter_b_value">Azul</string>
     <string name="color_filter_a_value">Alfa</string>
     <string name="pref_create_backup">Criar cópia de segurança</string>
-    <string name="pref_create_backup_summ">Pode ser usado para restaurar a biblioteca atual</string>
     <string name="pref_restore_backup">Restaurar cópia de segurança</string>
-    <string name="pref_restore_backup_summ">Restaurar biblioteca a partir de cópia de segurança</string>
     <string name="pref_backup_interval">Frequência de cópia de segurança</string>
     <string name="restoring_backup">Restaurando cópia de segurança</string>
     <string name="creating_backup">Criando cópia de segurança</string>
@@ -428,7 +426,6 @@
     <string name="pref_dual_page_split">Dividir as páginas longas</string>
     <string name="pref_dual_page_invert_summary">Se a posição das páginas longas divididas não se adequar ao modo de leitura</string>
     <string name="pref_dual_page_invert">Inverter a posição das páginas divididas</string>
-    <string name="backup_restore_content_full">Pode ter que instalar quaisquer extensões em falta e iniciar a sessão para rastrear os serviços depois de os utilizar.</string>
     <string name="nav_zone_right">Direita</string>
     <string name="nav_zone_left">Esquerda</string>
     <string name="nav_zone_next">Seguinte</string>

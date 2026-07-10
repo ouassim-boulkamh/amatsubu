@@ -16,6 +16,7 @@ import eu.kanade.presentation.category.components.CategoryFlagsDialog
 import eu.kanade.presentation.category.components.CategoryRenameDialog
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiCategoryFlag
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.flow.collectLatest
 import tachiyomi.presentation.core.screens.LoadingScreen
@@ -26,7 +27,7 @@ class CategoryScreen : Screen() {
     override fun Content() {
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
-        val screenModel = rememberScreenModel { CategoryScreenModel() }
+        val screenModel = rememberScreenModel { CategoryScreenModel(context.appDependencies) }
 
         val state by screenModel.state.collectAsState()
 

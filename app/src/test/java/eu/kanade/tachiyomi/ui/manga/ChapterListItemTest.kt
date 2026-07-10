@@ -6,7 +6,7 @@ import mihon.core.common.extensions.EMPTY
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import tachiyomi.domain.chapter.model.Chapter
+import eu.kanade.domain.chapter.model.Chapter
 
 class ChapterListItemTest {
 

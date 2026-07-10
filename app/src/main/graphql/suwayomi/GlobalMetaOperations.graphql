@@ -1,0 +1,19 @@
+query GetGlobalMeta($key: String!) {
+  meta(key: $key) { key value }
+}
+
+mutation SetGlobalMeta($input: SetGlobalMetaInput!) {
+  setGlobalMeta(input: $input) { meta { key value } }
+}
+
+mutation DeleteGlobalMeta($input: DeleteGlobalMetaInput!) {
+  deleteGlobalMeta(input: $input) { meta { key value } }
+}
+
+mutation ClearCachedImages($input: ClearCachedImagesInput!) {
+  clearCachedImages(input: $input) {
+    cachedPages
+    cachedThumbnails
+    downloadedThumbnails
+  }
+}

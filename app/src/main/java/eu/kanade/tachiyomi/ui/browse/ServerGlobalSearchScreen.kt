@@ -44,12 +44,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.browse.components.SourceFilter
 import eu.kanade.presentation.components.SearchToolbar
 import eu.kanade.presentation.manga.components.MangaCover
@@ -61,6 +61,7 @@ import eu.kanade.tachiyomi.data.suwayomi.SuwayomiSourceDto
 import eu.kanade.tachiyomi.data.suwayomi.hasNsfwContent
 import eu.kanade.tachiyomi.data.suwayomi.isLocalFolderSource
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -73,8 +74,6 @@ import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import kotlin.math.absoluteValue
 
 data class ServerGlobalSearchScreen(
@@ -84,10 +83,11 @@ data class ServerGlobalSearchScreen(
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val context = LocalContext.current
         val scope = rememberCoroutineScope()
-        val provider = remember { SuwayomiClientProvider() }
+        val provider = remember(context) { context.appDependencies.suwayomiClientProvider }
         val baseUrl = remember { provider.baseUrl() }
-        val sourcePreferences = remember { Injekt.get<SourcePreferences>() }
+        val sourcePreferences = remember(context) { context.appDependencies.sourcePreferences }
         var query by remember { mutableStateOf<String?>(initialQuery) }
         val initialSourceFilter = remember {
             if (sourcePreferences.pinnedSources.get().isEmpty()) SourceFilter.All else SourceFilter.PinnedOnly

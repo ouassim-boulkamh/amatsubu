@@ -6,7 +6,9 @@ import eu.kanade.tachiyomi.data.backup.BackupDecoder
 import eu.kanade.tachiyomi.data.backup.BackupNotifier
 import eu.kanade.tachiyomi.data.backup.restore.restorers.PreferenceRestorer
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
+import eu.kanade.tachiyomi.data.suwayomi.ClientMangaMetadataStore
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
+import eu.kanade.tachiyomi.data.suwayomi.serverBackupRestoreAffectedEntities
 import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.awaitSuccess
 import logcat.LogPriority
@@ -16,16 +18,13 @@ import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
-class ServerBackupRestorer(
+internal class ServerBackupRestorer(
     private val context: Context,
     private val notifier: BackupNotifier,
     private val isSync: Boolean,
+    private val suwayomiProvider: SuwayomiClientProvider,
 ) {
-    private val suwayomiProvider = SuwayomiClientProvider()
-
     suspend fun restore(uri: Uri, options: RestoreOptions) {
         val startTime = System.currentTimeMillis()
 
@@ -37,7 +36,7 @@ class ServerBackupRestorer(
         )
 
         restoreOnServer(uri)
-        ServerStateSync.requestRefresh()
+        ServerStateSync.requestRefresh(*serverBackupRestoreAffectedEntities().toTypedArray())
 
         notifier.showRestoreComplete(
             time = System.currentTimeMillis() - startTime,
@@ -67,9 +66,11 @@ class BackupRestorer(
     private val context: Context,
     private val notifier: BackupNotifier,
     private val isSync: Boolean,
-    private val decoder: BackupDecoder = BackupDecoder(context),
-    private val preferenceStore: PreferenceStore = Injekt.get(),
-    private val preferenceRestorer: PreferenceRestorer = PreferenceRestorer(context, preferenceStore),
+    private val decoder: BackupDecoder,
+    private val preferenceStore: PreferenceStore,
+    private val preferenceRestorer: PreferenceRestorer,
+    private val mangaMetadataStore: ClientMangaMetadataStore,
+    private val currentServerKey: () -> String,
 ) {
 
     suspend fun restore(uri: Uri, options: RestoreOptions) {
@@ -97,6 +98,12 @@ class BackupRestorer(
             defaultValues = appPreferenceDefaults,
         )
         val sourceRestoreResult = preferenceRestorer.restoreSource(compatibility.restorable.sourcePreferences)
+        if (options.appSettings) {
+            mangaMetadataStore.restoreForServer(
+                serverKey = currentServerKey(),
+                metadata = backup.clientMangaMetadata.map { it.toClientMetadata() },
+            )
+        }
         val restoreResult = appRestoreResult + sourceRestoreResult
 
         logcat(LogPriority.INFO) {

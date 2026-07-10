@@ -11,21 +11,20 @@ import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.preference.getAndSet
 import tachiyomi.core.common.util.lang.launchIO
-import tachiyomi.domain.category.model.Category
-import tachiyomi.domain.library.model.LibraryDisplayMode
-import tachiyomi.domain.library.model.LibrarySort
-import tachiyomi.domain.library.service.LibraryPreferences
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
+import eu.kanade.domain.category.model.Category
+import eu.kanade.domain.library.model.LibraryDisplayMode
+import eu.kanade.domain.library.model.LibrarySort
+import eu.kanade.domain.library.service.LibraryPreferences
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 
-class LibrarySettingsScreenModel(
-    val preferences: BasePreferences = Injekt.get(),
-    val libraryPreferences: LibraryPreferences = Injekt.get(),
+internal class LibrarySettingsScreenModel(
+    val preferences: BasePreferences,
+    val libraryPreferences: LibraryPreferences,
+    private val suwayomiProvider: SuwayomiClientProvider,
 ) : ScreenModel {
 
-    private val suwayomiClient = SuwayomiClientProvider().graphQlClient
+    private val suwayomiClient = suwayomiProvider.graphQlClient
 
     val trackersFlow = flow {
         emit(

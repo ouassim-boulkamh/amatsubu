@@ -1,29 +1,30 @@
 package eu.kanade.tachiyomi.data.suwayomi
 
+import eu.kanade.domain.migration.model.MigrationFlag
 import eu.kanade.domain.source.service.SourcePreferences
-import eu.kanade.tachiyomi.ui.browse.migration.SERVER_MIGRATION_NOTES_META_KEY
-import mihon.domain.migration.models.MigrationFlag
-import tachiyomi.domain.manga.model.Manga
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
+import eu.kanade.domain.manga.model.Manga
+import kotlin.coroutines.cancellation.CancellationException
 
 internal class ServerMigrateMangaUseCase private constructor(
     private val migrationFlags: () -> Set<MigrationFlag>,
     private val client: ServerMigrateMangaClient,
+    private val requestSharedRefresh: (Set<ServerStateEntity>) -> Unit,
 ) {
     constructor(
-        sourcePreferences: SourcePreferences = Injekt.get(),
-        provider: SuwayomiClientProvider = SuwayomiClientProvider(),
+        sourcePreferences: SourcePreferences,
+        provider: SuwayomiClientProvider,
     ) : this(
         migrationFlags = sourcePreferences.migrationFlags::get,
         client = DefaultServerMigrateMangaClient(provider),
+        requestSharedRefresh = { affected -> ServerStateSync.requestRefresh(*affected.toTypedArray()) },
     )
 
     internal constructor(
         migrationFlags: () -> Set<MigrationFlag>,
         client: ServerMigrateMangaClient,
+        requestSharedRefresh: (Set<ServerStateEntity>) -> Unit = { _ -> },
         @Suppress("UNUSED_PARAMETER") testConstructor: Unit = Unit,
-    ) : this(migrationFlags, client)
+    ) : this(migrationFlags, client, requestSharedRefresh)
 
     suspend fun isServerManga(mangaId: Long): Boolean {
         return runCatching { client.getManga(mangaId.toInt()) }.isSuccess
@@ -33,33 +34,76 @@ internal class ServerMigrateMangaUseCase private constructor(
         val currentId = current.id.toInt()
         val targetId = target.id.toInt()
         val flags = migrationFlags()
-        val currentServerManga = client.getManga(currentId)
+        var acceptedMutation = false
+        val affectedEntities = migrationAffectedEntities(currentId, targetId)
 
-        if (currentServerManga.inLibrary) {
-            client.updateMangaLibrary(targetId, inLibrary = true)
+        try {
+            val currentServerManga = runMigrationStep(ServerMigrationStep.LOAD_CURRENT_MANGA) {
+                client.getManga(currentId)
+            }
+
+            if (currentServerManga.inLibrary) {
+                runMigrationMutation(ServerMigrationStep.ADD_TARGET_TO_LIBRARY) {
+                    client.updateMangaLibrary(targetId, inLibrary = true)
+                }
+                acceptedMutation = true
+            }
+
+            if (MigrationFlag.CATEGORY in flags && currentServerManga.inLibrary) {
+                val categoryIds = runMigrationStep(ServerMigrationStep.LOAD_SOURCE_CATEGORIES) {
+                    client.getMangaCategories(currentId).map { it.id }
+                }
+                runMigrationMutation(ServerMigrationStep.COPY_CATEGORIES) {
+                    client.updateMangaCategories(targetId, categoryIds)
+                }
+                acceptedMutation = true
+            }
+
+            if (MigrationFlag.CHAPTER in flags) {
+                val migratedChapterState = migrateChapterState(currentId, targetId)
+                acceptedMutation = acceptedMutation || migratedChapterState
+            }
+
+            if (MigrationFlag.NOTES in flags && current.notes.isNotBlank()) {
+                runMigrationMutation(ServerMigrationStep.COPY_NOTES) {
+                    client.setMangaMeta(targetId, SERVER_MANGA_NOTES_META_KEY, current.notes)
+                }
+                acceptedMutation = true
+            }
+
+            if (replace && currentServerManga.inLibrary) {
+                runMigrationMutation(ServerMigrationStep.REMOVE_SOURCE_FROM_LIBRARY) {
+                    client.updateMangaLibrary(currentId, inLibrary = false)
+                }
+                acceptedMutation = true
+            }
+        } catch (error: Throwable) {
+            if (error is CancellationException) throw error
+            val stepFailure = error as? ServerMigrationStepFailure
+            val cause = stepFailure?.cause ?: error
+            if (acceptedMutation) {
+                requestSharedRefresh(affectedEntities)
+                throw ServerMigrationPartialFailureException(
+                    failedStep = stepFailure?.step,
+                    cause = cause,
+                )
+            }
+            throw cause
         }
 
-        if (MigrationFlag.CATEGORY in flags && currentServerManga.inLibrary) {
-            val categoryIds = client.getMangaCategories(currentId).map { it.id }
-            client.updateMangaCategories(targetId, categoryIds)
-        }
-
-        if (MigrationFlag.CHAPTER in flags) {
-            migrateChapterState(currentId, targetId)
-        }
-
-        if (MigrationFlag.NOTES in flags && current.notes.isNotBlank()) {
-            client.setMangaMeta(targetId, SERVER_MIGRATION_NOTES_META_KEY, current.notes)
-        }
-
-        if (replace && currentServerManga.inLibrary) {
-            client.updateMangaLibrary(currentId, inLibrary = false)
+        if (acceptedMutation) {
+            requestSharedRefresh(affectedEntities)
         }
     }
 
-    private suspend fun migrateChapterState(currentId: Int, targetId: Int) {
-        val currentChapters = client.getChapters(currentId)
-        val targetChapters = client.getChapters(targetId)
+    private suspend fun migrateChapterState(currentId: Int, targetId: Int): Boolean {
+        var acceptedMutation = false
+        val currentChapters = runMigrationStep(ServerMigrationStep.LOAD_SOURCE_CHAPTERS) {
+            client.getChapters(currentId)
+        }
+        val targetChapters = runMigrationStep(ServerMigrationStep.LOAD_TARGET_CHAPTERS) {
+            client.getChapters(targetId)
+        }
         val targetByNumber = targetChapters
             .filter { it.chapterNumber >= 0f }
             .groupBy { it.chapterNumber }
@@ -72,14 +116,84 @@ internal class ServerMigrateMangaUseCase private constructor(
                     ?: targetByName[currentChapter.name.normalizedChapterName()]
                     ?: return@forEach
 
-                client.updateChapterMigrationState(
-                    chapterId = targetChapter.id,
-                    isRead = currentChapter.isRead || targetChapter.isRead,
-                    isBookmarked = currentChapter.isBookmarked || targetChapter.isBookmarked,
-                    lastPageRead = maxOf(currentChapter.lastPageRead, targetChapter.lastPageRead),
-                )
+                runMigrationMutation(ServerMigrationStep.COPY_CHAPTER_STATE) {
+                    client.updateChapterMigrationState(
+                        chapterId = targetChapter.id,
+                        isRead = currentChapter.isRead || targetChapter.isRead,
+                        isBookmarked = currentChapter.isBookmarked || targetChapter.isBookmarked,
+                        lastPageRead = maxOf(currentChapter.lastPageRead, targetChapter.lastPageRead),
+                    )
+                }
+                acceptedMutation = true
             }
+        return acceptedMutation
     }
+}
+
+private fun migrationAffectedEntities(currentId: Int, targetId: Int): Set<ServerStateEntity> {
+    return setOf(
+        ServerStateEntity.Library,
+        ServerStateEntity.Categories,
+        ServerStateEntity.Manga(currentId),
+        ServerStateEntity.Manga(targetId),
+        ServerStateEntity.Chapters(currentId),
+        ServerStateEntity.Chapters(targetId),
+        ServerStateEntity.Trackers(targetId),
+    )
+}
+
+internal class ServerMigrationPartialFailureException(
+    failedStep: ServerMigrationStep?,
+    cause: Throwable,
+) : IllegalStateException(
+    buildString {
+        append("Suwayomi accepted part of this migration")
+        if (failedStep != null) {
+            append(", but ")
+            append(failedStep.label)
+            append(" failed")
+        } else {
+            append(", but a later step failed")
+        }
+        append(". Retry migration to repair the remaining server state.")
+    },
+    cause,
+)
+
+internal enum class ServerMigrationStep(val label: String) {
+    LOAD_CURRENT_MANGA("loading the source manga"),
+    ADD_TARGET_TO_LIBRARY("adding the target manga to the library"),
+    LOAD_SOURCE_CATEGORIES("loading source manga categories"),
+    COPY_CATEGORIES("copying categories"),
+    LOAD_SOURCE_CHAPTERS("loading source manga chapters"),
+    LOAD_TARGET_CHAPTERS("loading target manga chapters"),
+    COPY_CHAPTER_STATE("copying chapter state"),
+    COPY_NOTES("copying notes"),
+    REMOVE_SOURCE_FROM_LIBRARY("removing the source manga from the library"),
+}
+
+private class ServerMigrationStepFailure(
+    val step: ServerMigrationStep,
+    cause: Throwable,
+) : RuntimeException(cause)
+
+private suspend fun <T> runMigrationStep(
+    step: ServerMigrationStep,
+    block: suspend () -> T,
+): T {
+    return try {
+        block()
+    } catch (error: Throwable) {
+        if (error is CancellationException) throw error
+        throw ServerMigrationStepFailure(step, error)
+    }
+}
+
+private suspend fun runMigrationMutation(
+    step: ServerMigrationStep,
+    block: suspend () -> Unit,
+) {
+    runMigrationStep(step, block)
 }
 
 internal interface ServerMigrateMangaClient {

@@ -120,9 +120,7 @@
     <string name="disabled">Deaktiviert</string>
     <string name="services">Tracker</string>
     <string name="pref_create_backup">Datensicherung erstellen</string>
-    <string name="pref_create_backup_summ">Kann benutzt werden, um die aktuelle Bibliothek wiederherzustellen</string>
     <string name="pref_restore_backup">Datensicherung wiederherstellen</string>
-    <string name="pref_restore_backup_summ">Bibliothek mit Hilfe einer Datensicherung wiederherstellen</string>
     <string name="pref_backup_interval">Automatische Sicherungshäufigkeit</string>
     <string name="backup_created">Datensicherung erstellt</string>
     <string name="restore_completed">Wiederherstellen abgeschlossen</string>
@@ -430,7 +428,6 @@
     <string name="pref_dual_page_split">Breite Seiten aufteilen</string>
     <string name="pref_dual_page_invert_summary">Falls die Platzierung der aufgeteilten Seiten nicht mit der Leserichtung übereinstimmt</string>
     <string name="pref_dual_page_invert">Platzierung aufgeteilter Seiten umkehren</string>
-    <string name="backup_restore_content_full">Du musst jegliche fehlende Erweiterungen installieren und dich anschließend bei den Tracking-Anbietern einloggen, um sie zu benutzen.</string>
     <string name="pref_show_navigation_mode_summary">Kurz anzeigen, wenn der Leser geöffnet wird</string>
     <string name="pref_show_navigation_mode">Tippzonen-Overlay anzeigen</string>
     <string name="nav_zone_right">Rechts</string>

@@ -6,13 +6,14 @@ import androidx.annotation.IntRange
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.manga.model.readerOrientation
 import eu.kanade.domain.manga.model.readingMode
 import eu.kanade.domain.source.interactor.GetIncognitoState
-import eu.kanade.tachiyomi.data.database.models.isRecognizedNumber
-import eu.kanade.tachiyomi.data.database.models.toDomainChapter
 import eu.kanade.tachiyomi.data.saver.Image
 import eu.kanade.tachiyomi.data.saver.ImageSaver
 import eu.kanade.tachiyomi.data.saver.Location
@@ -20,6 +21,7 @@ import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyFreshness
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyStore
 import eu.kanade.tachiyomi.data.suwayomi.MangaStatus
 import eu.kanade.tachiyomi.data.suwayomi.ServerReadStatePendingStore
+import eu.kanade.tachiyomi.data.suwayomi.ServerReaderIntentPendingStore
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaDto
@@ -27,8 +29,9 @@ import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaMetaDto
 import eu.kanade.tachiyomi.data.suwayomi.normalizedGenre
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
 import eu.kanade.tachiyomi.data.suwayomi.serverCoverLastModified
-import eu.kanade.tachiyomi.source.model.Page
-import eu.kanade.tachiyomi.source.model.SManga
+import eu.kanade.tachiyomi.data.suwayomi.toDomainStatus
+import eu.kanade.tachiyomi.data.suwayomi.toDomainUpdateStrategy
+import eu.kanade.tachiyomi.di.AppDependencies
 import eu.kanade.tachiyomi.ui.reader.loader.ClientDeviceChapterCopyPageLoader
 import eu.kanade.tachiyomi.ui.reader.loader.PageLoader
 import eu.kanade.tachiyomi.ui.reader.loader.SuwayomiPageLoader
@@ -69,31 +72,30 @@ import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.chapter.model.Chapter
-import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.manga.model.Manga
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
+import eu.kanade.domain.chapter.model.Chapter
+import eu.kanade.domain.library.service.LibraryPreferences
+import eu.kanade.domain.manga.model.Manga
 import java.time.Instant
-import eu.kanade.tachiyomi.data.suwayomi.UpdateStrategy as SuwayomiUpdateStrategy
 
 /**
  * Presenter used by the activity to perform background operations.
  */
-class ReaderViewModel @JvmOverloads constructor(
+class ReaderViewModel private constructor(
     private val savedState: SavedStateHandle,
-    private val imageSaver: ImageSaver = Injekt.get(),
-    val readerPreferences: ReaderPreferences = Injekt.get(),
-    private val basePreferences: BasePreferences = Injekt.get(),
-    private val getIncognitoState: GetIncognitoState = Injekt.get(),
-    private val libraryPreferences: LibraryPreferences = Injekt.get(),
+    private val application: Application,
+    private val imageSaver: ImageSaver,
+    val readerPreferences: ReaderPreferences,
+    private val basePreferences: BasePreferences,
+    private val getIncognitoState: GetIncognitoState,
+    private val libraryPreferences: LibraryPreferences,
+    private val suwayomiProvider: SuwayomiClientProvider,
+    private val clientDeviceChapterCopyStore: ClientDeviceChapterCopyStore,
+    private val pendingReadStateStore: ServerReadStatePendingStore,
+    private val pendingReaderIntentStore: ServerReaderIntentPendingStore,
 ) : ViewModel() {
 
-    private val suwayomiProvider = SuwayomiClientProvider()
     private val suwayomiHttpClient = suwayomiProvider.httpClient
     private val suwayomiClient = suwayomiProvider.graphQlClient
-    private val clientDeviceChapterCopyStore: ClientDeviceChapterCopyStore = Injekt.get()
-    private val pendingReadStateStore: ServerReadStatePendingStore = Injekt.get()
     private var serverChapterList: List<ReaderChapter>? = null
     private var serverDownloadedChapterIds: Set<Long> = emptySet()
 
@@ -144,10 +146,10 @@ class ReaderViewModel @JvmOverloads constructor(
                     // Restore from SavedState
                     currentChapter.requestedPage = chapterPageIndex
                 } else if (!currentChapter.chapter.read) {
-                    currentChapter.requestedPage = currentChapter.chapter.last_page_read
+                    currentChapter.requestedPage = currentChapter.chapter.lastPageRead.toInt()
                 }
                 currentChapter.coerceRequestedPageToLoadedPages()
-                chapterId = currentChapter.chapter.id!!
+                chapterId = currentChapter.chapter.id
             }
             .launchIn(viewModelScope)
     }
@@ -211,7 +213,7 @@ class ReaderViewModel @JvmOverloads constructor(
 
         serverChapterList = readerChapters.chapters
         mutableState.update { it.copy(manga = manga) }
-        if (chapterId == -1L) chapterId = readerChapters.selectedChapter.chapter.id!!
+        if (chapterId == -1L) chapterId = readerChapters.selectedChapter.chapter.id
 
         loadServerChapter(readerChapters.selectedChapter)
         return Result.success(true)
@@ -249,7 +251,7 @@ class ReaderViewModel @JvmOverloads constructor(
 
         serverChapterList = serverReaderChapters.chapters
         mutableState.update { it.copy(manga = manga) }
-        if (chapterId == -1L) chapterId = serverReaderChapters.selectedChapter.chapter.id!!
+        if (chapterId == -1L) chapterId = serverReaderChapters.selectedChapter.chapter.id
 
         loadServerChapter(serverReaderChapters.selectedChapter)
         return Result.success(true)
@@ -269,7 +271,7 @@ class ReaderViewModel @JvmOverloads constructor(
                 throw IllegalStateException("No pages found")
             }
             if (!chapter.chapter.read) {
-                chapter.requestedPage = chapter.chapter.last_page_read
+                chapter.requestedPage = chapter.chapter.lastPageRead.toInt()
             }
             chapter.state = ReaderChapter.State.Loaded(pages)
             chapter.coerceRequestedPageToLoadedPages()
@@ -283,8 +285,8 @@ class ReaderViewModel @JvmOverloads constructor(
         val source = resolveReaderChapterSource(
             clientDeviceChapterCopyStore.getCopy(
                 serverKey = suwayomiProvider.serverKey(),
-                mangaId = chapter.chapter.manga_id!!.toInt(),
-                chapterId = chapter.chapter.id!!.toInt(),
+                mangaId = chapter.chapter.mangaId.toInt(),
+                chapterId = chapter.chapter.id.toInt(),
             ),
         )
         val loader = when (source) {
@@ -337,7 +339,6 @@ class ReaderViewModel @JvmOverloads constructor(
         val window = listOfNotNull(prevChapter, currChapter, nextChapter)
         val duplicateIds = window
             .groupBy { it.chapter.id }
-            .filterKeys { it != null }
             .filterValues { it.size > 1 }
             .keys
 
@@ -360,7 +361,7 @@ class ReaderViewModel @JvmOverloads constructor(
     private fun ReaderChapter?.debugSummary(): String {
         if (this == null) return "null"
         val chapter = chapter
-        return "id=${chapter.id}, number=${chapter.chapter_number}, url=${chapter.url}, " +
+        return "id=${chapter.id}, number=${chapter.chapterNumber}, url=${chapter.url}, " +
             "pages=${pages?.size ?: -1}, read=${chapter.read}"
     }
 
@@ -401,8 +402,8 @@ class ReaderViewModel @JvmOverloads constructor(
         }.getOrDefault(emptySet())
     }
 
-    private fun SuwayomiChapterDto.toDomainChapter(): tachiyomi.domain.chapter.model.Chapter {
-        return tachiyomi.domain.chapter.model.Chapter(
+    private fun SuwayomiChapterDto.toDomainChapter(): eu.kanade.domain.chapter.model.Chapter {
+        return eu.kanade.domain.chapter.model.Chapter(
             id = id.toLong(),
             mangaId = mangaId.toLong(),
             read = isRead,
@@ -419,25 +420,6 @@ class ReaderViewModel @JvmOverloads constructor(
             version = 0L,
             memo = JsonObject.EMPTY,
         )
-    }
-
-    private fun MangaStatus.toDomainStatus(): Long {
-        return when (this) {
-            MangaStatus.UNKNOWN -> SManga.UNKNOWN
-            MangaStatus.ONGOING -> SManga.ONGOING
-            MangaStatus.COMPLETED -> SManga.COMPLETED
-            MangaStatus.LICENSED -> SManga.LICENSED
-            MangaStatus.PUBLISHING_FINISHED -> SManga.PUBLISHING_FINISHED
-            MangaStatus.CANCELLED -> SManga.CANCELLED
-            MangaStatus.ON_HIATUS -> SManga.ON_HIATUS
-        }.toLong()
-    }
-
-    private fun SuwayomiUpdateStrategy.toDomainUpdateStrategy(): eu.kanade.tachiyomi.source.model.UpdateStrategy {
-        return when (this) {
-            SuwayomiUpdateStrategy.ALWAYS_UPDATE -> eu.kanade.tachiyomi.source.model.UpdateStrategy.ALWAYS_UPDATE
-            SuwayomiUpdateStrategy.ONLY_FETCH_ONCE -> eu.kanade.tachiyomi.source.model.UpdateStrategy.ONLY_FETCH_ONCE
-        }
     }
 
     private fun Long.setFlag(flag: Long, mask: Long): Long {
@@ -622,17 +604,18 @@ class ReaderViewModel @JvmOverloads constructor(
      * Saves the chapter progress (last read page and whether it's read)
      * if incognito mode isn't on.
      */
-    private suspend fun updateChapterProgress(readerChapter: ReaderChapter, page: Page) {
+    private suspend fun updateChapterProgress(readerChapter: ReaderChapter, page: ReaderPage) {
         val pageIndex = page.index
-        val readerChapterId = readerChapter.chapter.id!!
+        val readerChapterId = readerChapter.chapter.id
 
         updateActiveChapterPage(readerChapter, pageIndex)
         readerChapter.requestedPage = pageIndex
         chapterPageIndex = pageIndex
         chapterPageIndexChapterId = readerChapterId
 
-        if (!incognitoMode && page.status !is Page.State.Error) {
-            readerChapter.chapter.last_page_read = pageIndex
+        if (!incognitoMode && page.status !is ReaderPage.State.Error) {
+            val baseline = readerChapter.chapter.toReaderIntentBaseline()
+            readerChapter.chapter = readerChapter.chapter.copy(lastPageRead = pageIndex.toLong())
             val shouldTrackServerProgress = !readerChapter.chapter.read &&
                 readerChapter.pages?.lastIndex == pageIndex
 
@@ -649,24 +632,35 @@ class ReaderViewModel @JvmOverloads constructor(
                 suwayomiClient.updateChapterProgress(
                     chapterId = readerChapterId.toInt(),
                     isRead = readerChapter.chapter.read,
-                    lastPageRead = readerChapter.chapter.last_page_read,
+                    lastPageRead = readerChapter.chapter.lastPageRead.toInt(),
                 )
             }.getOrElse { error ->
                 if (error is CancellationException) throw error
                 logcat(LogPriority.ERROR, error) { "Failed to sync chapter progress" }
-                if (readerChapter.chapter.read) {
+                if (shouldQueuePendingReadStateAfterProgressFailure(readerChapter.chapter.read)) {
                     pendingReadStateStore.upsert(
                         serverKey = suwayomiProvider.serverKey(),
-                        mangaId = readerChapter.chapter.manga_id!!.toInt(),
+                        mangaId = readerChapter.chapter.mangaId.toInt(),
                         chapterId = readerChapterId.toInt(),
                         isRead = true,
                     )
                 }
+                pendingReaderIntentStore.upsertProgress(
+                    serverKey = suwayomiProvider.serverKey(),
+                    mangaId = readerChapter.chapter.mangaId.toInt(),
+                    chapterId = readerChapterId.toInt(),
+                    baseline = baseline,
+                    desiredIsRead = readerChapter.chapter.read,
+                    desiredLastPageRead = readerChapter.chapter.lastPageRead.toInt(),
+                )
+                eventChannel.send(Event.PendingReaderProgressQueued)
                 return
             }
             if (readerChapter.requestedPage == pageIndex && getCurrentChapter()?.chapter?.id == readerChapterId) {
-                readerChapter.chapter.read = updatedChapter.isRead
-                readerChapter.chapter.last_page_read = updatedChapter.lastPageRead
+                readerChapter.chapter = readerChapter.chapter.copy(
+                    read = updatedChapter.isRead,
+                    lastPageRead = updatedChapter.lastPageRead.toLong(),
+                )
             }
             if (updatedChapter.isRead && shouldTrackServerProgress) {
                 val mangaId = manga?.id?.toInt()
@@ -694,7 +688,7 @@ class ReaderViewModel @JvmOverloads constructor(
     }
 
     private suspend fun updateChapterProgressOnComplete(readerChapter: ReaderChapter) {
-        readerChapter.chapter.read = true
+        readerChapter.chapter = readerChapter.chapter.copy(read = true)
 
         val markDuplicateAsRead = libraryPreferences.markDuplicateReadChapterAsRead.get()
             .contains(LibraryPreferences.MARK_DUPLICATE_CHAPTER_READ_EXISTING)
@@ -705,16 +699,21 @@ class ReaderViewModel @JvmOverloads constructor(
             .filter { chapter ->
                 chapter.id != readerChapter.chapter.id &&
                     !chapter.read &&
-                    chapter.isRecognizedNumber &&
-                    chapter.chapter_number == readerChapter.chapter.chapter_number
+                    chapter.chapterNumber >= 0 &&
+                    chapter.chapterNumber == readerChapter.chapter.chapterNumber
             }
             .forEach { chapter ->
                 val updatedChapter = suwayomiClient.updateChapterRead(
-                    chapterId = chapter.id!!.toInt(),
+                    chapterId = chapter.id.toInt(),
                     isRead = true,
                 )
-                chapter.read = updatedChapter.isRead
-                chapter.last_page_read = updatedChapter.lastPageRead
+                val index = serverChapterList.orEmpty().indexOfFirst { it.chapter.id == chapter.id }
+                if (index >= 0) {
+                    serverChapterList!![index].chapter = chapter.copy(
+                        read = updatedChapter.isRead,
+                        lastPageRead = updatedChapter.lastPageRead.toLong(),
+                    )
+                }
             }
     }
 
@@ -769,17 +768,19 @@ class ReaderViewModel @JvmOverloads constructor(
      * Bookmarks the currently active chapter.
      */
     fun toggleChapterBookmark() {
-        val chapter = getCurrentChapter()?.chapter ?: return
+        val readerChapter = getCurrentChapter() ?: return
+        val chapter = readerChapter.chapter
+        val baseline = chapter.toReaderIntentBaseline()
         val bookmarked = !chapter.bookmark
-        chapter.bookmark = bookmarked
+        readerChapter.chapter = chapter.copy(bookmark = bookmarked)
 
         viewModelScope.launchNonCancellable {
             try {
                 val updatedChapter = suwayomiClient.updateChapterBookmark(
-                    chapterId = chapter.id!!.toInt(),
+                    chapterId = chapter.id.toInt(),
                     isBookmarked = bookmarked,
                 )
-                chapter.bookmark = updatedChapter.isBookmarked
+                readerChapter.chapter = readerChapter.chapter.copy(bookmark = updatedChapter.isBookmarked)
                 mutableState.update {
                     it.copy(
                         bookmarked = updatedChapter.isBookmarked,
@@ -788,12 +789,21 @@ class ReaderViewModel @JvmOverloads constructor(
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
                 logcat(LogPriority.ERROR, e) { "Failed to update server reader bookmark state" }
-                chapter.bookmark = !bookmarked
+                val rolledBackBookmark = bookmarkStateAfterReaderBookmarkFailure(bookmarked)
+                readerChapter.chapter = readerChapter.chapter.copy(bookmark = rolledBackBookmark)
                 mutableState.update {
                     it.copy(
-                        bookmarked = !bookmarked,
+                        bookmarked = rolledBackBookmark,
                     )
                 }
+                pendingReaderIntentStore.upsertBookmark(
+                    serverKey = suwayomiProvider.serverKey(),
+                    mangaId = chapter.mangaId.toInt(),
+                    chapterId = chapter.id.toInt(),
+                    baseline = baseline,
+                    desiredIsBookmarked = bookmarked,
+                )
+                eventChannel.send(Event.PendingReaderBookmarkQueued)
             }
         }
 
@@ -832,7 +842,7 @@ class ReaderViewModel @JvmOverloads constructor(
             )
             val currChapters = state.value.viewerChapters
             if (currChapters != null) {
-                currChapters.currChapter.requestedPage = currChapters.currChapter.chapter.last_page_read
+                currChapters.currChapter.requestedPage = currChapters.currChapter.chapter.lastPageRead.toInt()
             }
             mutableState.update {
                 it.copy(
@@ -941,11 +951,10 @@ class ReaderViewModel @JvmOverloads constructor(
      */
     fun saveImage() {
         val page = (state.value.dialog as? Dialog.PageActions)?.page
-        if (page?.status != Page.State.Ready) return
+        if (page?.status != ReaderPage.State.Ready) return
         val manga = manga ?: return
 
-        val context = Injekt.get<Application>()
-        val notifier = SaveImageNotifier(context)
+        val notifier = SaveImageNotifier(application)
         notifier.onClear()
 
         val filename = generateFilename(manga, page)
@@ -989,11 +998,10 @@ class ReaderViewModel @JvmOverloads constructor(
      */
     fun shareImage(copyToClipboard: Boolean) {
         val page = (state.value.dialog as? Dialog.PageActions)?.page
-        if (page?.status != Page.State.Ready) return
+        if (page?.status != ReaderPage.State.Ready) return
         val manga = manga ?: return
 
-        val context = Injekt.get<Application>()
-        val destDir = context.cacheImageDir
+        val destDir = application.cacheImageDir
 
         val filename = generateFilename(manga, page)
 
@@ -1053,11 +1061,35 @@ class ReaderViewModel @JvmOverloads constructor(
     sealed interface Event {
         data object ReloadViewerChapters : Event
         data object PageChanged : Event
+        data object PendingReaderProgressQueued : Event
+        data object PendingReaderBookmarkQueued : Event
         data class SetOrientation(val orientation: Int) : Event
 
         data class SavedImage(val result: SaveImageResult) : Event
         data class ShareImage(val uri: Uri, val page: ReaderPage) : Event
         data class CopyImage(val uri: Uri) : Event
+    }
+
+    internal class Factory(
+        private val dependencies: AppDependencies,
+    ) : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+            require(modelClass.isAssignableFrom(ReaderViewModel::class.java))
+            @Suppress("UNCHECKED_CAST")
+            return ReaderViewModel(
+                savedState = extras.createSavedStateHandle(),
+                application = dependencies.application,
+                imageSaver = dependencies.imageSaver,
+                readerPreferences = dependencies.readerPreferences,
+                basePreferences = dependencies.basePreferences,
+                getIncognitoState = dependencies.getIncognitoState,
+                libraryPreferences = dependencies.libraryPreferences,
+                suwayomiProvider = dependencies.suwayomiClientProvider,
+                clientDeviceChapterCopyStore = dependencies.clientDeviceChapterCopyStore,
+                pendingReadStateStore = dependencies.serverReadStatePendingStore,
+                pendingReaderIntentStore = dependencies.serverReaderIntentPendingStore,
+            ) as T
+        }
     }
 
     private companion object {

@@ -1,0 +1,70 @@
+mutation FetchSourceManga($input: FetchSourceMangaInput!) {
+  fetchSourceManga(input: $input) {
+    hasNextPage
+    mangas {
+      ...AmatsubuManga
+    }
+  }
+}
+
+query SourceDetails($id: LongString!) {
+  source(id: $id) {
+    baseUrl
+    contentWarning
+    displayName
+    homeUrl
+    iconUrl
+    id
+    isConfigurable
+    isNsfw
+    lang
+    name
+    supportsLatest
+    filters {
+      ...AmatsubuSourceFilter
+    }
+    preferences {
+      ...AmatsubuSourcePreference
+    }
+  }
+}
+
+mutation UpdateSourcePreference($input: UpdateSourcePreferenceInput!) {
+  updateSourcePreference(input: $input) {
+    preferences {
+      ...AmatsubuSourcePreference
+    }
+  }
+}
+
+fragment AmatsubuSourceFilter on Filter {
+  __typename
+  ... on CheckBoxFilter { name defaultBoolean: default }
+  ... on HeaderFilter { name }
+  ... on SeparatorFilter { name }
+  ... on SelectFilter { name defaultInt: default values }
+  ... on SortFilter { name values defaultSort: default { index ascending } }
+  ... on TextFilter { name defaultString: default }
+  ... on TriStateFilter { name defaultTriState: default }
+  ... on GroupFilter { name filters { ...AmatsubuSourceFilterChild } }
+}
+
+fragment AmatsubuSourceFilterChild on Filter {
+  __typename
+  ... on CheckBoxFilter { name defaultBoolean: default }
+  ... on HeaderFilter { name }
+  ... on SeparatorFilter { name }
+  ... on SelectFilter { name defaultInt: default values }
+  ... on SortFilter { name values defaultSort: default { index ascending } }
+  ... on TextFilter { name defaultString: default }
+  ... on TriStateFilter { name defaultTriState: default }
+}
+
+fragment AmatsubuSourcePreference on Preference {
+  __typename
+  ... on CheckBoxPreference { key title summary enabled visible currentBoolean: currentValue defaultBoolean: default }
+  ... on SwitchPreference { key title summary enabled visible currentBoolean: currentValue defaultBoolean: default }
+  ... on EditTextPreference { key title summary enabled visible currentString: currentValue defaultString: default text dialogTitle dialogMessage }
+  ... on ListPreference { key title summary enabled visible currentString: currentValue defaultString: default entries entryValues }
+  ... on MultiSelectListPreference { key title summary enabled visible currentStringList: currentValue defaultStringList: default entries entryValues dialogTitle dialogMessage }
+}

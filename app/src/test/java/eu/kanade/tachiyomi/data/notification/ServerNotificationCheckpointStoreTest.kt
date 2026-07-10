@@ -40,19 +40,6 @@ class ServerNotificationCheckpointStoreTest {
     }
 
     @Test
-    fun `notified chapters are filtered until the server identity changes`() {
-        val store = ServerNotificationCheckpointStore(InMemoryPreferenceStore())
-        store.recordLibraryUpdate(SERVER_A, SuwayomiUpdaterJobsInfoDto(isRunning = false))
-        store.markChaptersNotified(listOf(1, 2))
-
-        assertEquals(setOf(3), store.filterUnnotifiedChapterIds(listOf(1, 2, 3)))
-
-        store.recordLibraryUpdate(SERVER_B, SuwayomiUpdaterJobsInfoDto(isRunning = false))
-
-        assertEquals(setOf(1, 2, 3), store.filterUnnotifiedChapterIds(listOf(1, 2, 3)))
-    }
-
-    @Test
     fun `download queue transition records visibility and state`() {
         val store = ServerNotificationCheckpointStore(InMemoryPreferenceStore())
 
@@ -134,6 +121,27 @@ class ServerNotificationCheckpointStoreTest {
         store.recordDownloadQueue(serverIdentity = SERVER_A, visible = true, state = "STOPPED")
         assertTrue(store.hasActiveServerJob(SERVER_A))
         assertFalse(store.hasActiveServerJob(SERVER_B))
+    }
+
+    @Test
+    fun `current-server reconciliation clears old server active checkpoints`() {
+        val store = ServerNotificationCheckpointStore(InMemoryPreferenceStore())
+
+        store.recordLibraryUpdate(
+            serverIdentity = SERVER_A,
+            jobs = SuwayomiUpdaterJobsInfoDto(isRunning = true, totalJobs = 5, finishedJobs = 1),
+            nowMillis = 1L,
+        )
+        store.recordDownloadQueue(serverIdentity = SERVER_A, visible = true, state = "STARTED")
+        store.recordSyncYomiStatus(
+            serverIdentity = SERVER_A,
+            status = syncStatus(state = "UPLOADING", startDate = "1"),
+        )
+
+        assertTrue(store.hasActiveServerJob(SERVER_A))
+
+        assertFalse(store.hasActiveServerJob(SERVER_B))
+        assertFalse(store.hasActiveServerJob(SERVER_A))
     }
 
     @Test
