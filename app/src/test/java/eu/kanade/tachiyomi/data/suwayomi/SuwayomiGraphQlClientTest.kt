@@ -897,6 +897,46 @@ class SuwayomiGraphQlClientTest {
     }
 
     @Test
+    fun `tracker mutation refetch failure preserves accepted mutation and recovers on next fetch`() = runTest {
+        val requests = mutableListOf<String>()
+        var trackRecordsAttempts = 0
+        val graphQlClient = graphQlClient(requests) { requestBody ->
+            when {
+                requestBody.contains("UpdateTrack") ->
+                    """{ "data": { "updateTrack": { "trackRecord": ${trackerRecordJson()} } } }"""
+                requestBody.contains("TrackRecords") -> {
+                    trackRecordsAttempts += 1
+                    if (trackRecordsAttempts == 1) {
+                        """{ "errors": [{ "message": "Tracker refetch unavailable" }] }"""
+                    } else {
+                        """{ "data": { "trackRecords": { "nodes": [${trackerRecordJson()}] } } }"""
+                    }
+                }
+                else -> error("Unexpected request: $requestBody")
+            }
+        }
+
+        val accepted = graphQlClient.updateTrack(recordId = 60, private = true)
+            ?: error("Expected accepted tracker mutation to return a record")
+
+        val refetchFailure = assertThrows<IllegalStateException> {
+            graphQlClient.getTrackRecords(mangaId = 10)
+        }
+        val recovered = graphQlClient.getTrackRecords(mangaId = 10)
+
+        assertEquals("Tracker refetch unavailable", refetchFailure.message)
+        assertEquals(60, accepted.id)
+        assertEquals(listOf(60), recovered.map { it.id })
+        assertEquals(
+            setOf(ServerStateEntity.Manga(10), ServerStateEntity.Trackers(10)),
+            serverTrackAffectedEntities(accepted.mangaId),
+        )
+        assertTrue(requests[0].contains("UpdateTrack"))
+        assertTrue(requests[1].contains("TrackRecords"))
+        assertTrue(requests[2].contains("TrackRecords"))
+    }
+
+    @Test
     fun `tracker unbind operation sends delete remote flag and decodes nullable record`() = runTest {
         val requests = mutableListOf<String>()
         val graphQlClient = graphQlClient(requests) {

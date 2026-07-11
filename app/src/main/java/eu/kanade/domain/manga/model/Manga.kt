@@ -1,14 +1,14 @@
 package eu.kanade.domain.manga.model
 
 import eu.kanade.domain.base.BasePreferences
+import eu.kanade.domain.chapter.model.Chapter
+import eu.kanade.domain.manga.model.Manga
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.metadata.comicinfo.ComicInfo
 import tachiyomi.core.metadata.comicinfo.ComicInfoPublishingStatus
-import eu.kanade.domain.chapter.model.Chapter
-import eu.kanade.domain.manga.model.Manga
 import tachiyomi.core.metadata.comicinfo.ComicInfo.SourceMihon as ComicInfoSource
 
 // TODO: move these into the domain model

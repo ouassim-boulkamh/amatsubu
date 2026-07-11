@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.ui.browse.migration.manga
 import androidx.compose.runtime.Immutable
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
+import eu.kanade.domain.manga.model.Manga
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.ui.browse.migration.toMigrationManga
 import kotlinx.coroutines.channels.Channel
@@ -14,7 +15,6 @@ import logcat.LogPriority
 import mihon.core.common.utils.mutate
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
-import eu.kanade.domain.manga.model.Manga
 
 internal class MigrateMangaScreenModel(
     private val sourceId: String,

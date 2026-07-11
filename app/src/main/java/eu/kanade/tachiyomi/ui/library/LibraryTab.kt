@@ -22,6 +22,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -31,6 +32,9 @@ import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import eu.kanade.domain.category.model.Category
+import eu.kanade.domain.library.model.LibraryManga
+import eu.kanade.domain.manga.model.Manga
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
 import eu.kanade.presentation.library.DeleteLibraryMangaDialog
 import eu.kanade.presentation.library.LibrarySettingsDialog
@@ -56,9 +60,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.launchIO
-import eu.kanade.domain.category.model.Category
-import eu.kanade.domain.library.model.LibraryManga
-import eu.kanade.domain.manga.model.Manga
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
@@ -212,12 +213,18 @@ data object LibraryTab : Tab {
         ) { contentPadding ->
             when {
                 state.isLoading -> {
-                    LoadingScreen(Modifier.padding(contentPadding))
+                    LoadingScreen(
+                        Modifier
+                            .padding(contentPadding)
+                            .testTag("library_loading"),
+                    )
                 }
                 state.serverUnavailable && state.libraryData.staleSnapshot == null -> {
                     EmptyScreen(
                         stringRes = MR.strings.server_unreachable,
-                        modifier = Modifier.padding(contentPadding),
+                        modifier = Modifier
+                            .padding(contentPadding)
+                            .testTag("library_server_unavailable"),
                         actions = listOf(
                             EmptyScreenAction(
                                 stringRes = MR.strings.pref_category_server,
@@ -231,7 +238,9 @@ data object LibraryTab : Tab {
                     val handler = LocalUriHandler.current
                     EmptyScreen(
                         stringRes = MR.strings.information_empty_library,
-                        modifier = Modifier.padding(contentPadding),
+                        modifier = Modifier
+                            .padding(contentPadding)
+                            .testTag("library_empty"),
                         actions = listOf(
                             EmptyScreenAction(
                                 stringRes = MR.strings.getting_started_guide,

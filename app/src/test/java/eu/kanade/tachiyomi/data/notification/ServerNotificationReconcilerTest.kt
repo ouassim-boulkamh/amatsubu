@@ -7,8 +7,8 @@ import eu.kanade.tachiyomi.data.suwayomi.SuwayomiDownloadChapterDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiDownloadDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiDownloadMangaDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiDownloadStatusDto
-import eu.kanade.tachiyomi.data.suwayomi.SuwayomiGraphQlClient
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiGlobalMetaDto
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiGraphQlClient
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiLibraryUpdateStatusDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiSyncStatusDto

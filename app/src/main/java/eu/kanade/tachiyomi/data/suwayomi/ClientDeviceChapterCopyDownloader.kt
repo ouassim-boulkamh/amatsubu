@@ -9,10 +9,10 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.HttpException
 import eu.kanade.tachiyomi.network.awaitSuccess
-import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.util.storage.DiskUtil
 import eu.kanade.tachiyomi.util.system.workManager
 import kotlinx.coroutines.delay
@@ -31,6 +31,12 @@ internal class ClientDeviceChapterCopyDownloader(
     private val rootDirectory: () -> File,
     private val now: () -> Long = System::currentTimeMillis,
     private val pageRetryDelaysMillis: List<Long> = listOf(500L, 1_500L),
+    private val promoteTempDirectory: (tempDir: File, finalDir: File) -> Boolean = { tempDir, finalDir ->
+        tempDir.renameTo(finalDir)
+    },
+    private val deleteCopyDirectory: (directory: File) -> Boolean = { directory ->
+        directory.deleteRecursively()
+    },
 ) {
 
     suspend fun saveToDevice(
@@ -42,6 +48,11 @@ internal class ClientDeviceChapterCopyDownloader(
         val expectedPages = buildClientDeviceCopyPages(manifest)
         val tempDir = chapterTempDirectory(serverKey, manifest)
         val finalDir = chapterDirectory(serverKey, manifest)
+        val existingCompleteCopy = store.getCopy(
+            serverKey = serverKey,
+            mangaId = manifest.chapter.mangaId,
+            chapterId = manifest.chapter.id,
+        )?.takeIf { it.isComplete && File(it.storagePath.orEmpty()).isDirectory }
         val downloadedPages = mutableListOf<ClientDeviceChapterCopyPage>()
 
         tempDir.deleteRecursively()
@@ -79,7 +90,7 @@ internal class ClientDeviceChapterCopyDownloader(
             }
 
             finalDir.deleteRecursively()
-            check(tempDir.renameTo(finalDir)) {
+            check(promoteTempDirectory(tempDir, finalDir)) {
                 "Could not promote downloaded chapter copy to ${finalDir.absolutePath}"
             }
 
@@ -100,30 +111,37 @@ internal class ClientDeviceChapterCopyDownloader(
             )
         } catch (error: Throwable) {
             if (error is CancellationException) throw error
-            finalDir.deleteRecursively()
-            if (downloadedPages.isNotEmpty()) {
-                tempDir.renameTo(finalDir)
+            if (existingCompleteCopy != null) {
+                store.upsert(existingCompleteCopy.toUpsert())
             } else {
-                tempDir.deleteRecursively()
+                finalDir.deleteRecursively()
+                if (downloadedPages.isNotEmpty()) {
+                    tempDir.renameTo(finalDir)
+                } else {
+                    tempDir.deleteRecursively()
+                }
+                val incompletePages = expectedPages.map { expected ->
+                    downloadedPages.firstOrNull { it.index == expected.index }
+                        ?.copy(
+                            localUri = File(
+                                finalDir,
+                                expected.fileName ?: pageFileName(expected.index),
+                            ).toURI().toString(),
+                        )
+                        ?: expected
+                }
+                store.upsert(
+                    ClientDeviceChapterCopyUpsert(
+                        serverKey = serverKey,
+                        mangaTitle = mangaTitle,
+                        manifest = manifest,
+                        storagePath = finalDir.absolutePath,
+                        pages = incompletePages,
+                        status = ClientChapterCopyStatus.INCOMPLETE,
+                        freshness = ClientChapterCopyFreshness.INCOMPLETE,
+                    ),
+                )
             }
-            val incompletePages = expectedPages.map { expected ->
-                downloadedPages.firstOrNull { it.index == expected.index }
-                    ?.copy(
-                        localUri = File(finalDir, expected.fileName ?: pageFileName(expected.index)).toURI().toString(),
-                    )
-                    ?: expected
-            }
-            store.upsert(
-                ClientDeviceChapterCopyUpsert(
-                    serverKey = serverKey,
-                    mangaTitle = mangaTitle,
-                    manifest = manifest,
-                    storagePath = finalDir.absolutePath,
-                    pages = incompletePages,
-                    status = ClientChapterCopyStatus.INCOMPLETE,
-                    freshness = ClientChapterCopyFreshness.INCOMPLETE,
-                ),
-            )
             throw error
         } finally {
             tempDir.deleteRecursively()
@@ -153,7 +171,11 @@ internal class ClientDeviceChapterCopyDownloader(
         existing?.storagePath
             ?.let(::File)
             ?.takeIf { it.exists() }
-            ?.deleteRecursively()
+            ?.let { directory ->
+                check(deleteCopyDirectory(directory)) {
+                    "Could not remove downloaded chapter copy at ${directory.absolutePath}"
+                }
+            }
         store.deleteCopy(serverKey, mangaId, chapterId)
     }
 
@@ -169,6 +191,35 @@ internal class ClientDeviceChapterCopyDownloader(
     }
 
     private fun pageFileName(index: Int): String = ClientDeviceChapterCopyPathPolicy.pageFileName(index)
+}
+
+private fun ClientDeviceChapterCopy.toUpsert(): ClientDeviceChapterCopyUpsert {
+    return ClientDeviceChapterCopyUpsert(
+        serverKey = serverKey,
+        mangaTitle = mangaTitle,
+        manifest = SuwayomiChapterPageManifest(
+            pages = pages.map { it.sourceUrl },
+            chapter = SuwayomiChapterDto(
+                id = chapterId,
+                mangaId = mangaId,
+                name = chapterTitle,
+                url = chapterUrl,
+                realUrl = chapterRealUrl,
+                sourceOrder = sourceOrder,
+                chapterNumber = chapterNumber,
+                uploadDate = uploadDate,
+                fetchedAt = fetchedAt,
+                scanlator = scanlator,
+                pageCount = expectedPageCount,
+            ),
+        ),
+        storagePath = storagePath,
+        pages = pages,
+        status = status,
+        freshness = freshness,
+        verifiedAt = verifiedAt,
+        orphanedAt = orphanedAt,
+    )
 }
 
 internal object ClientDeviceChapterCopyPathPolicy {

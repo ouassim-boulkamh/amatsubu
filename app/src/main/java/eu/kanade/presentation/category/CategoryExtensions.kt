@@ -2,8 +2,8 @@ package eu.kanade.presentation.category
 
 import android.content.Context
 import androidx.compose.runtime.Composable
-import tachiyomi.core.common.i18n.stringResource
 import eu.kanade.domain.category.model.Category
+import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 

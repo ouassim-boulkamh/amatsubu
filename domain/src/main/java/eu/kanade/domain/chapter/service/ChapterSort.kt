@@ -1,8 +1,8 @@
 package eu.kanade.domain.chapter.service
 
-import tachiyomi.core.common.util.lang.compareToWithCollator
 import eu.kanade.domain.chapter.model.Chapter
 import eu.kanade.domain.manga.model.Manga
+import tachiyomi.core.common.util.lang.compareToWithCollator
 
 fun getChapterSort(
     manga: Manga,

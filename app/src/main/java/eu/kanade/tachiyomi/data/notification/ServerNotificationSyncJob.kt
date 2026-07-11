@@ -118,7 +118,9 @@ internal class ServerNotificationSyncJob(
             val notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
             val hasActiveServerJob = runCatching {
                 ServerNotificationCheckpointStore(context.appDependencies.preferenceStore)
-                    .hasActiveServerJob(context.appDependencies.suwayomiClientProvider.serverIdentity().notificationCheckpointKey)
+                    .hasActiveServerJob(
+                        context.appDependencies.suwayomiClientProvider.serverIdentity().notificationCheckpointKey,
+                    )
             }.getOrDefault(false)
 
             if (!notificationsEnabled && !hasActiveServerJob) {

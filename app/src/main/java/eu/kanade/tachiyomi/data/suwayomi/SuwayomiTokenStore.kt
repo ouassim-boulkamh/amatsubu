@@ -36,7 +36,10 @@ internal class AndroidSuwayomiTokenStore(context: Context) : SuwayomiTokenStore 
     }.getOrNull()
 
     override fun write(serverKey: String, tokens: SuwayomiTokens) {
-        preferences.edit().putString(preferenceKey(serverKey), encrypt("${tokens.accessToken}\n${tokens.refreshToken}")).apply()
+        preferences.edit().putString(
+            preferenceKey(serverKey),
+            encrypt("${tokens.accessToken}\n${tokens.refreshToken}"),
+        ).apply()
     }
 
     override fun clear(serverKey: String) {

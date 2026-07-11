@@ -6,7 +6,10 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 /**
  * Implementation of a left to right PagerViewer.
  */
-class L2RPagerViewer(activity: ReaderActivity, readerPreferences: ReaderPreferences) : PagerViewer(activity, readerPreferences) {
+class L2RPagerViewer(
+    activity: ReaderActivity,
+    readerPreferences: ReaderPreferences,
+) : PagerViewer(activity, readerPreferences) {
     /**
      * Creates a new left to right pager.
      */
@@ -18,7 +21,10 @@ class L2RPagerViewer(activity: ReaderActivity, readerPreferences: ReaderPreferen
 /**
  * Implementation of a right to left PagerViewer.
  */
-class R2LPagerViewer(activity: ReaderActivity, readerPreferences: ReaderPreferences) : PagerViewer(activity, readerPreferences) {
+class R2LPagerViewer(
+    activity: ReaderActivity,
+    readerPreferences: ReaderPreferences,
+) : PagerViewer(activity, readerPreferences) {
     /**
      * Creates a new right to left pager.
      */
@@ -44,7 +50,10 @@ class R2LPagerViewer(activity: ReaderActivity, readerPreferences: ReaderPreferen
 /**
  * Implementation of a vertical (top to bottom) PagerViewer.
  */
-class VerticalPagerViewer(activity: ReaderActivity, readerPreferences: ReaderPreferences) : PagerViewer(activity, readerPreferences) {
+class VerticalPagerViewer(
+    activity: ReaderActivity,
+    readerPreferences: ReaderPreferences,
+) : PagerViewer(activity, readerPreferences) {
     /**
      * Creates a new vertical pager.
      */

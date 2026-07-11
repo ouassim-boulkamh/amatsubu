@@ -1,5 +1,8 @@
 package eu.kanade.tachiyomi.ui.library
 
+import eu.kanade.domain.category.model.Category
+import eu.kanade.domain.library.model.LibraryManga
+import eu.kanade.domain.manga.model.Manga
 import eu.kanade.tachiyomi.data.suwayomi.MangaStatus
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiLatestFetchedChapterDto
@@ -10,9 +13,6 @@ import eu.kanade.tachiyomi.data.suwayomi.UpdateStrategy
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import eu.kanade.domain.category.model.Category
-import eu.kanade.domain.library.model.LibraryManga
-import eu.kanade.domain.manga.model.Manga
 
 class ServerLibraryDerivedStateTest {
 

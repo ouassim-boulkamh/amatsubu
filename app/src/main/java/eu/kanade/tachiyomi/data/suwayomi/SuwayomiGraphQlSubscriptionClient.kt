@@ -1,11 +1,11 @@
 package eu.kanade.tachiyomi.data.suwayomi
 
+import com.apollographql.apollo.api.Optional
 import eu.kanade.tachiyomi.data.suwayomi.generated.DownloadStatusChangedSubscription
 import eu.kanade.tachiyomi.data.suwayomi.generated.LibraryUpdateStatusChangedSubscription
 import eu.kanade.tachiyomi.data.suwayomi.generated.SyncStatusChangedSubscription
 import eu.kanade.tachiyomi.data.suwayomi.generated.type.DownloadChangedInput
 import eu.kanade.tachiyomi.data.suwayomi.generated.type.LibraryUpdateStatusChangedInput
-import com.apollographql.apollo.api.Optional
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -29,7 +29,8 @@ internal class SuwayomiGraphQlSubscriptionClient(
     private val endpoint: () -> String,
 ) {
     fun downloadStatusChanged(maxUpdates: Int = 150): Flow<SuwayomiDownloadUpdatesDto> {
-        val operation = DownloadStatusChangedSubscription(DownloadChangedInput(maxUpdates = Optional.present(maxUpdates)))
+        val operation =
+            DownloadStatusChangedSubscription(DownloadChangedInput(maxUpdates = Optional.present(maxUpdates)))
         return subscribe(
             operationName = operation.name(),
             query = operation.document(),
@@ -156,7 +157,6 @@ internal class SuwayomiGraphQlSubscriptionClient(
             socket.close(1000, "Closing Suwayomi subscription")
         }
     }
-
 }
 
 internal fun toSuwayomiWebSocketUrl(endpoint: String): String {

@@ -192,7 +192,9 @@ class DownloadQueueScreenModel private constructor(
                 }
                 is AcceptedMutationRefetchResult.AcceptedRefreshFailed -> {
                     val error = result.error
-                    logcat(LogPriority.ERROR, error) { "Suwayomi accepted download queue mutation but status refresh failed" }
+                    logcat(LogPriority.ERROR, error) {
+                        "Suwayomi accepted download queue mutation but status refresh failed"
+                    }
                     _state.update { it.copy(error = acceptedRefreshFailureMessage(error)) }
                     ServerStateSync.requestRefresh(*serverDownloadQueueAffectedEntities().toTypedArray())
                 }

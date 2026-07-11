@@ -15,14 +15,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.testTag
 import eu.kanade.core.preference.PreferenceMutableState
+import eu.kanade.domain.category.model.Category
+import eu.kanade.domain.library.model.LibraryDisplayMode
+import eu.kanade.domain.library.model.LibraryManga
 import eu.kanade.presentation.components.ServerOfflineBanner
 import eu.kanade.tachiyomi.ui.library.LibraryItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import eu.kanade.domain.category.model.Category
-import eu.kanade.domain.library.model.LibraryDisplayMode
-import eu.kanade.domain.library.model.LibraryManga
 import tachiyomi.presentation.core.components.material.PullRefresh
 import kotlin.time.Duration.Companion.seconds
 
@@ -49,11 +50,13 @@ fun LibraryContent(
     getItemsForCategory: (Category) -> List<LibraryItem>,
 ) {
     Column(
-        modifier = Modifier.padding(
-            top = contentPadding.calculateTopPadding(),
-            start = contentPadding.calculateStartPadding(LocalLayoutDirection.current),
-            end = contentPadding.calculateEndPadding(LocalLayoutDirection.current),
-        ),
+        modifier = Modifier
+            .padding(
+                top = contentPadding.calculateTopPadding(),
+                start = contentPadding.calculateStartPadding(LocalLayoutDirection.current),
+                end = contentPadding.calculateEndPadding(LocalLayoutDirection.current),
+            )
+            .testTag("library_content"),
     ) {
         val pagerState = rememberPagerState(currentPage) { categories.size }
 

@@ -1,10 +1,10 @@
 package eu.kanade.tachiyomi.ui.updates
 
 import cafe.adriel.voyager.core.model.ScreenModel
+import eu.kanade.domain.updates.service.UpdatesPreferences
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.preference.getAndSet
-import eu.kanade.domain.updates.service.UpdatesPreferences
 
 class UpdatesSettingsScreenModel(
     val updatesPreferences: UpdatesPreferences,

@@ -24,7 +24,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import eu.kanade.tachiyomi.di.appDependencies
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -37,11 +36,12 @@ import eu.kanade.presentation.more.settings.widget.ListPreferenceWidget
 import eu.kanade.presentation.more.settings.widget.SwitchPreferenceWidget
 import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
 import eu.kanade.presentation.util.Screen
-import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateEntity
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiSourcePreferenceChange
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiSourcePreferenceDto
 import eu.kanade.tachiyomi.data.suwayomi.serverSourcePreferenceAffectedEntities
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.ui.ServerForegroundRefreshEffect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -116,7 +116,7 @@ data class ServerSourcePreferencesScreen(
                     ) {
                         loadPreferences(showLoading = false)
                     }
-            }
+                }
         }
 
         ServerForegroundRefreshEffect {

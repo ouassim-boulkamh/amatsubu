@@ -42,6 +42,7 @@ class BackupCompatibilityPolicy(
         }
 
         val sourcePrefs = if (options.sourceSettings) {
+            val restoredSourceKeys = mutableSetOf<String>()
             backup.backupSourcePreferences.mapNotNull { sourcePreferenceBackup ->
                 val existingPreferences = sourcePreferences[sourcePreferenceBackup.sourceKey]
                 if (existingPreferences == null) {
@@ -49,6 +50,16 @@ class BackupCompatibilityPolicy(
                         section = "$SECTION_SOURCE_PREFERENCES:${sourcePreferenceBackup.sourceKey}",
                         decision = BackupCompatibilityDecisionType.IGNORE_RECORDED,
                         reason = "No matching local ConfigurableSource preference store exists in Amatsubu.",
+                        count = sourcePreferenceBackup.prefs.size,
+                    )
+                    return@mapNotNull null
+                }
+
+                if (sourcePreferenceBackup.sourceKey in restoredSourceKeys) {
+                    decisions += BackupCompatibilityDecision(
+                        section = "$SECTION_SOURCE_PREFERENCES:${sourcePreferenceBackup.sourceKey}",
+                        decision = BackupCompatibilityDecisionType.IGNORE_RECORDED,
+                        reason = "Duplicate source preference block; first compatible block is retained.",
                         count = sourcePreferenceBackup.prefs.size,
                     )
                     return@mapNotNull null
@@ -64,6 +75,7 @@ class BackupCompatibilityPolicy(
                 if (restorablePreferences.isEmpty()) {
                     null
                 } else {
+                    restoredSourceKeys += sourcePreferenceBackup.sourceKey
                     sourcePreferenceBackup.copy(prefs = restorablePreferences)
                 }
             }
@@ -95,6 +107,7 @@ class BackupCompatibilityPolicy(
         includePrivatePreferences: Boolean,
         decisions: MutableList<BackupCompatibilityDecision>,
     ): List<BackupPreference> {
+        val restoredKeys = mutableSetOf<String>()
         return mapNotNull { preference ->
             val translatedKey = KEY_TRANSLATIONS[preference.key] ?: preference.key
             val translatedPreference = if (translatedKey == preference.key) {
@@ -130,6 +143,13 @@ class BackupCompatibilityPolicy(
                     decisions += preference.unsupportedDecision(
                         section = section,
                         reason = "Preference value type does not match the existing Amatsubu value.",
+                    )
+                    null
+                }
+                !restoredKeys.add(translatedKey) -> {
+                    decisions += preference.ignoredDecision(
+                        section = section,
+                        reason = "Duplicate compatible preference key; first compatible value is retained.",
                     )
                     null
                 }

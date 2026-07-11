@@ -1,14 +1,14 @@
 package eu.kanade.tachiyomi.data.suwayomi
 
-import okhttp3.Credentials
+import kotlinx.coroutines.runBlocking
 import okhttp3.Authenticator
+import okhttp3.Credentials
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
-import kotlinx.coroutines.runBlocking
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import java.io.IOException
@@ -157,7 +157,8 @@ private class TokenGraphQlResponseInterceptor(
     }
 
     private companion object {
-        val unauthorizedGraphQlError = Regex("\\\"message\\\"\\s*:\\s*\\\"[^\\\"]*unauthorized", RegexOption.IGNORE_CASE)
+        val unauthorizedGraphQlError =
+            Regex("\\\"message\\\"\\s*:\\s*\\\"[^\\\"]*unauthorized", RegexOption.IGNORE_CASE)
     }
 }
 

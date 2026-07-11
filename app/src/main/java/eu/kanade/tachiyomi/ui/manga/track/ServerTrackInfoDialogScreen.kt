@@ -697,7 +697,9 @@ private fun SuwayomiTrackerDto.toPresentation(
         supportsReadingDates = supportsReadingDates,
         supportsPrivateTracking = supportsPrivateTracking,
         supportsTrackDeletion = supportsTrackDeletion,
-        statuses = statuses.map { ServerTrackerPresentation.Status(it.value.toLong(), it.name.toStatusStringResource()) },
+        statuses = statuses.map {
+            ServerTrackerPresentation.Status(it.value.toLong(), it.name.toStatusStringResource())
+        },
         scores = scores,
         displayScores = displayScores,
     )

@@ -36,7 +36,10 @@ class SuwayomiTrackLoginActivity : BaseActivity() {
 
         lifecycleScope.launch {
             try {
-                appDependencies.suwayomiClientProvider.graphQlClient.loginTrackerOAuth(trackerId, callbackUri.toString())
+                appDependencies.suwayomiClientProvider.graphQlClient.loginTrackerOAuth(
+                    trackerId,
+                    callbackUri.toString(),
+                )
                 toast(MR.strings.login_success)
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e

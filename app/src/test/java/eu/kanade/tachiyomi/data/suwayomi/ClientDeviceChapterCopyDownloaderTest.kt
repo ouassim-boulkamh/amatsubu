@@ -1,6 +1,10 @@
 package eu.kanade.tachiyomi.data.suwayomi
 
 import eu.kanade.tachiyomi.network.HttpException
+import eu.kanade.tachiyomi.testing.FuzzTestConfig
+import io.kotest.property.Arb
+import io.kotest.property.arbitrary.int
+import io.kotest.property.checkAll
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -101,6 +105,99 @@ class ClientDeviceChapterCopyDownloaderTest {
     }
 
     @Test
+    fun `failed promotion retains a complete partial copy for recovery`() = runTest {
+        val store = FakeClientDeviceChapterCopyRepository()
+        val manifest = manifest(pageCount = 3)
+        val downloader = downloader(
+            store = store,
+            fetcher = FakeClientDeviceChapterPageFetcher(manifest),
+            promoteTempDirectory = { _, _ -> false },
+        )
+
+        val result = runCatching {
+            downloader.saveToDevice("server-a", "Manga", manifest.chapter.id)
+        }
+        val copy = store.getCopy("server-a", manifest.chapter.mangaId, manifest.chapter.id)
+
+        assertTrue(result.isFailure)
+        assertNotNull(copy)
+        assertEquals(ClientChapterCopyStatus.INCOMPLETE, copy!!.status)
+        assertEquals(ClientChapterCopyFreshness.INCOMPLETE, copy.freshness)
+        assertEquals(3, copy.downloadedPageCount)
+        assertEquals(listOf(true, true, true), copy.pages.map { it.isPresent })
+        assertTrue(File(copy.storagePath!!).isDirectory)
+        assertEquals(
+            listOf("bytes-page-0", "bytes-page-1", "bytes-page-2"),
+            copy.pages.map { File(java.net.URI(it.localUri)).readText() },
+        )
+    }
+
+    @Test
+    fun `failed replacement preserves an existing complete device copy`() = runTest {
+        val store = FakeClientDeviceChapterCopyRepository()
+        val manifest = manifest(pageCount = 3)
+        val firstDownloader = downloader(store, FakeClientDeviceChapterPageFetcher(manifest))
+        val existing = firstDownloader.saveToDevice("server-a", "Manga", manifest.chapter.id)
+        val existingPageBytes = existing.pages.map { File(java.net.URI(it.localUri)).readBytes() }
+
+        val replacementDownloader = downloader(
+            store = store,
+            fetcher = FakeClientDeviceChapterPageFetcher(manifest, failAtIndex = 1),
+        )
+
+        assertTrue(
+            runCatching {
+                replacementDownloader.saveToDevice("server-a", "Manga", manifest.chapter.id)
+            }.isFailure,
+        )
+
+        val retained = store.getCopy("server-a", manifest.chapter.mangaId, manifest.chapter.id)
+        assertNotNull(retained)
+        assertEquals(ClientChapterCopyStatus.COMPLETE, retained!!.status)
+        assertTrue(retained.isComplete)
+        assertTrue(File(retained.storagePath!!).isDirectory)
+        assertEquals(
+            existingPageBytes.map { it.decodeToString() },
+            retained.pages.map { File(java.net.URI(it.localUri)).readText() },
+        )
+    }
+
+    @Test
+    suspend fun `generated interrupted replacements preserve the prior complete copy`() {
+        checkAll(FuzzTestConfig.caseCount(), Arb.int(1..8), Arb.int(0..31), Arb.int(1..10_000)) {
+                pageCount,
+                failureSeed,
+                chapterId,
+            ->
+            val store = FakeClientDeviceChapterCopyRepository()
+            val manifest = manifest(pageCount = pageCount, chapterId = chapterId)
+            val initialDownloader = downloader(store, FakeClientDeviceChapterPageFetcher(manifest))
+            val existing = initialDownloader.saveToDevice("server-a", "Manga", chapterId)
+            val priorPageContents = existing.pages.map { File(java.net.URI(it.localUri)).readText() }
+
+            val replacementDownloader = downloader(
+                store = store,
+                fetcher = FakeClientDeviceChapterPageFetcher(
+                    manifest = manifest,
+                    failAtIndex = failureSeed % pageCount,
+                ),
+            )
+
+            assertTrue(
+                runCatching {
+                    replacementDownloader.saveToDevice("server-a", "Manga", chapterId)
+                }.isFailure,
+            )
+
+            val retained = store.getCopy("server-a", manifest.chapter.mangaId, chapterId)
+            assertNotNull(retained)
+            assertEquals(ClientChapterCopyStatus.COMPLETE, retained!!.status)
+            assertTrue(retained.isComplete)
+            assertEquals(priorPageContents, retained.pages.map { File(java.net.URI(it.localUri)).readText() })
+        }
+    }
+
+    @Test
     fun `remove device copy deletes files and metadata without touching other copies`() = runTest {
         val store = FakeClientDeviceChapterCopyRepository()
         val manifest = manifest(pageCount = 1)
@@ -114,6 +211,56 @@ class ClientDeviceChapterCopyDownloaderTest {
 
         assertFalse(File(copy.storagePath!!).exists())
         assertNull(store.getCopy("http://server.test/api/graphql", manifest.chapter.mangaId, manifest.chapter.id))
+    }
+
+    @Test
+    fun `failed device copy removal retains files and metadata for retry`() = runTest {
+        val store = FakeClientDeviceChapterCopyRepository()
+        val manifest = manifest(pageCount = 2)
+        val downloader = downloader(
+            store = store,
+            fetcher = FakeClientDeviceChapterPageFetcher(manifest),
+        )
+        val copy = downloader.saveToDevice("server-a", "Manga", manifest.chapter.id)
+        val pageContents = copy.pages.map { File(java.net.URI(it.localUri)).readText() }
+        val failingRemoval = downloader(
+            store = store,
+            fetcher = FakeClientDeviceChapterPageFetcher(manifest),
+            deleteCopyDirectory = { false },
+        )
+
+        val result = runCatching {
+            failingRemoval.removeDeviceCopy("server-a", manifest.chapter.mangaId, manifest.chapter.id)
+        }
+
+        assertTrue(result.isFailure)
+        assertTrue(File(copy.storagePath!!).isDirectory)
+        assertNotNull(store.getCopy("server-a", manifest.chapter.mangaId, manifest.chapter.id))
+        assertEquals(pageContents, copy.pages.map { File(java.net.URI(it.localUri)).readText() })
+    }
+
+    @Test
+    suspend fun `generated copy removal deletes only the selected unreferenced copy`() {
+        checkAll(FuzzTestConfig.caseCount(), Arb.int(1..10_000), Arb.int(10_001..20_000)) {
+                firstChapterId,
+                secondChapterId,
+            ->
+            val store = FakeClientDeviceChapterCopyRepository()
+            val firstManifest = manifest(pageCount = 1, chapterId = firstChapterId)
+            val secondManifest = manifest(pageCount = 1, chapterId = secondChapterId)
+            val firstDownloader = downloader(store, FakeClientDeviceChapterPageFetcher(firstManifest))
+            val secondDownloader = downloader(store, FakeClientDeviceChapterPageFetcher(secondManifest))
+
+            val first = firstDownloader.saveToDevice("server-a", "Manga", firstChapterId)
+            val second = secondDownloader.saveToDevice("server-a", "Manga", secondChapterId)
+
+            firstDownloader.removeDeviceCopy("server-a", first.mangaId, first.chapterId)
+
+            assertFalse(File(first.storagePath!!).exists())
+            assertNull(store.getCopy("server-a", first.mangaId, first.chapterId))
+            assertTrue(File(second.storagePath!!).exists())
+            assertNotNull(store.getCopy("server-a", second.mangaId, second.chapterId))
+        }
     }
 
     @Test
@@ -187,12 +334,16 @@ class ClientDeviceChapterCopyDownloaderTest {
     private fun downloader(
         store: ClientDeviceChapterCopyRepository,
         fetcher: ClientDeviceChapterPageFetcher,
+        promoteTempDirectory: (File, File) -> Boolean = { tempDir, finalDir -> tempDir.renameTo(finalDir) },
+        deleteCopyDirectory: (File) -> Boolean = { directory -> directory.deleteRecursively() },
     ): ClientDeviceChapterCopyDownloader {
         return ClientDeviceChapterCopyDownloader(
             store = store,
             pageFetcher = fetcher,
             rootDirectory = { tempDir.toFile() },
             now = { 1234L },
+            promoteTempDirectory = promoteTempDirectory,
+            deleteCopyDirectory = deleteCopyDirectory,
         )
     }
 

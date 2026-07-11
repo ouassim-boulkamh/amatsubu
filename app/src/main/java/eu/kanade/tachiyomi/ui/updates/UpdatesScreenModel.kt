@@ -10,12 +10,17 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.core.preference.asState
 import eu.kanade.core.util.addOrRemove
 import eu.kanade.core.util.insertSeparators
+import eu.kanade.domain.library.service.LibraryPreferences
+import eu.kanade.domain.manga.model.MangaCover
+import eu.kanade.domain.manga.model.applyFilter
+import eu.kanade.domain.updates.model.UpdatesWithRelations
+import eu.kanade.domain.updates.service.UpdatesPreferences
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.updates.UpdatesUiModel
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.data.notification.ServerNotificationSyncJob
-import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateEntity
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterWithMangaDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiDownloadStatusDto
@@ -52,11 +57,6 @@ import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.system.logcat
-import eu.kanade.domain.library.service.LibraryPreferences
-import eu.kanade.domain.manga.model.MangaCover
-import eu.kanade.domain.manga.model.applyFilter
-import eu.kanade.domain.updates.model.UpdatesWithRelations
-import eu.kanade.domain.updates.service.UpdatesPreferences
 import kotlin.coroutines.cancellation.CancellationException
 
 class UpdatesScreenModel private constructor(

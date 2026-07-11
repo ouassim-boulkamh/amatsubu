@@ -11,6 +11,9 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import eu.kanade.domain.base.BasePreferences
+import eu.kanade.domain.chapter.model.Chapter
+import eu.kanade.domain.library.service.LibraryPreferences
+import eu.kanade.domain.manga.model.Manga
 import eu.kanade.domain.manga.model.readerOrientation
 import eu.kanade.domain.manga.model.readingMode
 import eu.kanade.domain.source.interactor.GetIncognitoState
@@ -72,9 +75,6 @@ import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
-import eu.kanade.domain.chapter.model.Chapter
-import eu.kanade.domain.library.service.LibraryPreferences
-import eu.kanade.domain.manga.model.Manga
 import java.time.Instant
 
 /**
@@ -755,8 +755,10 @@ class ReaderViewModel private constructor(
     }
 
     private fun ReaderChapter.coerceRequestedPageToLoadedPages() {
-        val lastPageIndex = pages?.lastIndex ?: return
-        requestedPage = requestedPage.coerceIn(0, lastPageIndex)
+        requestedPage = coerceRequestedReaderPageIndex(
+            requestedPage = requestedPage,
+            pageCount = pages?.size ?: return,
+        ) ?: return
     }
 
     fun getChapterUrl(): String? {

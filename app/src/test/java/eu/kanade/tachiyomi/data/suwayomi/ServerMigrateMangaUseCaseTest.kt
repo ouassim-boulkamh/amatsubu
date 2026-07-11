@@ -1,12 +1,12 @@
 package eu.kanade.tachiyomi.data.suwayomi
 
+import eu.kanade.domain.manga.model.Manga
 import eu.kanade.domain.migration.model.MigrationFlag
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Test
-import eu.kanade.domain.manga.model.Manga
 
 class ServerMigrateMangaUseCaseTest {
 
@@ -225,7 +225,10 @@ class ServerMigrateMangaUseCaseTest {
             repairingClient.operations,
         )
         assertEquals(1, repairingClient.sharedRefreshes)
-        assertEquals(listOf(migrationAffectedEntities(currentId = 10, targetId = 20)), repairingClient.sharedInvalidations)
+        assertEquals(
+            listOf(migrationAffectedEntities(currentId = 10, targetId = 20)),
+            repairingClient.sharedInvalidations,
+        )
     }
 
     private class FakeServerMigrateMangaClient(

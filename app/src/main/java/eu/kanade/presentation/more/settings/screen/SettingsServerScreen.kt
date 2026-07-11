@@ -25,7 +25,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.more.settings.Preference
-import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.presentation.more.settings.screen.data.ServerCreateBackupScreen
 import eu.kanade.presentation.more.settings.screen.data.ServerRestoreBackupScreen
 import eu.kanade.presentation.more.settings.widget.EditTextPreferenceWidget
@@ -51,6 +50,7 @@ import eu.kanade.tachiyomi.data.suwayomi.isValidSuwayomiServerPort
 import eu.kanade.tachiyomi.data.suwayomi.serverSettingsAffectedEntities
 import eu.kanade.tachiyomi.data.suwayomi.successMessage
 import eu.kanade.tachiyomi.data.suwayomi.userMessage
+import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.util.system.DeviceUtil
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.flow.collectLatest
@@ -322,8 +322,12 @@ object SettingsServerScreen : SearchableSettings {
                                                         client.testConnection()
                                                     }
                                                 }.fold(
-                                                    onSuccess = { TestConnectionDialog(testSuccessTitle, it.successMessage()) },
-                                                    onFailure = { TestConnectionDialog(testFailureTitle, it.userMessage()) },
+                                                    onSuccess = {
+                                                        TestConnectionDialog(testSuccessTitle, it.successMessage())
+                                                    },
+                                                    onFailure = {
+                                                        TestConnectionDialog(testFailureTitle, it.userMessage())
+                                                    },
                                                 )
                                             }
                                         },

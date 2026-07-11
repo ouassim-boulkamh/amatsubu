@@ -29,6 +29,7 @@ dependencies {
     compileOnly(libs.androidx.compose.runtimeAnnotation)
 
     testImplementation(libs.bundles.test)
+    testImplementation(libs.kotest.property)
     testImplementation(libs.kotlinx.coroutines.test)
     testRuntimeOnly(libs.junit.platform.launcher)
 }

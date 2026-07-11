@@ -1192,7 +1192,11 @@ data class SuwayomiMangaDto(
 )
 
 internal fun List<SuwayomiMangaDto>.filterInLibraryMangas(): List<SuwayomiMangaDto> {
-    return filter { it.inLibrary }
+    val duplicateIds = groupingBy { it.id }
+        .eachCount()
+        .filterValues { it > 1 }
+        .keys
+    return filter { it.inLibrary && it.id !in duplicateIds }
 }
 
 @Serializable

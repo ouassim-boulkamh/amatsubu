@@ -8,15 +8,17 @@ import eu.kanade.tachiyomi.ui.browse.source.browse.SourceFilter
 import eu.kanade.tachiyomi.ui.browse.source.browse.SourceFilterList
 
 internal fun List<SuwayomiSourceFilterDto>.toSourceFilterList(): SourceFilterList {
-    return SourceFilterList(mapIndexedNotNull { index, dto -> dto.toSourceFilter(index) })
+    return SourceFilterList(mapNotNull(SuwayomiSourceFilterDto::toSourceFilter))
 }
 
-private fun SuwayomiSourceFilterDto.toSourceFilter(position: Int): SourceFilter? {
+private fun SuwayomiSourceFilterDto.toSourceFilter(): SourceFilter? {
     return when (type) {
         "CheckBoxFilter" -> SourceFilter.CheckBox(name, defaultBoolean ?: false)
         "HeaderFilter" -> SourceFilter.Header(name)
         "SeparatorFilter" -> SourceFilter.Separator(name)
-        "SelectFilter" -> SourceFilter.Select(name, values, defaultInt ?: 0)
+        "SelectFilter" -> normalizedSelectDefault()?.let { default ->
+            SourceFilter.Select(name, values, default)
+        }
         "SortFilter" -> SourceFilter.Sort(
             name = name,
             values = values,
@@ -26,7 +28,7 @@ private fun SuwayomiSourceFilterDto.toSourceFilter(position: Int): SourceFilter?
         "TriStateFilter" -> SourceFilter.TriState(name, defaultTriState.toSourceFilterState())
         "GroupFilter" -> SourceFilter.Group(
             name = name,
-            state = filters.mapIndexedNotNull { childIndex, child -> child.toSourceFilter(childIndex) },
+            state = filters.mapNotNull(SuwayomiSourceFilterDto::toSourceFilter),
         )
         else -> null
     }
@@ -35,9 +37,11 @@ private fun SuwayomiSourceFilterDto.toSourceFilter(position: Int): SourceFilter?
 internal fun List<SuwayomiSourceFilterDto>.toFilterChanges(
     filters: SourceFilterList,
 ): List<SuwayomiSourceFilterChange> {
-    return flatMapIndexed { index, dto ->
-        val filter = filters.getOrNull(index) ?: return@flatMapIndexed emptyList()
-        dto.toFilterChanges(index, filter)
+    var visibleFilterIndex = 0
+    return flatMapIndexed { serverPosition, dto ->
+        if (dto.toSourceFilter() == null) return@flatMapIndexed emptyList()
+        val filter = filters.getOrNull(visibleFilterIndex++) ?: return@flatMapIndexed emptyList()
+        dto.toFilterChanges(serverPosition, filter)
     }
 }
 
@@ -51,7 +55,7 @@ private fun SuwayomiSourceFilterDto.toFilterChanges(
             listOf(SuwayomiSourceFilterChange(position = position, checkBoxState = filter.state))
         }
         this.type == "SelectFilter" && filter is SourceFilter.Select &&
-            filter.state != (defaultInt ?: 0) -> {
+            filter.state != normalizedSelectDefault() -> {
             listOf(SuwayomiSourceFilterChange(position = position, selectState = filter.state))
         }
         this.type == "SortFilter" && filter is SourceFilter.Sort &&
@@ -72,15 +76,22 @@ private fun SuwayomiSourceFilterDto.toFilterChanges(
             listOf(SuwayomiSourceFilterChange(position = position, triState = filter.state.toSuwayomiTriState()))
         }
         this.type == "GroupFilter" && filter is SourceFilter.Group -> {
-            filters.mapIndexedNotNull { childIndex, childDto ->
-                val childFilter = filter.state.getOrNull(childIndex) ?: return@mapIndexedNotNull null
-                childDto.toFilterChanges(childIndex, childFilter)
-            }.flatten().map { childChange ->
+            var visibleChildIndex = 0
+            filters.flatMapIndexed { childServerPosition, childDto ->
+                if (childDto.toSourceFilter() == null) return@flatMapIndexed emptyList()
+                val childFilter = filter.state.getOrNull(visibleChildIndex++) ?: return@flatMapIndexed emptyList()
+                childDto.toFilterChanges(childServerPosition, childFilter)
+            }.map { childChange ->
                 SuwayomiSourceFilterChange(position = position, groupChange = childChange)
             }
         }
         else -> emptyList()
     }
+}
+
+private fun SuwayomiSourceFilterDto.normalizedSelectDefault(): Int? {
+    if (values.isEmpty()) return null
+    return (defaultInt ?: 0).coerceIn(values.indices)
 }
 
 private fun SuwayomiTriState?.toSourceFilterState(): SourceFilter.TriState.State {

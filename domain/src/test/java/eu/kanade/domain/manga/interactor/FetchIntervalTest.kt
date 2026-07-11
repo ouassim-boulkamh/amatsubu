@@ -1,10 +1,10 @@
 package eu.kanade.domain.manga.interactor
 
+import eu.kanade.domain.chapter.model.Chapter
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
-import eu.kanade.domain.chapter.model.Chapter
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import kotlin.time.Duration

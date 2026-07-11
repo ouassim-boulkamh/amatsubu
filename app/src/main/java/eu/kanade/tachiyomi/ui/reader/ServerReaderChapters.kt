@@ -1,14 +1,14 @@
 package eu.kanade.tachiyomi.ui.reader
 
+import eu.kanade.domain.chapter.model.Chapter
+import eu.kanade.domain.chapter.service.getChapterSort
+import eu.kanade.domain.manga.model.Manga
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopy
 import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.util.chapter.removeDuplicates
 import kotlinx.serialization.json.JsonObject
 import mihon.core.common.extensions.EMPTY
-import eu.kanade.domain.chapter.model.Chapter
-import eu.kanade.domain.chapter.service.getChapterSort
-import eu.kanade.domain.manga.model.Manga
 
 data class ServerReaderChapterList(
     val chapters: List<ReaderChapter>,

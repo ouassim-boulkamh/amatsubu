@@ -44,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -63,8 +64,8 @@ import eu.kanade.tachiyomi.data.suwayomi.SuwayomiSourceFilterDto
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
 import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.ui.ServerForegroundRefreshEffect
-import eu.kanade.tachiyomi.ui.browse.source.browse.SourceFilterList
 import eu.kanade.tachiyomi.ui.browse.source.browse.SourceFilterDialog
+import eu.kanade.tachiyomi.ui.browse.source.browse.SourceFilterList
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import kotlinx.coroutines.launch
 import tachiyomi.core.common.util.lang.withIOContext
@@ -287,6 +288,7 @@ data class ServerSourceMangaScreen(
                         }
                         FilterChip(
                             selected = sourceType == FetchSourceMangaType.SEARCH,
+                            modifier = Modifier.testTag("source_search_button"),
                             onClick = {
                                 sourceType = FetchSourceMangaType.SEARCH
                                 toolbarQuery = submittedQuery.orEmpty()
@@ -304,6 +306,7 @@ data class ServerSourceMangaScreen(
                             FilterChip(
                                 selected = sourceType == FetchSourceMangaType.SEARCH &&
                                     filterDtos.toFilterChanges(filters).isNotEmpty(),
+                                modifier = Modifier.testTag("source_filter_button"),
                                 onClick = {
                                     if (filtersError != null && filters.isEmpty()) {
                                         loadFilters()
@@ -412,6 +415,7 @@ private fun ServerSourceMangaItem(
 ) {
     Column(
         modifier = Modifier
+            .testTag("source_manga_${manga.id}")
             .clickable(onClick = onClick)
             .padding(4.dp),
     ) {

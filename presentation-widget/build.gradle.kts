@@ -18,5 +18,4 @@ dependencies {
     implementation(libs.material)
 
     implementation(libs.coil.core)
-
 }

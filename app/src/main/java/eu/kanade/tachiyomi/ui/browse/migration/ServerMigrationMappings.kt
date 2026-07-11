@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.browse.migration
 
+import eu.kanade.domain.manga.model.Manga
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaDto
 import eu.kanade.tachiyomi.data.suwayomi.normalizedGenre
@@ -9,7 +10,6 @@ import eu.kanade.tachiyomi.data.suwayomi.serverNotes
 import eu.kanade.tachiyomi.data.suwayomi.toDomainStatus
 import eu.kanade.tachiyomi.data.suwayomi.toDomainUpdateStrategy
 import kotlinx.serialization.json.JsonObject
-import eu.kanade.domain.manga.model.Manga
 import kotlin.time.Duration.Companion.seconds
 
 internal fun SuwayomiMangaDto.toMigrationManga(

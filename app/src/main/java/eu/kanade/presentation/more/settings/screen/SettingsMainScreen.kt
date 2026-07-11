@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.ColorUtils
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -142,6 +143,9 @@ object SettingsMainScreen : Screen() {
                             if (selected) {
                                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                             }
+                        }
+                        if (item.screen == SettingsServerScreen) {
+                            modifier = modifier.testTag("server_settings")
                         }
                         CompositionLocalProvider(LocalContentColor provides contentColor) {
                             TextPreferenceWidget(

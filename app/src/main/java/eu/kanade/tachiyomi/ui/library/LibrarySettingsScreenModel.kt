@@ -3,6 +3,10 @@ package eu.kanade.tachiyomi.ui.library
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.domain.base.BasePreferences
+import eu.kanade.domain.category.model.Category
+import eu.kanade.domain.library.model.LibraryDisplayMode
+import eu.kanade.domain.library.model.LibrarySort
+import eu.kanade.domain.library.service.LibraryPreferences
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flow
@@ -11,10 +15,6 @@ import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.preference.getAndSet
 import tachiyomi.core.common.util.lang.launchIO
-import eu.kanade.domain.category.model.Category
-import eu.kanade.domain.library.model.LibraryDisplayMode
-import eu.kanade.domain.library.model.LibrarySort
-import eu.kanade.domain.library.service.LibraryPreferences
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 

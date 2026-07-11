@@ -23,6 +23,7 @@ import androidx.compose.ui.util.fastForEach
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
+import eu.kanade.domain.manga.model.Manga
 import eu.kanade.domain.migration.model.MigrationFlag
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.util.formattedMessage
@@ -33,7 +34,6 @@ import logcat.LogPriority
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
-import eu.kanade.domain.manga.model.Manga
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.LabeledCheckbox
 import tachiyomi.presentation.core.components.material.padding

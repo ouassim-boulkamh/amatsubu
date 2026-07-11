@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import dev.icerock.moko.resources.StringResource
+import eu.kanade.domain.category.model.Category
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiCategoryDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiCategoryFlag
@@ -15,7 +16,6 @@ import kotlinx.coroutines.flow.update
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.system.logcat
-import eu.kanade.domain.category.model.Category
 import tachiyomi.i18n.MR
 
 class CategoryScreenModel private constructor(

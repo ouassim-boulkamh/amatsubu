@@ -56,14 +56,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastMaxOfOrNull
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import eu.kanade.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.MangaStatus
+import eu.kanade.domain.manga.model.MangaWithChapterCount
 import eu.kanade.presentation.components.AdaptiveSheet
 import eu.kanade.presentation.components.TabbedDialogPaddings
 import eu.kanade.presentation.manga.components.MangaCover
 import eu.kanade.presentation.more.settings.LocalPreferenceMinHeight
 import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
-import eu.kanade.domain.manga.model.Manga
-import eu.kanade.domain.manga.model.MangaStatus
-import eu.kanade.domain.manga.model.MangaWithChapterCount
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.Badge
 import tachiyomi.presentation.core.components.BadgeGroup

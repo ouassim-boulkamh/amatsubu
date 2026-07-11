@@ -36,12 +36,13 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import eu.kanade.domain.library.service.LibraryPreferences
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.ui.manga.DeviceCopyState
 import me.saket.swipe.SwipeableActionsBox
-import eu.kanade.domain.library.service.LibraryPreferences
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.DISABLED_ALPHA
 import tachiyomi.presentation.core.components.material.SECONDARY_ALPHA
@@ -98,6 +99,7 @@ fun MangaChapterListItem(
     ) {
         Row(
             modifier = modifier
+                .testTag("manga_chapter_item")
                 .selectedBackground(selected)
                 .combinedClickable(
                     onClick = onClick,

@@ -12,6 +12,8 @@ import coil3.fetch.SourceFetchResult
 import coil3.getOrDefault
 import coil3.request.Options
 import com.hippo.unifile.UniFile
+import eu.kanade.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.MangaCover
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.coil.MangaCoverFetcher.Companion.USE_CUSTOM_COVER_KEY
 import eu.kanade.tachiyomi.network.await
@@ -27,8 +29,6 @@ import okio.buffer
 import okio.sink
 import okio.source
 import tachiyomi.core.common.util.system.logcat
-import eu.kanade.domain.manga.model.Manga
-import eu.kanade.domain.manga.model.MangaCover
 import java.io.File
 import java.io.IOException
 
