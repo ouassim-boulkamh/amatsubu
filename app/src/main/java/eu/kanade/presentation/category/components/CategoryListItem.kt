@@ -17,8 +17,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import sh.calvin.reorderable.ReorderableCollectionItemScope
 import eu.kanade.domain.category.model.Category
+import sh.calvin.reorderable.ReorderableCollectionItemScope
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource

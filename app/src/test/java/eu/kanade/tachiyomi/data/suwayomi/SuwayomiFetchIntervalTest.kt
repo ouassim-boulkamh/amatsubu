@@ -1,8 +1,8 @@
 package eu.kanade.tachiyomi.data.suwayomi
 
+import eu.kanade.domain.manga.model.Manga
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
-import eu.kanade.domain.manga.model.Manga
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import kotlin.time.Duration.Companion.milliseconds

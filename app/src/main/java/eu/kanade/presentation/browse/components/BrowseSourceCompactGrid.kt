@@ -11,11 +11,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
+import eu.kanade.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.MangaCover
 import eu.kanade.presentation.library.components.CommonMangaItemDefaults
 import eu.kanade.presentation.library.components.MangaCompactGridItem
 import kotlinx.coroutines.flow.StateFlow
-import eu.kanade.domain.manga.model.Manga
-import eu.kanade.domain.manga.model.MangaCover
 import tachiyomi.presentation.core.util.plus
 
 @Composable

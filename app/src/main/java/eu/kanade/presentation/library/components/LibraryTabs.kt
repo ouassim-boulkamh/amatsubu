@@ -10,8 +10,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import eu.kanade.presentation.category.visualName
 import eu.kanade.domain.category.model.Category
+import eu.kanade.presentation.category.visualName
 import tachiyomi.presentation.core.components.material.TabText
 
 @Composable

@@ -1,13 +1,13 @@
 package eu.kanade.domain.source.service
 
-import eu.kanade.domain.source.interactor.SetMigrateSorting
+import eu.kanade.domain.library.model.LibraryDisplayMode
 import eu.kanade.domain.migration.model.MigrationFlag
+import eu.kanade.domain.source.interactor.SetMigrateSorting
 import eu.kanade.tachiyomi.util.system.LocaleHelper
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.preference.getEnum
 import tachiyomi.core.common.preference.getLongArray
-import eu.kanade.domain.library.model.LibraryDisplayMode
 
 class SourcePreferences(
     preferenceStore: PreferenceStore,

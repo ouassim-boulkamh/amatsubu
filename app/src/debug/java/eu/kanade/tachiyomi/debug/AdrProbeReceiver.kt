@@ -34,18 +34,27 @@ class AdrProbeReceiver : BroadcastReceiver() {
                 ServerNotificationSyncJob.schedulePromptReconciliation(context)
                 Log.i(TAG, "Scheduled prompt server notification reconciliation")
             }
+            ACTION_CANCEL_NOTIFICATION_RECONCILIATION -> {
+                ServerNotificationSyncJob.cancel(context)
+                Log.i(TAG, "Cancelled prompt server notification reconciliation")
+            }
             ACTION_TOKEN_AUTH_LOGIN_AND_TEST -> loginAndTestTokenAuth(context, intent)
             ACTION_TOKEN_AUTH_TEST_CONNECTION -> testTokenAuthenticatedConnection(context)
             ACTION_TOKEN_AUTH_LOGOUT -> logoutTokenAuth(context)
             ACTION_ENQUEUE_DELAYED_COPY_SAVE -> enqueueDelayedCopySave(context, intent)
             ACTION_ENQUEUE_DELAYED_SERVER_BACKUP_CREATE -> enqueueDelayedServerBackupCreate(context, intent)
             ACTION_ENQUEUE_DELAYED_SERVER_BACKUP_RESTORE -> enqueueDelayedServerBackupRestore(context, intent)
+            ACTION_MUTATION_REFETCH_FAILURE -> probeMutationRefetchFailure(context, intent)
             else -> Log.w(TAG, "Unknown ADR probe action=${intent.action}")
         }
     }
 
     private fun setServerUrl(context: Context, intent: Intent) {
         val url = intent.getStringExtra(EXTRA_SERVER_URL)?.trim().orEmpty()
+        setServerUrl(context, url)
+    }
+
+    private fun setServerUrl(context: Context, url: String) {
         if (url.isBlank()) {
             Log.e(TAG, "Missing $EXTRA_SERVER_URL")
             return
@@ -213,6 +222,49 @@ class AdrProbeReceiver : BroadcastReceiver() {
         )
     }
 
+    private fun probeMutationRefetchFailure(context: Context, intent: Intent) {
+        val mangaId = intent.getIntExtra(EXTRA_MANGA_ID, -1)
+        val originalInLibrary = intent.getBooleanExtra(EXTRA_ORIGINAL_IN_LIBRARY, false)
+        val primaryServerUrl = intent.getStringExtra(EXTRA_PRIMARY_SERVER_URL)?.trim().orEmpty()
+        val unavailableServerUrl = intent.getStringExtra(EXTRA_UNAVAILABLE_SERVER_URL)?.trim().orEmpty()
+        if (mangaId < 0 || primaryServerUrl.isBlank() || unavailableServerUrl.isBlank()) {
+            Log.e(TAG, "Missing mutation/refetch probe inputs")
+            return
+        }
+
+        val pendingResult = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            val provider = context.appDependencies.suwayomiClientProvider
+            val changedInLibrary = !originalInLibrary
+            try {
+                provider.graphQlClient.updateMangaLibrary(mangaId, changedInLibrary)
+                Log.i(TAG, "OC07 mutation accepted mangaId=$mangaId inLibrary=$changedInLibrary")
+
+                setServerUrl(context, unavailableServerUrl)
+                val refetchFailure = runCatching { provider.graphQlClient.getManga(mangaId) }.exceptionOrNull()
+                check(refetchFailure != null) { "OC07 expected refetch failure was not observed" }
+                Log.i(TAG, "OC07 refetch failed after accepted mutation mangaId=$mangaId")
+
+                setServerUrl(context, primaryServerUrl)
+                check(provider.graphQlClient.getManga(mangaId).inLibrary == changedInLibrary) {
+                    "OC07 recovery refetch did not retain accepted mutation"
+                }
+                Log.i(TAG, "OC07 recovery refetch converged mangaId=$mangaId inLibrary=$changedInLibrary")
+
+                provider.graphQlClient.updateMangaLibrary(mangaId, originalInLibrary)
+                check(provider.graphQlClient.getManga(mangaId).inLibrary == originalInLibrary) {
+                    "OC07 fixture restoration did not converge"
+                }
+                Log.i(TAG, "OC07 fixture restored mangaId=$mangaId inLibrary=$originalInLibrary")
+            } catch (error: Throwable) {
+                Log.e(TAG, "OC07 mutation/refetch failure probe failed", error)
+            } finally {
+                setServerUrl(context, primaryServerUrl)
+                pendingResult.finish()
+            }
+        }
+    }
+
     companion object {
         private const val TAG = "AdrProbeReceiver"
         private const val TAG_CLIENT_DEVICE_COPY = "ClientDeviceChapterCopy"
@@ -227,6 +279,8 @@ class AdrProbeReceiver : BroadcastReceiver() {
         const val ACTION_SET_SERVER_URL = "app.amatsubu.debug.ADR_PROBE_SET_SERVER_URL"
         const val ACTION_SCHEDULE_NOTIFICATION_RECONCILIATION =
             "app.amatsubu.debug.ADR_PROBE_SCHEDULE_NOTIFICATION_RECONCILIATION"
+        const val ACTION_CANCEL_NOTIFICATION_RECONCILIATION =
+            "app.amatsubu.debug.ADR_PROBE_CANCEL_NOTIFICATION_RECONCILIATION"
         const val ACTION_TOKEN_AUTH_LOGIN_AND_TEST = "app.amatsubu.debug.ADR_PROBE_TOKEN_AUTH_LOGIN_AND_TEST"
         const val ACTION_TOKEN_AUTH_TEST_CONNECTION = "app.amatsubu.debug.ADR_PROBE_TOKEN_AUTH_TEST_CONNECTION"
         const val ACTION_TOKEN_AUTH_LOGOUT = "app.amatsubu.debug.ADR_PROBE_TOKEN_AUTH_LOGOUT"
@@ -236,8 +290,14 @@ class AdrProbeReceiver : BroadcastReceiver() {
             "app.amatsubu.debug.ADR_PROBE_ENQUEUE_DELAYED_SERVER_BACKUP_CREATE"
         const val ACTION_ENQUEUE_DELAYED_SERVER_BACKUP_RESTORE =
             "app.amatsubu.debug.ADR_PROBE_ENQUEUE_DELAYED_SERVER_BACKUP_RESTORE"
+        const val ACTION_MUTATION_REFETCH_FAILURE =
+            "app.amatsubu.debug.ADR_PROBE_MUTATION_REFETCH_FAILURE"
 
         const val EXTRA_SERVER_URL = "server_url"
+        const val EXTRA_PRIMARY_SERVER_URL = "primary_server_url"
+        const val EXTRA_UNAVAILABLE_SERVER_URL = "unavailable_server_url"
+        const val EXTRA_MANGA_ID = "manga_id"
+        const val EXTRA_ORIGINAL_IN_LIBRARY = "original_in_library"
         const val EXTRA_CHAPTER_ID = "chapter_id"
         const val EXTRA_MANGA_TITLE = "manga_title"
         const val EXTRA_DELAY_SECONDS = "delay_seconds"

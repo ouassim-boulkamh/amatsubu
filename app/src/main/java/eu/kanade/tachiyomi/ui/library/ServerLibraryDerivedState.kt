@@ -1,12 +1,12 @@
 package eu.kanade.tachiyomi.ui.library
 
+import eu.kanade.domain.category.model.Category
+import eu.kanade.domain.library.model.LibraryManga
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaDto
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
-import eu.kanade.domain.category.model.Category
-import eu.kanade.domain.library.model.LibraryManga
 import kotlin.time.Duration.Companion.seconds
 
 internal const val SERVER_EXCLUDED_SCANLATORS_META_KEY = "amatsubu.excludedScanlators"
@@ -73,7 +73,7 @@ internal fun groupServerLibraryMangaByCategory(
     showSystemCategory: Boolean,
 ): Map<Category, List<Long>> {
     val groupCache = mutableMapOf<Long, MutableList<Long>>()
-    favorites.forEach { item ->
+    favorites.collapseServerLibraryMangaById().forEach { item ->
         item.categories.forEach { categoryId ->
             groupCache.getOrPut(categoryId) { mutableListOf() }.add(item.id)
         }
@@ -81,4 +81,8 @@ internal fun groupServerLibraryMangaByCategory(
     return categories
         .filter { showSystemCategory || !it.isSystemCategory }
         .associateWith { groupCache[it.id]?.toList().orEmpty() }
+}
+
+internal fun List<LibraryManga>.collapseServerLibraryMangaById(): List<LibraryManga> {
+    return associateBy { it.id }.values.toList()
 }

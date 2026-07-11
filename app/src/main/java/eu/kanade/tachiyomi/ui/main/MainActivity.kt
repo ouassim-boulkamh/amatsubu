@@ -35,6 +35,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import androidx.core.animation.doOnEnd
 import androidx.core.net.toUri
@@ -48,7 +50,9 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
 import cafe.adriel.voyager.navigator.currentOrThrow
+import eu.kanade.amatsubu.migration.Migrator
 import eu.kanade.domain.base.BasePreferences
+import eu.kanade.domain.library.service.LibraryPreferences
 import eu.kanade.domain.source.interactor.GetIncognitoState
 import eu.kanade.presentation.components.AppStateBanners
 import eu.kanade.presentation.components.DownloadedOnlyBannerBackgroundColor
@@ -57,11 +61,14 @@ import eu.kanade.presentation.components.IndexingBannerBackgroundColor
 import eu.kanade.presentation.more.settings.screen.data.ServerRestoreBackupScreen
 import eu.kanade.presentation.util.AssistContentScreen
 import eu.kanade.presentation.util.DefaultNavigatorScreenTransition
+import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.data.cache.ChapterCache
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
+import eu.kanade.tachiyomi.data.suwayomi.FetchSourceMangaType
 import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
 import eu.kanade.tachiyomi.ui.browse.ServerGlobalSearchScreen
+import eu.kanade.tachiyomi.ui.browse.ServerSourceMangaScreen
 import eu.kanade.tachiyomi.ui.deeplink.DeepLinkScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
@@ -75,10 +82,8 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import eu.kanade.amatsubu.migration.Migrator
 import tachiyomi.core.common.Constants
 import tachiyomi.core.common.util.lang.launchIO
-import eu.kanade.domain.library.service.LibraryPreferences
 import tachiyomi.presentation.core.components.material.Scaffold
 
 class MainActivity : BaseActivity() {
@@ -150,7 +155,11 @@ class MainActivity : BaseActivity() {
                     contentWindowInsets = scaffoldInsets,
                 ) { contentPadding ->
                     // Consume insets already used by app state banners
-                    Box {
+                    Box(
+                        modifier = Modifier.semantics {
+                            testTagsAsResourceId = BuildConfig.DEBUG
+                        },
+                    ) {
                         // Shows current screen
                         DefaultNavigatorScreenTransition(
                             navigator = navigator,
@@ -331,7 +340,6 @@ class MainActivity : BaseActivity() {
                     navigator.popUntilRoot()
                     navigator.push(DeepLinkScreen(query))
                 }
-                null
             }
             INTENT_SEARCH -> {
                 val query = intent.getStringExtra(INTENT_SEARCH_QUERY)
@@ -340,6 +348,25 @@ class MainActivity : BaseActivity() {
                     navigator.popUntilRoot()
                     navigator.push(ServerGlobalSearchScreen(query))
                 }
+            }
+            INTENT_AUTOMATION_SOURCE -> {
+                if (!BuildConfig.DEBUG) return false
+                val sourceId = intent.getStringExtra(INTENT_SOURCE_ID) ?: return false
+                val sourceName = intent.getStringExtra(INTENT_SOURCE_NAME).orEmpty()
+                val sourceDisplayName = intent.getStringExtra(INTENT_SOURCE_DISPLAY_NAME).orEmpty()
+                navigator.popUntilRoot()
+                navigator.push(
+                    ServerSourceMangaScreen(
+                        sourceId = sourceId,
+                        sourceName = sourceName,
+                        sourceDisplayName = sourceDisplayName.ifBlank { sourceName },
+                        supportsLatest = intent.getBooleanExtra(INTENT_SOURCE_SUPPORTS_LATEST, false),
+                        isConfigurable = intent.getBooleanExtra(INTENT_SOURCE_IS_CONFIGURABLE, false),
+                        initialTypeName = intent.getStringExtra(INTENT_SOURCE_INITIAL_TYPE)
+                            ?: FetchSourceMangaType.POPULAR.name,
+                        initialQuery = intent.getStringExtra(INTENT_SOURCE_INITIAL_QUERY),
+                    ),
+                )
             }
             Intent.ACTION_VIEW -> {
                 // Handling opening of backup files
@@ -359,6 +386,14 @@ class MainActivity : BaseActivity() {
         const val INTENT_SEARCH = "eu.kanade.tachiyomi.SEARCH"
         const val INTENT_SEARCH_QUERY = "query"
         const val INTENT_SEARCH_FILTER = "filter"
+        const val INTENT_AUTOMATION_SOURCE = "eu.kanade.tachiyomi.DEBUG_AUTOMATION_SOURCE"
+        const val INTENT_SOURCE_ID = "source_id"
+        const val INTENT_SOURCE_NAME = "source_name"
+        const val INTENT_SOURCE_DISPLAY_NAME = "source_display_name"
+        const val INTENT_SOURCE_SUPPORTS_LATEST = "source_supports_latest"
+        const val INTENT_SOURCE_IS_CONFIGURABLE = "source_is_configurable"
+        const val INTENT_SOURCE_INITIAL_TYPE = "source_initial_type"
+        const val INTENT_SOURCE_INITIAL_QUERY = "source_initial_query"
     }
 }
 

@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.reader
 
+import eu.kanade.domain.chapter.model.Chapter
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiGraphQlClient
 import eu.kanade.tachiyomi.ui.reader.loader.SuwayomiPageLoader
 import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
@@ -18,7 +19,6 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import eu.kanade.domain.chapter.model.Chapter
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 

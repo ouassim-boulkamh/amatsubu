@@ -20,11 +20,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import eu.kanade.presentation.browse.components.BaseSourceItem
-import eu.kanade.tachiyomi.util.system.LocaleHelper
 import eu.kanade.domain.source.model.Pin
 import eu.kanade.domain.source.model.Source
+import eu.kanade.presentation.browse.components.BaseSourceItem
+import eu.kanade.tachiyomi.util.system.LocaleHelper
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.ScrollbarLazyColumn
 import tachiyomi.presentation.core.components.material.SECONDARY_ALPHA
@@ -133,7 +134,7 @@ private fun SourceItem(
     }
     if (sourceIcon == null) {
         BaseSourceItem(
-            modifier = modifier,
+            modifier = modifier.testTag("source_${source.id}"),
             source = source,
             onClickItem = { onClickItem(source, SourceListing.Popular) },
             onLongClickItem = { onLongClickItem(source) },
@@ -141,7 +142,7 @@ private fun SourceItem(
         )
     } else {
         BaseSourceItem(
-            modifier = modifier,
+            modifier = modifier.testTag("source_${source.id}"),
             source = source,
             onClickItem = { onClickItem(source, SourceListing.Popular) },
             onLongClickItem = { onLongClickItem(source) },

@@ -1,9 +1,9 @@
 package eu.kanade.amatsubu.migration.migrations
 
-import eu.kanade.domain.base.BasePreferences
-import mihon.core.common.FeatureFlags
 import eu.kanade.amatsubu.migration.Migration
 import eu.kanade.amatsubu.migration.MigrationContext
+import eu.kanade.domain.base.BasePreferences
+import mihon.core.common.FeatureFlags
 import kotlin.uuid.ExperimentalUuidApi
 
 class InstallationIdMigration : Migration {

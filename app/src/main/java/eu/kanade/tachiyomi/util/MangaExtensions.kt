@@ -1,8 +1,8 @@
 package eu.kanade.tachiyomi.util
 
+import eu.kanade.domain.manga.model.Manga
 import eu.kanade.domain.manga.model.hasCustomCover
 import eu.kanade.tachiyomi.data.cache.CoverCache
-import eu.kanade.domain.manga.model.Manga
 import java.io.InputStream
 import java.time.Instant
 

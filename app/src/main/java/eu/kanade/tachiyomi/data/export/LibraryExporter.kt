@@ -2,9 +2,9 @@ package eu.kanade.tachiyomi.data.export
 
 import android.content.Context
 import android.net.Uri
+import eu.kanade.domain.manga.model.Manga
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import eu.kanade.domain.manga.model.Manga
 
 object LibraryExporter {
 

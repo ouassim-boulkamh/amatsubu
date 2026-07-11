@@ -41,6 +41,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.components.SearchToolbar
 import eu.kanade.presentation.manga.components.MangaCover
+import eu.kanade.presentation.migration.MigrateMangaDialog
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.data.suwayomi.FetchSourceMangaType
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
@@ -57,7 +58,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import eu.kanade.presentation.migration.MigrateMangaDialog
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.padding

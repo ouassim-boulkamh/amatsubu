@@ -58,8 +58,12 @@ class SuwayomiTokenAuthApiTest {
     private class FakeTokenStore : SuwayomiTokenStore {
         private val tokens = mutableMapOf<String, SuwayomiTokens>()
         override fun read(serverKey: String) = tokens[serverKey]
-        override fun write(serverKey: String, tokens: SuwayomiTokens) { this.tokens[serverKey] = tokens }
-        override fun clear(serverKey: String) { tokens.remove(serverKey) }
+        override fun write(serverKey: String, tokens: SuwayomiTokens) {
+            this.tokens[serverKey] = tokens
+        }
+        override fun clear(serverKey: String) {
+            tokens.remove(serverKey)
+        }
     }
 
     private class FakeOperations(

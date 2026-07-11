@@ -22,6 +22,9 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.allowRgb565
 import coil3.request.crossfade
 import coil3.util.DebugLogger
+import eu.kanade.amatsubu.migration.MigrationContext
+import eu.kanade.amatsubu.migration.Migrator
+import eu.kanade.amatsubu.migration.migrations.migrations
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.domain.ui.model.setAppCompatDelegateThemeMode
@@ -54,17 +57,14 @@ import kotlinx.coroutines.flow.onEach
 import logcat.AndroidLogcatLogger
 import logcat.LogPriority
 import logcat.LogcatLogger
-import eu.kanade.amatsubu.migration.MigrationContext
-import eu.kanade.amatsubu.migration.Migrator
-import eu.kanade.amatsubu.migration.migrations.migrations
 import org.conscrypt.Conscrypt
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.util.system.ImageUtil
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
-import tachiyomi.presentation.widget.WidgetManager
 import tachiyomi.presentation.widget.UpdatesWidgetDependenciesProvider
+import tachiyomi.presentation.widget.WidgetManager
 import java.security.Security
 
 class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factory, UpdatesWidgetDependenciesProvider {

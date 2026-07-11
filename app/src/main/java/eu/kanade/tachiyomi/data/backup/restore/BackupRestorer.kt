@@ -4,9 +4,14 @@ import android.content.Context
 import android.net.Uri
 import eu.kanade.tachiyomi.data.backup.BackupDecoder
 import eu.kanade.tachiyomi.data.backup.BackupNotifier
+import eu.kanade.tachiyomi.data.backup.models.Backup
+import eu.kanade.tachiyomi.data.backup.models.BackupPreference
+import eu.kanade.tachiyomi.data.backup.models.BackupSourcePreferences
+import eu.kanade.tachiyomi.data.backup.restore.restorers.PreferenceRestoreResult
 import eu.kanade.tachiyomi.data.backup.restore.restorers.PreferenceRestorer
-import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
+import eu.kanade.tachiyomi.data.suwayomi.ClientMangaMetadata
 import eu.kanade.tachiyomi.data.suwayomi.ClientMangaMetadataStore
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.data.suwayomi.serverBackupRestoreAffectedEntities
 import eu.kanade.tachiyomi.network.POST
@@ -83,7 +88,38 @@ class BackupRestorer(
             isSync,
         )
 
-        val backup = decoder.decode(uri)
+        val restoreOutcome = ClientBackupRestoreApplier(
+            preferenceStore = preferenceStore,
+            preferenceRestorer = PreferenceRestorerAdapter(preferenceRestorer),
+            mangaMetadataRestorer = ClientMangaMetadataStoreAdapter(mangaMetadataStore),
+            currentServerKey = currentServerKey,
+        ).apply(decoder.decode(uri), options)
+
+        logcat(LogPriority.INFO) {
+            "Client backup preference restore complete: " +
+                "restored=${restoreOutcome.restoreResult.restored} " +
+                "failed=${restoreOutcome.restoreResult.failed}"
+        }
+
+        notifier.showRestoreComplete(
+            time = System.currentTimeMillis() - startTime,
+            errorCount = restoreOutcome.restoreResult.failed +
+                restoreOutcome.compatibility.summary.unsupportedCount,
+            path = null,
+            file = null,
+            sync = isSync,
+        )
+    }
+}
+
+internal class ClientBackupRestoreApplier(
+    private val preferenceStore: PreferenceStore,
+    private val preferenceRestorer: ClientBackupPreferenceRestorer,
+    private val mangaMetadataRestorer: ClientBackupMangaMetadataRestorer,
+    private val currentServerKey: () -> String,
+) {
+
+    suspend fun apply(backup: Backup, options: RestoreOptions): ClientBackupRestoreOutcome {
         val appPreferenceDefaults = ClientPreferenceRestoreSchema.defaultsWith(
             backup.backupPreferences.map { it.key },
         )
@@ -93,30 +129,22 @@ class BackupRestorer(
         ).evaluate(backup, options)
 
         compatibility.summary.log()
+        if (options.appSettings) {
+            mangaMetadataRestorer.restoreForServer(
+                serverKey = currentServerKey(),
+                metadata = backup.clientMangaMetadata.map { it.toClientMetadata() },
+            )
+        }
+
         val appRestoreResult = preferenceRestorer.restoreApp(
             compatibility.restorable.appPreferences,
             defaultValues = appPreferenceDefaults,
         )
         val sourceRestoreResult = preferenceRestorer.restoreSource(compatibility.restorable.sourcePreferences)
-        if (options.appSettings) {
-            mangaMetadataStore.restoreForServer(
-                serverKey = currentServerKey(),
-                metadata = backup.clientMangaMetadata.map { it.toClientMetadata() },
-            )
-        }
-        val restoreResult = appRestoreResult + sourceRestoreResult
 
-        logcat(LogPriority.INFO) {
-            "Client backup preference restore complete: " +
-                "restored=${restoreResult.restored} failed=${restoreResult.failed}"
-        }
-
-        notifier.showRestoreComplete(
-            time = System.currentTimeMillis() - startTime,
-            errorCount = restoreResult.failed + compatibility.summary.unsupportedCount,
-            path = null,
-            file = null,
-            sync = isSync,
+        return ClientBackupRestoreOutcome(
+            compatibility = compatibility,
+            restoreResult = appRestoreResult + sourceRestoreResult,
         )
     }
 
@@ -128,6 +156,53 @@ class BackupRestorer(
                     "count=${decision.count} reason=${decision.reason}"
             }
         }
+    }
+}
+
+internal data class ClientBackupRestoreOutcome(
+    val compatibility: BackupCompatibilityResult,
+    val restoreResult: PreferenceRestoreResult,
+)
+
+internal interface ClientBackupPreferenceRestorer {
+    fun restoreApp(
+        preferences: List<BackupPreference>,
+        defaultValues: Map<String, Any>,
+    ): PreferenceRestoreResult
+
+    fun restoreSource(preferences: List<BackupSourcePreferences>): PreferenceRestoreResult
+}
+
+internal interface ClientBackupMangaMetadataRestorer {
+    suspend fun restoreForServer(
+        serverKey: String,
+        metadata: List<ClientMangaMetadata>,
+    )
+}
+
+private class PreferenceRestorerAdapter(
+    private val delegate: PreferenceRestorer,
+) : ClientBackupPreferenceRestorer {
+    override fun restoreApp(
+        preferences: List<BackupPreference>,
+        defaultValues: Map<String, Any>,
+    ): PreferenceRestoreResult {
+        return delegate.restoreApp(preferences, defaultValues)
+    }
+
+    override fun restoreSource(preferences: List<BackupSourcePreferences>): PreferenceRestoreResult {
+        return delegate.restoreSource(preferences)
+    }
+}
+
+private class ClientMangaMetadataStoreAdapter(
+    private val delegate: ClientMangaMetadataStore,
+) : ClientBackupMangaMetadataRestorer {
+    override suspend fun restoreForServer(
+        serverKey: String,
+        metadata: List<ClientMangaMetadata>,
+    ) {
+        delegate.restoreForServer(serverKey, metadata)
     }
 }
 

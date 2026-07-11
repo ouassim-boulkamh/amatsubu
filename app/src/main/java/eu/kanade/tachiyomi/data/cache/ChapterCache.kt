@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.data.cache
 import android.content.Context
 import android.text.format.Formatter
 import com.jakewharton.disklrucache.DiskLruCache
+import eu.kanade.domain.chapter.model.Chapter
 import eu.kanade.tachiyomi.util.storage.DiskUtil
 import eu.kanade.tachiyomi.util.storage.saveTo
 import kotlinx.serialization.Serializable
@@ -12,7 +13,6 @@ import okhttp3.Response
 import okio.buffer
 import okio.sink
 import tachiyomi.core.common.util.system.logcat
-import eu.kanade.domain.chapter.model.Chapter
 import java.io.File
 import java.io.IOException
 

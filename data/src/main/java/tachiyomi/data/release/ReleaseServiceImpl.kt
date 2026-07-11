@@ -1,13 +1,13 @@
 package tachiyomi.data.release
 
 import android.os.Build
+import eu.kanade.domain.release.interactor.GetApplicationRelease
+import eu.kanade.domain.release.model.Release
+import eu.kanade.domain.release.service.ReleaseService
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.network.parseAs
-import eu.kanade.domain.release.interactor.GetApplicationRelease
-import eu.kanade.domain.release.model.Release
-import eu.kanade.domain.release.service.ReleaseService
 import kotlinx.serialization.json.Json
 
 class ReleaseServiceImpl(

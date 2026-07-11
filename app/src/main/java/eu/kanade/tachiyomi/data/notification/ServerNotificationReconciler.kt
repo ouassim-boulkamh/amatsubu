@@ -1,10 +1,10 @@
 package eu.kanade.tachiyomi.data.notification
 
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterWithMangaDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiDownloadStatusDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiGraphQlClient
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiLibraryUpdateStatusDto
-import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterWithMangaDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiSyncStatusDto
 import eu.kanade.tachiyomi.data.suwayomi.serverNotificationDownloadAffectedEntities
 import eu.kanade.tachiyomi.data.suwayomi.serverNotificationLibraryUpdateAffectedEntities

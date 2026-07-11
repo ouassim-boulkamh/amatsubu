@@ -5,11 +5,18 @@ import androidx.compose.runtime.Immutable
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.core.util.insertSeparators
+import eu.kanade.domain.category.model.Category
+import eu.kanade.domain.chapter.model.Chapter
+import eu.kanade.domain.history.model.HistoryWithRelations
+import eu.kanade.domain.library.service.LibraryPreferences
+import eu.kanade.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.MangaCover
+import eu.kanade.domain.manga.model.UpdateStrategy
 import eu.kanade.presentation.history.HistoryUiModel
 import eu.kanade.tachiyomi.data.suwayomi.MangaStatus
-import eu.kanade.tachiyomi.data.suwayomi.SuwayomiCategoryDto
-import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateEntity
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiCategoryDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterWithMangaDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
@@ -17,9 +24,9 @@ import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaDto
 import eu.kanade.tachiyomi.data.suwayomi.isSuwayomiServerUnavailable
 import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
 import eu.kanade.tachiyomi.data.suwayomi.serverHistoryClearAffectedEntities
-import eu.kanade.tachiyomi.data.suwayomi.serverHistoryRefreshAffectedEntities
 import eu.kanade.tachiyomi.data.suwayomi.serverHistoryLibraryAffectedEntities
 import eu.kanade.tachiyomi.data.suwayomi.serverHistoryReadAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.serverHistoryRefreshAffectedEntities
 import eu.kanade.tachiyomi.data.suwayomi.toDomainStatus
 import eu.kanade.tachiyomi.util.lang.toLocalDate
 import kotlinx.coroutines.CancellationException
@@ -42,13 +49,6 @@ import tachiyomi.core.common.preference.mapAsCheckboxState
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
-import eu.kanade.domain.category.model.Category
-import eu.kanade.domain.chapter.model.Chapter
-import eu.kanade.domain.history.model.HistoryWithRelations
-import eu.kanade.domain.library.service.LibraryPreferences
-import eu.kanade.domain.manga.model.Manga
-import eu.kanade.domain.manga.model.MangaCover
-import eu.kanade.domain.manga.model.UpdateStrategy
 import java.util.Date
 
 class HistoryScreenModel internal constructor(
@@ -307,8 +307,12 @@ class HistoryScreenModel internal constructor(
         screenModelScope.launchIO {
             val manga = runCatching { suwayomiClient.getManga(mangaId.toInt()).toDomainManga() }
                 .getOrElse { error ->
-                    logcat(LogPriority.ERROR, error) { "Failed to load Suwayomi history manga before adding to library" }
-                    _events.send(if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError)
+                    logcat(LogPriority.ERROR, error) {
+                        "Failed to load Suwayomi history manga before adding to library"
+                    }
+                    _events.send(
+                        if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError,
+                    )
                     return@launchIO
                 }
 

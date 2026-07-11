@@ -76,8 +76,8 @@ android {
     defaultConfig {
         applicationId = "app.amatsubu"
 
-        versionCode = 24
-        versionName = "0.1.0-alpha.2"
+        versionCode = 25
+        versionName = "0.1.0"
 
         buildConfigField("String", "MIHON_BASE_VERSION", "\"0.20.0\"")
         buildConfigField("String", "MIHON_BASE_COMMIT", "\"b8e5f22c0\"")
@@ -183,8 +183,8 @@ android {
     }
 
     lint {
-        abortOnError = false
-        checkReleaseBuilds = false
+        abortOnError = true
+        checkReleaseBuilds = true
     }
 }
 
@@ -309,8 +309,12 @@ dependencies {
 
     // Tests
     testImplementation(libs.bundles.test)
+    testImplementation(libs.kotest.property)
     testImplementation(libs.sqldelight.sqliteDriver)
     testRuntimeOnly(libs.junit.platform.launcher)
+    androidTestImplementation(libs.androidx.test.junit)
+    androidTestImplementation(libs.androidx.test.espresso.core)
+    androidTestImplementation(libs.androidx.test.uiautomator)
 
     // For detecting memory leaks; see https://square.github.io/leakcanary/
     // debugImplementation(libs.leakCanary.android)

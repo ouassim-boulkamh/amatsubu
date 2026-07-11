@@ -22,6 +22,7 @@ import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
 import java.io.FileOutputStream
+import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -45,21 +46,10 @@ class BackupCreator(
             }
 
             val backup = createBackup(options)
-            val backupBytes = encodeBackup(backup, parser)
-
-            file.openOutputStream()
-                .also {
-                    (it as? FileOutputStream)?.channel?.truncate(0)
-                }
-                .sink().gzip().buffer().use { output ->
-                    output.write(backupBytes)
-                }
-
-            val fileUri = file.uri
-
-            validator.validate(fileUri)
-
-            return fileUri.toString()
+            return writeClientBackupFile(
+                file = UniFileBackupFile(file, validator::validate),
+                backupBytes = encodeBackup(backup, parser),
+            )
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e)
             file?.delete()
@@ -99,6 +89,64 @@ class BackupCreator(
             val date = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.ENGLISH).format(Date())
             return "${BuildConfig.APPLICATION_ID}_$date.tachibk"
         }
+    }
+}
+
+internal interface BackupOutputFile {
+    val location: String
+    val isFile: Boolean
+    fun openOutputStream(): OutputStream
+    fun validate()
+    fun delete(): Boolean
+}
+
+private class UniFileBackupFile(
+    private val file: UniFile,
+    private val validateUri: (Uri) -> Unit,
+) : BackupOutputFile {
+    override val location: String
+        get() = file.uri.toString()
+
+    override val isFile: Boolean
+        get() = file.isFile
+
+    override fun openOutputStream(): OutputStream {
+        return file.openOutputStream()
+    }
+
+    override fun validate() {
+        validateUri(file.uri)
+    }
+
+    override fun delete(): Boolean {
+        return file.delete()
+    }
+}
+
+internal fun writeClientBackupFile(
+    file: BackupOutputFile?,
+    backupBytes: ByteArray,
+    createFileErrorMessage: String = "Could not create backup file",
+): String {
+    try {
+        if (file == null || !file.isFile) {
+            throw IllegalStateException(createFileErrorMessage)
+        }
+
+        file.openOutputStream()
+            .also {
+                (it as? FileOutputStream)?.channel?.truncate(0)
+            }
+            .sink().gzip().buffer().use { output ->
+                output.write(backupBytes)
+            }
+
+        file.validate()
+
+        return file.location
+    } catch (e: Exception) {
+        file?.delete()
+        throw e
     }
 }
 

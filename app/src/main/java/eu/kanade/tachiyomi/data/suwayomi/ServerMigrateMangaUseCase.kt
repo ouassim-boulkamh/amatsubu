@@ -1,8 +1,8 @@
 package eu.kanade.tachiyomi.data.suwayomi
 
+import eu.kanade.domain.manga.model.Manga
 import eu.kanade.domain.migration.model.MigrationFlag
 import eu.kanade.domain.source.service.SourcePreferences
-import eu.kanade.domain.manga.model.Manga
 import kotlin.coroutines.cancellation.CancellationException
 
 internal class ServerMigrateMangaUseCase private constructor(

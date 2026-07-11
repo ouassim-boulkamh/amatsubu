@@ -9,6 +9,16 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.core.preference.PreferenceMutableState
 import eu.kanade.core.preference.asState
 import eu.kanade.domain.base.BasePreferences
+import eu.kanade.domain.category.model.Category
+import eu.kanade.domain.chapter.model.Chapter
+import eu.kanade.domain.library.model.LibraryDisplayMode
+import eu.kanade.domain.library.model.LibraryManga
+import eu.kanade.domain.library.model.LibrarySort
+import eu.kanade.domain.library.model.plus
+import eu.kanade.domain.library.model.sort
+import eu.kanade.domain.library.service.LibraryPreferences
+import eu.kanade.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.applyFilter
 import eu.kanade.presentation.library.components.LibraryToolbarTitle
 import eu.kanade.presentation.manga.DownloadAction
 import eu.kanade.tachiyomi.data.cache.CoverCache
@@ -69,20 +79,10 @@ import tachiyomi.core.common.util.lang.compareToWithCollator
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.system.logcat
-import eu.kanade.domain.category.model.Category
-import eu.kanade.domain.chapter.model.Chapter
-import eu.kanade.domain.library.model.LibraryDisplayMode
-import eu.kanade.domain.library.model.LibraryManga
-import eu.kanade.domain.library.model.LibrarySort
-import eu.kanade.domain.library.model.plus
-import eu.kanade.domain.library.model.sort
-import eu.kanade.domain.library.service.LibraryPreferences
-import eu.kanade.domain.manga.model.Manga
-import eu.kanade.domain.manga.model.MangaStatus as DomainMangaStatus
-import eu.kanade.domain.manga.model.applyFilter
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
+import eu.kanade.domain.manga.model.MangaStatus as DomainMangaStatus
 
 internal class LibraryScreenModel(
     private val application: Application,

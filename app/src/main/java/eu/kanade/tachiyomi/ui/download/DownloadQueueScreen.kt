@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -192,12 +193,16 @@ object DownloadQueueScreen : Screen() {
                 state.downloads.isEmpty() -> {
                     EmptyScreen(
                         stringRes = MR.strings.information_no_downloads,
-                        modifier = Modifier.padding(contentPadding),
+                        modifier = Modifier
+                            .padding(contentPadding)
+                            .testTag("download_queue_empty"),
                     )
                 }
                 else -> {
                     LazyColumn(
-                        modifier = Modifier.padding(contentPadding),
+                        modifier = Modifier
+                            .padding(contentPadding)
+                            .testTag("download_queue_list"),
                     ) {
                         itemsIndexed(
                             items = state.downloads,

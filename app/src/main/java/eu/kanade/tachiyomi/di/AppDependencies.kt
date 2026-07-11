@@ -2,24 +2,27 @@ package eu.kanade.tachiyomi.di
 
 import android.app.Application
 import android.content.Context
-import app.cash.sqldelight.async.coroutines.await
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import app.cash.sqldelight.async.coroutines.await
 import com.eygraber.sqldelight.androidx.driver.AndroidxSqliteConfiguration
 import com.eygraber.sqldelight.androidx.driver.AndroidxSqliteDatabaseType
 import com.eygraber.sqldelight.androidx.driver.AndroidxSqliteDriver
 import com.eygraber.sqldelight.androidx.driver.FileProvider
 import eu.kanade.domain.base.BasePreferences
+import eu.kanade.domain.library.service.LibraryPreferences
 import eu.kanade.domain.source.interactor.GetIncognitoState
 import eu.kanade.domain.source.service.SourcePreferences
+import eu.kanade.domain.storage.service.StoragePreferences
 import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.domain.updates.service.UpdatesPreferences
 import eu.kanade.tachiyomi.App
+import eu.kanade.tachiyomi.core.security.SecurityPreferences
 import eu.kanade.tachiyomi.data.cache.ChapterCache
 import eu.kanade.tachiyomi.data.cache.CoverCache
-import eu.kanade.tachiyomi.core.security.SecurityPreferences
 import eu.kanade.tachiyomi.data.saver.ImageSaver
+import eu.kanade.tachiyomi.data.suwayomi.AndroidSuwayomiTokenStore
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyStore
 import eu.kanade.tachiyomi.data.suwayomi.ClientMangaMetadataStore
-import eu.kanade.tachiyomi.data.suwayomi.AndroidSuwayomiTokenStore
 import eu.kanade.tachiyomi.data.suwayomi.ServerReadStatePendingStore
 import eu.kanade.tachiyomi.data.suwayomi.ServerReaderIntentPendingStore
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
@@ -29,16 +32,13 @@ import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.network.NetworkPreferences
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.util.system.isDebugBuildType
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.protobuf.ProtoBuf
-import kotlinx.coroutines.runBlocking
 import tachiyomi.core.common.preference.AndroidPreferenceStore
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.storage.AndroidStorageFolderProvider
 import tachiyomi.data.Database
-import eu.kanade.domain.library.service.LibraryPreferences
-import eu.kanade.domain.storage.service.StoragePreferences
-import eu.kanade.domain.updates.service.UpdatesPreferences
 import tachiyomi.presentation.widget.UpdatesWidgetDataSource
 
 internal class AppDependencies(
@@ -78,13 +78,13 @@ internal fun createAppDependencies(application: Application): AppDependencies {
         explicitNulls = false
     }
     val databaseDriver = AndroidxSqliteDriver(
-            driver = BundledSQLiteDriver(),
-            databaseType = AndroidxSqliteDatabaseType.FileProvider(application, "tachiyomi.db"),
-            schema = Database.Schema,
-            configuration = AndroidxSqliteConfiguration(
-                isForeignKeyConstraintsEnabled = true,
-            ),
-        )
+        driver = BundledSQLiteDriver(),
+        databaseType = AndroidxSqliteDatabaseType.FileProvider(application, "tachiyomi.db"),
+        schema = Database.Schema,
+        configuration = AndroidxSqliteConfiguration(
+            isForeignKeyConstraintsEnabled = true,
+        ),
+    )
     val database = Database(driver = databaseDriver)
     ensureClientMangaMetadataTable(databaseDriver)
     val basePreferences = BasePreferences(application, preferenceStore)

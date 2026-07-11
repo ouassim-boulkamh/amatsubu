@@ -1,12 +1,12 @@
 package eu.kanade.tachiyomi.ui.manga
 
+import eu.kanade.domain.chapter.model.Chapter
 import eu.kanade.tachiyomi.data.download.model.Download
 import kotlinx.serialization.json.JsonObject
 import mihon.core.common.extensions.EMPTY
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import eu.kanade.domain.chapter.model.Chapter
 
 class ChapterListItemTest {
 

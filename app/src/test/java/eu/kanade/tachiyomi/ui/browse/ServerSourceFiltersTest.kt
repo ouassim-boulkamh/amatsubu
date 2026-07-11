@@ -80,6 +80,44 @@ class ServerSourceFiltersTest {
         )
     }
 
+    @Test
+    fun `invalid select defaults are normalized without a synthetic server change`() {
+        val dtos = listOf(
+            SuwayomiSourceFilterDto(
+                type = "SelectFilter",
+                name = "empty",
+                values = emptyList(),
+                defaultInt = Int.MAX_VALUE,
+            ),
+            SuwayomiSourceFilterDto(
+                type = "SelectFilter",
+                name = "out of range",
+                values = listOf("first", "second"),
+                defaultInt = Int.MAX_VALUE,
+            ),
+            SuwayomiSourceFilterDto(
+                type = "CheckBoxFilter",
+                name = "following server position",
+                defaultBoolean = true,
+            ),
+        )
+
+        val filters = dtos.toSourceFilterList()
+
+        assertEquals(
+            listOf(
+                SourceFilter.Select("out of range", listOf("first", "second"), 1),
+                SourceFilter.CheckBox("following server position", true),
+            ),
+            filters,
+        )
+        assertTrue(dtos.toFilterChanges(filters).isEmpty())
+        assertEquals(
+            listOf(SuwayomiSourceFilterChange(position = 2, checkBoxState = false)),
+            dtos.toFilterChanges(filters.replaceAt(1, SourceFilter.CheckBox("following server position", false))),
+        )
+    }
+
     private fun filterDtos(): List<SuwayomiSourceFilterDto> {
         return listOf(
             SuwayomiSourceFilterDto(

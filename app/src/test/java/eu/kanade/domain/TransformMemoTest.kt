@@ -1,12 +1,12 @@
 package eu.kanade.domain
 
+import eu.kanade.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.MangaStatus
+import eu.kanade.domain.manga.model.UpdateStrategy
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import eu.kanade.domain.manga.model.Manga
-import eu.kanade.domain.manga.model.MangaStatus
-import eu.kanade.domain.manga.model.UpdateStrategy
 
 class TransformMemoTest {
 

@@ -7,9 +7,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import eu.kanade.tachiyomi.ui.library.LibraryItem
 import eu.kanade.domain.library.model.LibraryManga
 import eu.kanade.domain.manga.model.MangaCover
+import eu.kanade.tachiyomi.ui.library.LibraryItem
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
 import tachiyomi.presentation.core.util.plus
 

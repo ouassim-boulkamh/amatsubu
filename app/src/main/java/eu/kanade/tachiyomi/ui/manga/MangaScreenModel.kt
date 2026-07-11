@@ -12,9 +12,17 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.core.preference.asState
 import eu.kanade.core.util.addOrRemove
 import eu.kanade.core.util.insertSeparators
+import eu.kanade.domain.base.BasePreferences
+import eu.kanade.domain.category.model.Category
+import eu.kanade.domain.chapter.model.Chapter
+import eu.kanade.domain.chapter.service.calculateChapterGap
+import eu.kanade.domain.chapter.service.getChapterSort
+import eu.kanade.domain.library.service.LibraryPreferences
+import eu.kanade.domain.manga.model.Manga
+import eu.kanade.domain.manga.model.MangaWithChapterCount
+import eu.kanade.domain.manga.model.applyFilter
 import eu.kanade.domain.manga.model.chaptersFiltered
 import eu.kanade.domain.manga.model.downloadedFilter
-import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.manga.model.localDownloadedFilter
 import eu.kanade.presentation.manga.DownloadAction
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
@@ -27,9 +35,9 @@ import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyStore
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyWorker
 import eu.kanade.tachiyomi.data.suwayomi.MangaStatus
 import eu.kanade.tachiyomi.data.suwayomi.SUWAYOMI_MANGA_REAL_URL_META_KEY
+import eu.kanade.tachiyomi.data.suwayomi.ServerMangaRefreshMode
 import eu.kanade.tachiyomi.data.suwayomi.ServerReadStatePendingStore
 import eu.kanade.tachiyomi.data.suwayomi.ServerReaderIntentBaseline
-import eu.kanade.tachiyomi.data.suwayomi.ServerMangaRefreshMode
 import eu.kanade.tachiyomi.data.suwayomi.ServerReaderIntentPendingStore
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateEntity
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateInvalidation
@@ -47,19 +55,19 @@ import eu.kanade.tachiyomi.data.suwayomi.estimateFetchInterval
 import eu.kanade.tachiyomi.data.suwayomi.isSuwayomiServerUnavailable
 import eu.kanade.tachiyomi.data.suwayomi.normalizedGenre
 import eu.kanade.tachiyomi.data.suwayomi.oldestPositive
-import eu.kanade.tachiyomi.data.suwayomi.replayPendingReaderIntents
-import eu.kanade.tachiyomi.data.suwayomi.replayPendingReadStates
-import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
 import eu.kanade.tachiyomi.data.suwayomi.refreshServerMangaFromSource
-import eu.kanade.tachiyomi.data.suwayomi.serverCoverLastModified
-import eu.kanade.tachiyomi.data.suwayomi.syncTrackerProgressAfterReadStateChange
+import eu.kanade.tachiyomi.data.suwayomi.replayPendingReadStates
+import eu.kanade.tachiyomi.data.suwayomi.replayPendingReaderIntents
+import eu.kanade.tachiyomi.data.suwayomi.resolveServerUrl
 import eu.kanade.tachiyomi.data.suwayomi.serverChapterBookmarkAffectedEntities
 import eu.kanade.tachiyomi.data.suwayomi.serverChapterDownloadAffectedEntities
 import eu.kanade.tachiyomi.data.suwayomi.serverChapterReadAffectedEntities
+import eu.kanade.tachiyomi.data.suwayomi.serverCoverLastModified
 import eu.kanade.tachiyomi.data.suwayomi.serverMangaCategoryAffectedEntities
 import eu.kanade.tachiyomi.data.suwayomi.serverMangaLibraryAffectedEntities
 import eu.kanade.tachiyomi.data.suwayomi.serverMangaSettingsAffectedEntities
 import eu.kanade.tachiyomi.data.suwayomi.serverNotes
+import eu.kanade.tachiyomi.data.suwayomi.syncTrackerProgressAfterReadStateChange
 import eu.kanade.tachiyomi.data.suwayomi.toDomainStatus
 import eu.kanade.tachiyomi.data.suwayomi.toDomainUpdateStrategy
 import eu.kanade.tachiyomi.di.AppDependencies
@@ -87,14 +95,6 @@ import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
-import eu.kanade.domain.category.model.Category
-import eu.kanade.domain.chapter.model.Chapter
-import eu.kanade.domain.chapter.service.calculateChapterGap
-import eu.kanade.domain.chapter.service.getChapterSort
-import eu.kanade.domain.library.service.LibraryPreferences
-import eu.kanade.domain.manga.model.Manga
-import eu.kanade.domain.manga.model.MangaWithChapterCount
-import eu.kanade.domain.manga.model.applyFilter
 import tachiyomi.i18n.MR
 import kotlin.math.floor
 import kotlin.time.Duration.Companion.seconds
@@ -832,7 +832,6 @@ class MangaScreenModel private constructor(
             null
         }
     }
-
 
     private fun SuwayomiChapterDto.toDomainChapter(): Chapter {
         return Chapter(

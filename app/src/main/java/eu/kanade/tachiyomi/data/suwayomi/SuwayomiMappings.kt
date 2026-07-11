@@ -1,9 +1,9 @@
 package eu.kanade.tachiyomi.data.suwayomi
 
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import kotlin.time.Duration.Companion.seconds
 import eu.kanade.domain.manga.model.MangaStatus as DomainMangaStatus
 import eu.kanade.domain.manga.model.UpdateStrategy as DomainUpdateStrategy
-import kotlin.time.Duration.Companion.seconds
 
 internal const val SUWAYOMI_MANGA_REAL_URL_META_KEY = "amatsubu.suwayomi.realUrl"
 internal const val SERVER_MANGA_NOTES_META_KEY = "amatsubu.notes"

@@ -10,20 +10,20 @@ import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import eu.kanade.domain.manga.model.Manga
 import eu.kanade.presentation.manga.MangaNotesScreen
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.data.suwayomi.SERVER_MANGA_NOTES_META_KEY
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
-import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.data.suwayomi.serverMangaNotesAffectedEntities
 import eu.kanade.tachiyomi.data.suwayomi.serverNotes
+import eu.kanade.tachiyomi.di.appDependencies
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.update
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.system.logcat
-import eu.kanade.domain.manga.model.Manga
 
 class MangaNotesScreen(
     private val manga: Manga,

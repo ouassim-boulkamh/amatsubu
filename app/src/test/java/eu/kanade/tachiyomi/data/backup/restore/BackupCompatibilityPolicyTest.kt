@@ -22,6 +22,50 @@ import tachiyomi.core.common.preference.Preference
 class BackupCompatibilityPolicyTest {
 
     @Test
+    fun `duplicate compatible preferences retain the first value and record later conflicts`() {
+        val result = BackupCompatibilityPolicy(
+            appPreferences = mapOf("theme_mode" to "system"),
+            sourcePreferences = mapOf("source_1" to mapOf("enabled" to false)),
+        ).evaluate(
+            Backup(
+                backupManga = emptyList(),
+                backupPreferences = listOf(
+                    BackupPreference("theme_mode", StringPreferenceValue("dark")),
+                    BackupPreference("theme_mode", StringPreferenceValue("light")),
+                ),
+                backupSourcePreferences = listOf(
+                    BackupSourcePreferences(
+                        sourceKey = "source_1",
+                        prefs = listOf(BackupPreference("enabled", BooleanPreferenceValue(true))),
+                    ),
+                    BackupSourcePreferences(
+                        sourceKey = "source_1",
+                        prefs = listOf(BackupPreference("enabled", BooleanPreferenceValue(false))),
+                    ),
+                ),
+            ),
+            RestoreOptions(appSettings = true, sourceSettings = true),
+        )
+
+        assertEquals(listOf(StringPreferenceValue("dark")), result.restorable.appPreferences.map { it.value })
+        assertEquals(listOf("source_1"), result.restorable.sourcePreferences.map { it.sourceKey })
+        assertTrue(
+            result.summary.decisions.any {
+                it.section == "backupPreferences:theme_mode" &&
+                    it.decision == BackupCompatibilityDecisionType.IGNORE_RECORDED &&
+                    it.reason.startsWith("Duplicate compatible preference key")
+            },
+        )
+        assertTrue(
+            result.summary.decisions.any {
+                it.section == "backupSourcePreferences:source_1" &&
+                    it.decision == BackupCompatibilityDecisionType.IGNORE_RECORDED &&
+                    it.reason.startsWith("Duplicate source preference block")
+            },
+        )
+    }
+
+    @Test
     fun `restores app preferences only when key and type match`() {
         val backup = Backup(
             backupManga = emptyList(),

@@ -42,7 +42,13 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import coil3.compose.AsyncImage
+import eu.kanade.domain.extension.model.Extension
+import eu.kanade.domain.extension.model.ExtensionStore
+import eu.kanade.domain.extension.model.InstallStep
 import eu.kanade.domain.source.interactor.SetMigrateSorting
+import eu.kanade.domain.source.model.Pin
+import eu.kanade.domain.source.model.Pins
+import eu.kanade.domain.source.model.Source
 import eu.kanade.presentation.browse.ExtensionScreen
 import eu.kanade.presentation.browse.ExtensionUiModel
 import eu.kanade.presentation.browse.ExtensionsState
@@ -79,8 +85,6 @@ import eu.kanade.tachiyomi.data.suwayomi.serverExtensionActionAffectedEntities
 import eu.kanade.tachiyomi.data.suwayomi.sourceNodes
 import eu.kanade.tachiyomi.data.suwayomi.webUrl
 import eu.kanade.tachiyomi.di.appDependencies
-import eu.kanade.domain.extension.model.Extension
-import eu.kanade.domain.extension.model.InstallStep
 import eu.kanade.tachiyomi.ui.ServerForegroundRefreshEffect
 import eu.kanade.tachiyomi.ui.browse.migration.manga.MigrateMangaScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
@@ -94,13 +98,9 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import logcat.LogPriority
-import eu.kanade.domain.extension.model.ExtensionStore
 import tachiyomi.core.common.preference.getAndSet
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
-import eu.kanade.domain.source.model.Pin
-import eu.kanade.domain.source.model.Pins
-import eu.kanade.domain.source.model.Source
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.PullRefresh
 import tachiyomi.presentation.core.i18n.stringResource
@@ -144,7 +144,7 @@ data object BrowseTab : Tab {
         var sourcesRefreshVersion by remember { mutableIntStateOf(0) }
         var extensionsRefreshVersion by remember { mutableIntStateOf(0) }
         var migrationRefreshVersion by remember { mutableIntStateOf(0) }
-        val state = rememberPagerState { BrowsePageCount }
+        val state = rememberPagerState { BROWSE_PAGE_COUNT }
         val syncServerState: (SnackbarHostState) -> Unit = { snackbarHostState ->
             if (!isSyncing) {
                 scope.launch {
@@ -880,7 +880,6 @@ private data class ServerMigrationSourcesResult(
     val sourceIconUrlsByDomainId: Map<Long, String?>,
 )
 
-
 private fun serverMigrationComparator(
     mode: SetMigrateSorting.Mode,
     direction: SetMigrateSorting.Direction,
@@ -955,4 +954,4 @@ private fun SuwayomiSourceDto.domainId(): Long {
     return id.toLongOrNull() ?: id.hashCode().absoluteValue.toLong()
 }
 
-private const val BrowsePageCount = 3
+private const val BROWSE_PAGE_COUNT = 3
