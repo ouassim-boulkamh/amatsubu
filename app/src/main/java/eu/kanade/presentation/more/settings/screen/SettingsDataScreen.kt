@@ -358,7 +358,7 @@ object SettingsDataScreen : SearchableSettings {
             preferenceItems = listOf(
                 Preference.PreferenceItem.TextPreference(
                     title = "Manage device copies",
-                    subtitle = "Review orphaned chapter copies stored on this Android device.",
+                    subtitle = "Review readiness, storage use, and saved chapter copies on this Android device.",
                     onClick = onOpenDeviceCopies,
                 ),
                 Preference.PreferenceItem.InfoPreference(
