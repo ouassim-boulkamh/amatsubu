@@ -93,19 +93,22 @@ jobs:
           tag_name: ${{ needs.get_tag.outputs.tag }}
           name: Amatsubu ${{ needs.get_tag.outputs.tag }}
           body: |
-            ## APK downloads
+            This is the first stable Amatsubu release. It moves the app much closer to being a Suwayomi-first Android client instead of a Mihon fork with a server bolted on.
 
-            The APKs are the same Amatsubu build, split by device CPU architecture so smaller installs are available for specific devices.
+            ## What changed since v0.1.0-alpha.2
 
-            - `amatsubu-universal-all-devices-${{ needs.get_tag.outputs.tag }}.apk`: recommended if you are unsure. Works across supported Android devices, but is larger.
-            - `amatsubu-arm64-v8a-modern-android-${{ needs.get_tag.outputs.tag }}.apk`: best choice for most modern Android phones and tablets, including arm64-v8a devices.
-            - `amatsubu-armeabi-v7a-legacy-32bit-arm-${{ needs.get_tag.outputs.tag }}.apk`: for older 32-bit ARM Android devices.
-            - `amatsubu-x86-32bit-emulator-${{ needs.get_tag.outputs.tag }}.apk`: for 32-bit x86 emulators or x86 Android targets.
-            - `amatsubu-x86_64-64bit-emulator-${{ needs.get_tag.outputs.tag }}.apk`: for 64-bit x86 emulators, some Chromebooks, or x86_64 Android targets.
+            - Library, history, updates, manga details, categories, downloads, reader progress, bookmarks, and tracking now operate through Suwayomi instead of Amatsubu keeping its own local manga/chapter database.
+            - Reader progress and bookmark changes are more resilient when the server drops out. If Suwayomi is unreachable, Amatsubu now queues the change and tells you it will sync later.
+            - Browse source filters now use Suwayomi's filter definitions, including checkbox, select, sort, text, tri-state, and grouped filters.
+            - Server authentication now supports token login in addition to no auth and basic auth.
+            - Tracking now uses Suwayomi tracker data directly, including tracker search, binding, status, score, dates, private tracking, and remote removal where supported.
+            - Backups are now scoped to Android client settings instead of pretending to back up the server-owned library.
+            - Downloads and saved device copies are handled more consistently in the reader, download queue, and downloaded-only navigation.
+            - Server notifications and notification actions were tightened up so failed actions surface a useful error instead of silently going stale.
+            - Removed old local-only Mihon pieces that no longer fit Amatsubu, including local manga/chapter repositories, local source manager paths, clear-local-database UI, and the upcoming calendar feature.
+            - Added broader regression coverage for launch, server settings, library membership, browsing, updates/history, downloads/device copies, reader flows, notification work, backup/restore, and hostile or sparse Suwayomi payloads.
 
-            > [!TIP]
-            >
-            > If you are installing on a normal recent Android phone, choose `amatsubu-arm64-v8a-modern-android-${{ needs.get_tag.outputs.tag }}.apk`. If you are unsure, choose `amatsubu-universal-all-devices-${{ needs.get_tag.outputs.tag }}.apk`.
+            *If unsure which APK to install, use `amatsubu-universal-all-devices-${{ needs.get_tag.outputs.tag }}.apk`.*
           files: |
             amatsubu-universal-all-devices-${{ needs.get_tag.outputs.tag }}.apk
             amatsubu-arm64-v8a-modern-android-${{ needs.get_tag.outputs.tag }}.apk
