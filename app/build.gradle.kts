@@ -30,9 +30,13 @@ android {
 
         fun signingValue(vararg names: String): String? {
             return names.firstNotNullOfOrNull { name ->
-                providers.environmentVariable(name).orNull
+                providers.environmentVariable(name).orNull?.trim()?.takeIf(String::isNotEmpty)
                     ?: providers.gradleProperty(name).orNull
+                        ?.trim()
+                        ?.takeIf(String::isNotEmpty)
                     ?: localSecrets.getProperty(name)
+                        ?.trim()
+                        ?.takeIf(String::isNotEmpty)
             }
         }
 
