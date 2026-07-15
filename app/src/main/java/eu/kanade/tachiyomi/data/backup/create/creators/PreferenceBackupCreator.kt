@@ -16,7 +16,10 @@ class PreferenceBackupCreator(
 ) {
 
     fun createApp(includePrivatePreferences: Boolean): List<BackupPreference> {
-        return preferenceStore.getAll()
+        val storedPreferences = preferenceStore.getAll()
+        val preferencesWithLiveNotificationDefaults = LIVE_SERVER_NOTIFICATION_DEFAULTS + storedPreferences
+
+        return preferencesWithLiveNotificationDefaults
             .toBackupPreferences()
             .withPrivatePreferences(includePrivatePreferences)
     }
@@ -49,5 +52,16 @@ class PreferenceBackupCreator(
         } else {
             filter { !Preference.isPrivate(it.key) }
         }
+    }
+
+    private companion object {
+        // Defaults are not written to SharedPreferences, but this user-facing
+        // setting must round-trip through backups even before it is toggled.
+        val LIVE_SERVER_NOTIFICATION_DEFAULTS = mapOf(
+            LIVE_SERVER_NOTIFICATIONS_KEY to true,
+            SHOW_SERVER_ADDRESS_IN_LIVE_NOTIFICATION_KEY to true,
+        )
+        const val LIVE_SERVER_NOTIFICATIONS_KEY = "amatsubu_live_server_notifications"
+        const val SHOW_SERVER_ADDRESS_IN_LIVE_NOTIFICATION_KEY = "amatsubu_show_server_address_in_live_notification"
     }
 }

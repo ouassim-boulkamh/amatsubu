@@ -59,6 +59,7 @@ class NotificationReceiver : BroadcastReceiver() {
             ACTION_START_DOWNLOADER -> runServerMutation(context, ServerNotificationAction.StartDownloader)
             ACTION_STOP_DOWNLOADER -> runServerMutation(context, ServerNotificationAction.StopDownloader)
             ACTION_CLEAR_DOWNLOADER -> runServerMutation(context, ServerNotificationAction.ClearDownloader)
+            ACTION_STOP_LIVE_SERVER_NOTIFICATIONS -> ServerLiveNotificationManager.stop(context)
         }
     }
 
@@ -156,6 +157,8 @@ class NotificationReceiver : BroadcastReceiver() {
         private const val ACTION_START_DOWNLOADER = "$ID.$NAME.START_DOWNLOADER"
         private const val ACTION_STOP_DOWNLOADER = "$ID.$NAME.STOP_DOWNLOADER"
         private const val ACTION_CLEAR_DOWNLOADER = "$ID.$NAME.CLEAR_DOWNLOADER"
+
+        const val ACTION_STOP_LIVE_SERVER_NOTIFICATIONS = "$ID.$NAME.STOP_LIVE_SERVER_NOTIFICATIONS"
 
         private const val EXTRA_URI = "$ID.$NAME.URI"
         private const val EXTRA_NOTIFICATION_ID = "$ID.$NAME.NOTIFICATION_ID"

@@ -26,6 +26,9 @@ object Notifications {
     const val ID_DOWNLOAD_PROGRESS = -201
     const val ID_DOWNLOAD_ERROR = -202
 
+    const val CHANNEL_LIVE_SERVER_NOTIFICATIONS = "live_server_notifications_channel"
+    const val ID_LIVE_SERVER_NOTIFICATIONS = -801
+
     /**
      * Notification channel and ids used by server-owned SyncYomi work.
      */
@@ -119,6 +122,10 @@ object Notifications {
             listOf(
                 buildNotificationChannel(CHANNEL_COMMON, IMPORTANCE_LOW) {
                     setName(context.stringResource(MR.strings.channel_common))
+                },
+                buildNotificationChannel(CHANNEL_LIVE_SERVER_NOTIFICATIONS, IMPORTANCE_LOW) {
+                    setName(context.stringResource(MR.strings.channel_live_server_notifications))
+                    setShowBadge(false)
                 },
                 buildNotificationChannel(CHANNEL_DOWNLOAD_PROGRESS, IMPORTANCE_LOW) {
                     setName(context.stringResource(MR.strings.channel_progress))

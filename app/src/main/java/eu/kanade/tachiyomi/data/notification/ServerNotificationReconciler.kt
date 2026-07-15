@@ -32,17 +32,17 @@ internal class ServerNotificationReconciler(
 
         if (!jobs.isRunning) {
             renderer.cancelLibraryProgress()
-            return if (transition.completed) {
+            // Suwayomi's status has no durable completion ID or timestamp. Reconcile the
+            // persisted recent-chapter high-water mark for every idle snapshot so a short
+            // update which completed while the app/subscription was unavailable is not lost.
+            if (transition.completed) {
                 ServerStateSync.requestRefresh(*serverNotificationLibraryUpdateAffectedEntities().toTypedArray())
-                showLibraryUpdateCompleteNotification(client, transition.startedAt)
-            } else {
-                LibraryReconciliationResult(
-                    started = false,
-                    completed = false,
-                    recentChaptersChecked = false,
-                    unnotifiedChapterCount = 0,
-                )
             }
+            val result = showLibraryUpdateCompleteNotification(client)
+            if (!transition.completed && result.unnotifiedChapterCount > 0) {
+                ServerStateSync.requestRefresh(*serverNotificationLibraryUpdateAffectedEntities().toTypedArray())
+            }
+            return result.copy(completed = transition.completed)
         }
 
         renderer.showLibraryProgress(jobs)
@@ -107,7 +107,6 @@ internal class ServerNotificationReconciler(
 
     private suspend fun showLibraryUpdateCompleteNotification(
         client: SuwayomiGraphQlClient,
-        startedAt: Long,
     ): LibraryReconciliationResult {
         val reconciliation = withContext(Dispatchers.IO) {
             runCatching {

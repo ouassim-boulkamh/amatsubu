@@ -28,6 +28,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
 import tachiyomi.core.common.preference.InMemoryPreferenceStore
 
@@ -38,6 +39,7 @@ class ServerNotificationReconcilerTest {
         val renderer = mockk<ServerNotificationRenderer>(relaxed = true)
         val client = mockk<SuwayomiGraphQlClient>()
         coEvery { client.getRecentChapters() } returns emptyList()
+        coEvery { client.getGlobalMeta(NEW_CHAPTER_CHECKPOINT_KEY) } returns null
         val reconciler = ServerNotificationReconciler(
             renderer = renderer,
             checkpoints = ServerNotificationCheckpointStore(InMemoryPreferenceStore()),
@@ -175,6 +177,39 @@ class ServerNotificationReconcilerTest {
         assertEquals(0, result.unnotifiedChapterCount)
         verify { renderer.showNewChapters(emptyList()) }
         coVerify(exactly = 0) { client.setGlobalMeta(any(), any()) }
+    }
+
+    @Test
+    fun `idle reconciliation catches chapters from an update completed before observation`() = runTest {
+        val renderer = mockk<ServerNotificationRenderer>(relaxed = true)
+        val client = mockk<SuwayomiGraphQlClient>()
+        var reconciliationCount = 0
+        var chapters = listOf(chapter(id = 10, fetchedAt = "1000", isRead = false))
+        coEvery { client.getRecentChapters() } answers { chapters }
+        coEvery { client.getGlobalMeta(NEW_CHAPTER_CHECKPOINT_KEY) } answers {
+            reconciliationCount += 1
+            when (reconciliationCount) {
+                1 -> null
+                2 -> checkpointMeta(NewChapterCheckpoint(lastFetchedAt = 1_000_000L, lastChapterId = 10))
+                else -> checkpointMeta(NewChapterCheckpoint(lastFetchedAt = 2_000_000L, lastChapterId = 11))
+            }
+        }
+        coEvery { client.setGlobalMeta(NEW_CHAPTER_CHECKPOINT_KEY, any()) } answers {
+            SuwayomiGlobalMetaDto(NEW_CHAPTER_CHECKPOINT_KEY, secondArg())
+        }
+        val reconciler = reconciler(renderer)
+        val idle = SuwayomiLibraryUpdateStatusDto(jobsInfo = SuwayomiUpdaterJobsInfoDto(isRunning = false))
+
+        reconciler.reconcileLibraryUpdate(client, SERVER, idle)
+        chapters = chapters + chapter(id = 11, fetchedAt = "2000", isRead = false)
+
+        val result = reconciler.reconcileLibraryUpdate(client, SERVER, idle)
+        val reconnectResult = reconciler.reconcileLibraryUpdate(client, SERVER, idle)
+
+        assertFalse(result.completed)
+        assertEquals(1, result.unnotifiedChapterCount)
+        assertEquals(0, reconnectResult.unnotifiedChapterCount)
+        verify(exactly = 1) { renderer.showNewChapters(match { it.map(SuwayomiChapterWithMangaDto::id) == listOf(11) }) }
     }
 
     @Test

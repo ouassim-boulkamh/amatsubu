@@ -17,11 +17,14 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
+import logcat.LogPriority
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import tachiyomi.core.common.util.system.logcat
+import java.util.UUID
 
 internal class SuwayomiGraphQlSubscriptionClient(
     private val client: OkHttpClient,
@@ -75,7 +78,10 @@ internal class SuwayomiGraphQlSubscriptionClient(
         deserializer: DeserializationStrategy<GraphQlResponse<T>>,
         mapper: (T) -> R,
     ): Flow<R> = callbackFlow {
-        val operationId = operationName
+        // Suwayomi keys active websocket operations by ID for the authenticated
+        // session, so separate UI and app-scoped consumers must not reuse the
+        // GraphQL operation name as the protocol ID.
+        val operationId = newSuwayomiSubscriptionOperationId(operationName)
         val request = Request.Builder()
             .url(toSuwayomiWebSocketUrl(endpoint()))
             .build()
@@ -92,6 +98,7 @@ internal class SuwayomiGraphQlSubscriptionClient(
         var webSocket: WebSocket? = null
         val listener = object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
+                logcat { "Opening Suwayomi websocket subscription operation=$operationName" }
                 webSocket.send(
                     json.encodeToString(
                         GraphQlWebSocketMessage.serializer(),
@@ -110,6 +117,7 @@ internal class SuwayomiGraphQlSubscriptionClient(
 
                 when (message.type) {
                     "connection_ack" -> {
+                        logcat { "Connected Suwayomi websocket subscription operation=$operationName" }
                         webSocket.send(json.encodeToString(GraphQlWebSocketMessage.serializer(), subscribeMessage))
                     }
                     "next" -> {
@@ -125,7 +133,9 @@ internal class SuwayomiGraphQlSubscriptionClient(
                             return
                         }
                         val data = response.data ?: return
-                        trySend(mapper(data))
+                        if (trySend(mapper(data)).isFailure) {
+                            logcat { "Ignored Suwayomi websocket update after subscription closed operation=$operationName" }
+                        }
                     }
                     "error" -> close(
                         IllegalStateException(message.payload?.toString() ?: "Suwayomi subscription failed"),
@@ -138,10 +148,12 @@ internal class SuwayomiGraphQlSubscriptionClient(
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                logcat(LogPriority.WARN, t) { "Suwayomi websocket subscription failed operation=$operationName" }
                 close(t)
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                logcat { "Suwayomi websocket subscription closed operation=$operationName code=$code" }
                 close()
             }
         }
@@ -157,6 +169,10 @@ internal class SuwayomiGraphQlSubscriptionClient(
             socket.close(1000, "Closing Suwayomi subscription")
         }
     }
+}
+
+internal fun newSuwayomiSubscriptionOperationId(operationName: String): String {
+    return "$operationName-${UUID.randomUUID()}"
 }
 
 internal fun toSuwayomiWebSocketUrl(endpoint: String): String {

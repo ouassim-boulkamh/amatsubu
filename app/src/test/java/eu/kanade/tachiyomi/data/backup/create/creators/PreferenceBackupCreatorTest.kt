@@ -61,6 +61,22 @@ class PreferenceBackupCreatorTest {
     }
 
     @Test
+    fun `includes the enabled live server notification default in backups`() {
+        val preferences = PreferenceBackupCreator(MapPreferenceStore())
+            .createApp(includePrivatePreferences = false)
+            .associate { it.key to it.value }
+
+        assertEquals(
+            BooleanPreferenceValue(true),
+            preferences["amatsubu_live_server_notifications"],
+        )
+        assertEquals(
+            BooleanPreferenceValue(true),
+            preferences["amatsubu_show_server_address_in_live_notification"],
+        )
+    }
+
+    @Test
     fun `filters app state and private preferences unless private is selected`() {
         val privateKey = Preference.privateKey("server_password")
         val appStateKey = Preference.appStateKey("last_screen")
@@ -77,8 +93,14 @@ class PreferenceBackupCreatorTest {
         val publicOnly = creator.createApp(includePrivatePreferences = false)
         val withPrivate = creator.createApp(includePrivatePreferences = true)
 
-        assertEquals(listOf("theme"), publicOnly.map { it.key })
-        assertEquals(setOf("theme", privateKey), withPrivate.map { it.key }.toSet())
+        assertEquals(
+            setOf("theme", "amatsubu_live_server_notifications", "amatsubu_show_server_address_in_live_notification"),
+            publicOnly.map { it.key }.toSet(),
+        )
+        assertEquals(
+            setOf("theme", privateKey, "amatsubu_live_server_notifications", "amatsubu_show_server_address_in_live_notification"),
+            withPrivate.map { it.key }.toSet(),
+        )
         assertFalse(withPrivate.any { it.key == appStateKey })
     }
 

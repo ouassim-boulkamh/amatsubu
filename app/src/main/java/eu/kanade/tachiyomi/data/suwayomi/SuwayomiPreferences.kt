@@ -29,6 +29,11 @@ internal class SuwayomiPreferences(
     val username = preferenceStore.getString("amatsubu_server_username", "")
     val password = preferenceStore.getString("amatsubu_server_password", "")
     val timeoutSeconds = preferenceStore.getInt("amatsubu_server_timeout_seconds", 30)
+    val liveServerNotifications = preferenceStore.getBoolean("amatsubu_live_server_notifications", true)
+    val showServerAddressInLiveNotification = preferenceStore.getBoolean(
+        "amatsubu_show_server_address_in_live_notification",
+        true,
+    )
 
     init {
         migrateLegacyPreference(preferenceStore.getString(legacyKey("server_url"), "http://127.0.0.1:4567"), serverUrl)
@@ -59,6 +64,12 @@ internal class SuwayomiPreferences(
     }
 
     fun graphQlEndpoint(): String = "${baseUrl()}/api/graphql"
+
+    fun notificationServerAddress(): String {
+        val uri = URI(baseUrl())
+        val host = uri.host ?: return baseUrl()
+        return if (uri.port >= 0) "$host:${uri.port}" else host
+    }
 
     /** Passwords are only used to obtain a token and must not survive a token-auth login. */
     fun clearTokenLoginPassword() {

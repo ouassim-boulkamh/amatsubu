@@ -24,4 +24,18 @@ class NotificationWorkManagerSmokeTest {
 
         ServerNotificationSyncJob.cancel(context)
     }
+
+    @Test
+    fun healthNotificationReconciliationQueuesRuntimeWork() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val workManager = WorkManager.getInstance(context)
+
+        ServerNotificationSyncJob.cancel(context)
+        ServerNotificationSyncJob.scheduleHealthReconciliation(context)
+
+        val work = workManager.getWorkInfosByTag("ServerNotificationSync").get(15, TimeUnit.SECONDS)
+        check(work.isNotEmpty()) { "Health notification reconciliation did not queue WorkManager work" }
+
+        ServerNotificationSyncJob.cancel(context)
+    }
 }

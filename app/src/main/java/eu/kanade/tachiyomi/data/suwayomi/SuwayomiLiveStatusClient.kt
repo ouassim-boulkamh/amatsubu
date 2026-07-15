@@ -8,7 +8,12 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancelAndJoin
+import kotlin.coroutines.cancellation.CancellationException
+import logcat.LogPriority
+import tachiyomi.core.common.util.system.logcat
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 internal class SuwayomiLiveStatusClient(
@@ -41,7 +46,10 @@ internal class SuwayomiLiveStatusClient(
     fun libraryUpdateStatusFlow(
         pollInterval: Duration = 2.seconds,
         maxUpdates: Int = 150,
+        monitorMode: Boolean = false,
     ): Flow<SuwayomiLibraryUpdateStatusDto> {
+        if (!monitorMode) return standardLibraryUpdateStatusFlow(pollInterval, maxUpdates)
+
         return channelFlow {
             var latestStatus: SuwayomiLibraryUpdateStatusDto? = null
 
@@ -51,37 +59,67 @@ internal class SuwayomiLiveStatusClient(
             }
 
             sendStatus(graphQlClient.getLibraryUpdateStatus())
-
-            val statusReconciler = launch {
-                while (isActive) {
-                    delay(pollInterval)
-                    runCatching { graphQlClient.getLibraryUpdateStatus() }
-                        .onSuccess { status ->
-                            if (status != latestStatus) {
-                                sendStatus(status)
-                            }
-                        }
-                }
-            }
-
-            subscriptionClient.libraryUpdateStatusChanged(maxUpdates)
-                .collect { updates ->
-                    val status = when {
-                        updates.omittedUpdates -> graphQlClient.getLibraryUpdateStatus()
-                        updates.initial != null -> updates.initial
-                        else -> SuwayomiLibraryUpdateStatusDto(
-                            categoryUpdates = updates.categoryUpdates,
-                            mangaUpdates = updates.mangaUpdates,
-                            jobsInfo = updates.jobsInfo,
-                        )
+            var retryDelay = MONITOR_RETRY_MIN
+            while (isActive) {
+                val healthReconciler = launch {
+                    while (isActive) {
+                        delay(MONITOR_HEALTH_POLL)
+                        runCatching { graphQlClient.getLibraryUpdateStatus() }
+                            .onSuccess { status -> if (status != latestStatus) sendStatus(status) }
                     }
-                    sendStatus(status)
                 }
-            statusReconciler.cancel()
-        }.catch {
-            emitAll(pollLibraryUpdateStatus(pollInterval))
+                try {
+                    subscriptionClient.libraryUpdateStatusChanged(maxUpdates).collect { updates ->
+                        val status = when {
+                            updates.omittedUpdates -> graphQlClient.getLibraryUpdateStatus()
+                            updates.initial != null -> updates.initial
+                            else -> SuwayomiLibraryUpdateStatusDto(
+                                categoryUpdates = updates.categoryUpdates,
+                                mangaUpdates = updates.mangaUpdates,
+                                jobsInfo = updates.jobsInfo,
+                            )
+                        }
+                        sendStatus(status)
+                        retryDelay = MONITOR_RETRY_MIN
+                    }
+                } catch (error: Throwable) {
+                    if (error is CancellationException) throw error
+                    logcat(LogPriority.WARN, error) { "Suwayomi live library subscription disconnected; retrying in $retryDelay" }
+                } finally {
+                    healthReconciler.cancelAndJoin()
+                }
+                delay(retryDelay)
+                runCatching { graphQlClient.getLibraryUpdateStatus() }
+                    .onSuccess { status -> if (status != latestStatus) sendStatus(status) }
+                retryDelay = (retryDelay * 2).coerceAtMost(MONITOR_RETRY_MAX)
+            }
         }
     }
+
+    private fun standardLibraryUpdateStatusFlow(
+        pollInterval: Duration,
+        maxUpdates: Int,
+    ): Flow<SuwayomiLibraryUpdateStatusDto> = channelFlow {
+        var latestStatus: SuwayomiLibraryUpdateStatusDto? = null
+        suspend fun sendStatus(status: SuwayomiLibraryUpdateStatusDto) { latestStatus = status; send(status) }
+        sendStatus(graphQlClient.getLibraryUpdateStatus())
+        val statusReconciler = launch {
+            while (isActive) {
+                delay(pollInterval)
+                runCatching { graphQlClient.getLibraryUpdateStatus() }
+                    .onSuccess { status -> if (status != latestStatus) sendStatus(status) }
+            }
+        }
+        subscriptionClient.libraryUpdateStatusChanged(maxUpdates).collect { updates ->
+            val status = when {
+                updates.omittedUpdates -> graphQlClient.getLibraryUpdateStatus()
+                updates.initial != null -> updates.initial
+                else -> SuwayomiLibraryUpdateStatusDto(updates.categoryUpdates, updates.mangaUpdates, updates.jobsInfo)
+            }
+            sendStatus(status)
+        }
+        statusReconciler.cancel()
+    }.catch { emitAll(pollLibraryUpdateStatus(pollInterval)) }
 
     fun syncStatusFlow(
         pollInterval: Duration = 5.seconds,
@@ -130,6 +168,12 @@ internal class SuwayomiLiveStatusClient(
                 }
             delay(interval)
         }
+    }
+
+    private companion object {
+        val MONITOR_HEALTH_POLL = 5.minutes
+        val MONITOR_RETRY_MIN = 1.minutes
+        val MONITOR_RETRY_MAX = 15.minutes
     }
 }
 

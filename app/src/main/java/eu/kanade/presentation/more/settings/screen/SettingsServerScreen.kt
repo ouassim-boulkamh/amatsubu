@@ -1,9 +1,14 @@
 package eu.kanade.presentation.more.settings.screen
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.NotificationManagerCompat
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,6 +37,7 @@ import eu.kanade.presentation.more.settings.widget.ListPreferenceWidget
 import eu.kanade.presentation.more.settings.widget.SwitchPreferenceWidget
 import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
 import eu.kanade.tachiyomi.data.backup.restore.ServerBackupRestoreJob
+import eu.kanade.tachiyomi.data.notification.ServerLiveNotificationManager
 import eu.kanade.tachiyomi.data.suwayomi.SUWAYOMI_PORT_MAX
 import eu.kanade.tachiyomi.data.suwayomi.SUWAYOMI_PORT_MIN
 import eu.kanade.tachiyomi.data.suwayomi.SUWAYOMI_TIMEOUT_MAX_SECONDS
@@ -47,6 +53,7 @@ import eu.kanade.tachiyomi.data.suwayomi.SuwayomiServerAboutDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiServerSettingsDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiWebUiAboutDto
 import eu.kanade.tachiyomi.data.suwayomi.isValidSuwayomiServerPort
+import eu.kanade.tachiyomi.data.suwayomi.isValidSuwayomiConnectionSettings
 import eu.kanade.tachiyomi.data.suwayomi.serverSettingsAffectedEntities
 import eu.kanade.tachiyomi.data.suwayomi.successMessage
 import eu.kanade.tachiyomi.data.suwayomi.userMessage
@@ -89,10 +96,13 @@ object SettingsServerScreen : SearchableSettings {
         val username by preferences.username.collectAsState()
         val password by preferences.password.collectAsState()
         val timeoutSeconds by preferences.timeoutSeconds.collectAsState()
+        val liveServerNotifications by preferences.liveServerNotifications.collectAsState()
         val testSuccessTitle = stringResource(MR.strings.pref_server_test_connection_success)
         val testFailureTitle = stringResource(MR.strings.pref_server_test_connection_failed)
         val logoutSuccessTitle = stringResource(MR.strings.logout_success)
         val settingsFailureTitle = stringResource(MR.strings.internal_error)
+        val liveMonitorPermissionRequired = stringResource(MR.strings.live_server_notifications_permission_required)
+        val liveMonitorInvalidServer = stringResource(MR.strings.live_server_notifications_invalid_server)
 
         val connectionKey = RemoteSettingsConnectionKey(
             serverUrl = serverUrl,
@@ -114,6 +124,17 @@ object SettingsServerScreen : SearchableSettings {
         var aboutLoading by remember { mutableStateOf(false) }
         var remoteMutationInFlight by remember { mutableStateOf(false) }
         var dialog by remember { mutableStateOf<TestConnectionDialog?>(null) }
+        var liveMonitorMessage by remember { mutableStateOf<String?>(null) }
+        var liveMonitorCanOpenSettings by remember { mutableStateOf(false) }
+        val notificationPermissionRequester = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+            onResult = { granted ->
+                if (!granted) {
+                    liveMonitorCanOpenSettings = true
+                    liveMonitorMessage = liveMonitorPermissionRequired
+                }
+            },
+        )
         val chooseServerBackup = rememberLauncherForActivityResult(
             object : ActivityResultContracts.GetContent() {
                 override fun createIntent(context: Context, input: String): Intent {
@@ -200,6 +221,41 @@ object SettingsServerScreen : SearchableSettings {
                 },
             )
         }
+        liveMonitorMessage?.let { message ->
+            AlertDialog(
+                onDismissRequest = { liveMonitorMessage = null },
+                title = { Text(stringResource(MR.strings.live_server_notifications_unavailable)) },
+                text = { Text(message) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            if (liveMonitorCanOpenSettings) {
+                                context.startActivity(
+                                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName),
+                                )
+                            }
+                            liveMonitorMessage = null
+                        },
+                    ) {
+                        Text(
+                            stringResource(
+                                if (liveMonitorCanOpenSettings) {
+                                    MR.strings.live_server_notifications_open_settings
+                                } else {
+                                    MR.strings.action_ok
+                                },
+                            ),
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { liveMonitorMessage = null }) {
+                        Text(stringResource(MR.strings.action_cancel))
+                    }
+                },
+            )
+        }
 
         suspend fun updateServerSettings(block: kotlinx.serialization.json.JsonObjectBuilder.() -> Unit): Boolean {
             if (remoteMutationInFlight) return false
@@ -249,7 +305,19 @@ object SettingsServerScreen : SearchableSettings {
                         ),
                         Preference.PreferenceItem.TextPreference(
                             title = stringResource(MR.strings.pref_server_test_connection),
-                            subtitle = "${preferences.baseUrl()}/api/graphql",
+                            subtitle = if (
+                                isValidSuwayomiConnectionSettings(
+                                    serverUrl = serverUrl,
+                                    useServerPort = useServerPort,
+                                    serverPort = serverPort,
+                                    authType = authType,
+                                    timeoutSeconds = timeoutSeconds,
+                                )
+                            ) {
+                                "${preferences.baseUrl()}/api/graphql"
+                            } else {
+                                liveMonitorInvalidServer
+                            },
                             onClick = {
                                 scope.launch {
                                     dialog = runCatching {
@@ -270,6 +338,55 @@ object SettingsServerScreen : SearchableSettings {
                                     )
                                 }
                             },
+                        ),
+                    ),
+                ),
+            )
+            add(
+                Preference.PreferenceGroup(
+                    title = stringResource(MR.strings.live_server_notifications_section),
+                    preferenceItems = listOf(
+                        Preference.PreferenceItem.SwitchPreference(
+                            preference = preferences.liveServerNotifications,
+                            title = stringResource(MR.strings.live_server_notifications_title),
+                            subtitle = stringResource(MR.strings.live_server_notifications_description),
+                            onValueChanged = { enabled ->
+                                if (!enabled) {
+                                    ServerLiveNotificationManager.stop(context)
+                                    return@SwitchPreference false
+                                }
+                                if (!isValidSuwayomiConnectionSettings(
+                                        serverUrl = serverUrl,
+                                        useServerPort = useServerPort,
+                                        serverPort = serverPort,
+                                        authType = authType,
+                                        timeoutSeconds = timeoutSeconds,
+                                    )
+                                ) {
+                                    liveMonitorCanOpenSettings = false
+                                    liveMonitorMessage = liveMonitorInvalidServer
+                                    return@SwitchPreference false
+                                }
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                    context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                                ) {
+                                    notificationPermissionRequester.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    return@SwitchPreference false
+                                }
+                                if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+                                    liveMonitorCanOpenSettings = true
+                                    liveMonitorMessage = liveMonitorPermissionRequired
+                                    return@SwitchPreference false
+                                }
+                                ServerLiveNotificationManager.start(context)
+                                false
+                            },
+                        ),
+                        Preference.PreferenceItem.SwitchPreference(
+                            preference = preferences.showServerAddressInLiveNotification,
+                            title = stringResource(MR.strings.live_server_notifications_show_server_address),
+                            subtitle = stringResource(MR.strings.live_server_notifications_show_server_address_description),
+                            enabled = liveServerNotifications,
                         ),
                     ),
                 ),

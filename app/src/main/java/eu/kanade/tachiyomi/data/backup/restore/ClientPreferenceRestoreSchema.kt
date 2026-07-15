@@ -55,6 +55,8 @@ object ClientPreferenceRestoreSchema {
         "amatsubu_server_username" to "",
         "amatsubu_server_password" to "",
         "amatsubu_server_timeout_seconds" to 30,
+        "amatsubu_live_server_notifications" to true,
+        "amatsubu_show_server_address_in_live_notification" to true,
 
         // Misc client settings retained by Amatsubu
         "pref_hardware_bitmap_threshold" to 0,

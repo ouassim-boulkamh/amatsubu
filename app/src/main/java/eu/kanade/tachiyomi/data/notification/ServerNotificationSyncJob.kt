@@ -109,6 +109,7 @@ internal class ServerNotificationSyncJob(
         private const val UNIQUE_IMMEDIATE_WORK_NAME = "ServerNotificationSyncImmediate"
         private const val UNIQUE_DELAYED_30_SECONDS_WORK_NAME = "ServerNotificationSyncDelayed30s"
         private const val UNIQUE_DELAYED_2_MINUTES_WORK_NAME = "ServerNotificationSyncDelayed2m"
+        private const val UNIQUE_HEALTH_RECONCILIATION_WORK_NAME = "ServerNotificationSyncHealth"
         private const val TAG = "ServerNotificationSync"
         private const val REPEAT_INTERVAL_MINUTES = 15L
         private const val FIRST_DELAY_SECONDS = 30L
@@ -188,11 +189,33 @@ internal class ServerNotificationSyncJob(
             logcat(LogPriority.DEBUG) { "Scheduled prompt server notification reconciliation work" }
         }
 
+        /**
+         * The foreground monitor has just proven the server is reachable. Queue one safe
+         * reconciliation so a library update that began and ended between status observations
+         * is still discovered from the persisted chapter high-water mark.
+         */
+        fun scheduleHealthReconciliation(context: Context) {
+            val request = OneTimeWorkRequestBuilder<ServerNotificationSyncJob>()
+                .addTag(TAG)
+                .setConstraints(
+                    Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build(),
+                )
+                .build()
+            context.workManager.enqueueUniqueWork(
+                UNIQUE_HEALTH_RECONCILIATION_WORK_NAME,
+                ExistingWorkPolicy.KEEP,
+                request,
+            )
+        }
+
         fun cancel(context: Context) {
             WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_WORK_NAME)
             WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_IMMEDIATE_WORK_NAME)
             WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_DELAYED_30_SECONDS_WORK_NAME)
             WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_DELAYED_2_MINUTES_WORK_NAME)
+            WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_HEALTH_RECONCILIATION_WORK_NAME)
         }
     }
 }

@@ -15,6 +15,8 @@ import eu.kanade.tachiyomi.data.backup.restore.RestoreOptions
 import eu.kanade.tachiyomi.data.backup.restore.ServerBackupRestoreJob
 import eu.kanade.tachiyomi.data.backup.restore.buildServerBackupRestoreInputData
 import eu.kanade.tachiyomi.data.notification.ServerNotificationSyncJob
+import eu.kanade.tachiyomi.data.notification.ServerLiveNotificationManager
+import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyWorker
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiPreferences.Companion.AUTH_TOKEN
 import eu.kanade.tachiyomi.di.appDependencies
@@ -45,6 +47,21 @@ class AdrProbeReceiver : BroadcastReceiver() {
             ACTION_ENQUEUE_DELAYED_SERVER_BACKUP_CREATE -> enqueueDelayedServerBackupCreate(context, intent)
             ACTION_ENQUEUE_DELAYED_SERVER_BACKUP_RESTORE -> enqueueDelayedServerBackupRestore(context, intent)
             ACTION_MUTATION_REFETCH_FAILURE -> probeMutationRefetchFailure(context, intent)
+            ACTION_START_LIVE_SERVER_NOTIFICATIONS -> {
+                check(ServerLiveNotificationManager.start(context))
+                Log.i(TAG, "Started live server notification monitoring")
+            }
+            ACTION_STOP_LIVE_SERVER_NOTIFICATIONS -> {
+                ServerLiveNotificationManager.stop(context)
+                Log.i(TAG, "Stopped live server notification monitoring")
+            }
+            ACTION_TRIGGER_LIVE_SERVER_NOTIFICATION_STOP -> {
+                context.sendBroadcast(
+                    Intent(context, NotificationReceiver::class.java)
+                        .setAction(NotificationReceiver.ACTION_STOP_LIVE_SERVER_NOTIFICATIONS),
+                )
+                Log.i(TAG, "Triggered live server notification Stop action")
+            }
             else -> Log.w(TAG, "Unknown ADR probe action=${intent.action}")
         }
     }
@@ -292,6 +309,12 @@ class AdrProbeReceiver : BroadcastReceiver() {
             "app.amatsubu.debug.ADR_PROBE_ENQUEUE_DELAYED_SERVER_BACKUP_RESTORE"
         const val ACTION_MUTATION_REFETCH_FAILURE =
             "app.amatsubu.debug.ADR_PROBE_MUTATION_REFETCH_FAILURE"
+        const val ACTION_START_LIVE_SERVER_NOTIFICATIONS =
+            "app.amatsubu.debug.ADR_PROBE_START_LIVE_SERVER_NOTIFICATIONS"
+        const val ACTION_STOP_LIVE_SERVER_NOTIFICATIONS =
+            "app.amatsubu.debug.ADR_PROBE_STOP_LIVE_SERVER_NOTIFICATIONS"
+        const val ACTION_TRIGGER_LIVE_SERVER_NOTIFICATION_STOP =
+            "app.amatsubu.debug.ADR_PROBE_TRIGGER_LIVE_SERVER_NOTIFICATION_STOP"
 
         const val EXTRA_SERVER_URL = "server_url"
         const val EXTRA_PRIMARY_SERVER_URL = "primary_server_url"

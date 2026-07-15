@@ -21,6 +21,25 @@ import java.util.concurrent.TimeUnit
 class SuwayomiPreferencesTest {
 
     @Test
+    fun `live server notifications default to enabled and can be disabled`() {
+        val preferences = SuwayomiPreferences(InMemoryPreferenceStore())
+
+        assertEquals(true, preferences.liveServerNotifications.get())
+        preferences.liveServerNotifications.set(false)
+        assertFalse(preferences.liveServerNotifications.get())
+    }
+
+    @Test
+    fun `live notification server address defaults to visible and uses host with port`() {
+        val preferences = SuwayomiPreferences(InMemoryPreferenceStore())
+
+        assertEquals(true, preferences.showServerAddressInLiveNotification.get())
+        assertEquals("127.0.0.1:4567", preferences.notificationServerAddress())
+        preferences.serverUrl.set("https://192.168.1.100:1234/server")
+        assertEquals("192.168.1.100:1234", preferences.notificationServerAddress())
+    }
+
+    @Test
     fun `base url uses configured default server`() {
         val preferences = SuwayomiPreferences(InMemoryPreferenceStore())
 

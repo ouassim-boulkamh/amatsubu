@@ -1037,6 +1037,24 @@
 
     <!-- Notification channels -->
     <string name="channel_common">Common</string>
+    <string name="channel_live_server_notifications">Live server notifications</string>
+    <string name="live_server_notifications_connected">Connected to server</string>
+    <string name="live_server_notifications_connected_to_server">Connected to %s</string>
+    <string name="live_server_notifications_reconnecting">Reconnecting to server</string>
+    <string name="live_server_notifications_reconnecting_to_server">Reconnecting to %s</string>
+    <string name="live_server_notifications_server_unavailable">Server unavailable</string>
+    <string name="live_server_notifications_server_unavailable_at">%s unavailable</string>
+    <string name="live_server_notifications_last_checked">Last checked at %s</string>
+    <string name="live_server_notifications_stop">Stop</string>
+    <string name="live_server_notifications_section">Live server notifications</string>
+    <string name="live_server_notifications_title">Live server notifications</string>
+    <string name="live_server_notifications_description">Keep a live connection to your Suwayomi server so status notifications arrive promptly. Monitoring starts whenever you open Amatsubu while this setting is enabled.</string>
+    <string name="live_server_notifications_show_server_address">Show server address in notification</string>
+    <string name="live_server_notifications_show_server_address_description">Display your server address in the live notification title.</string>
+    <string name="live_server_notifications_unavailable">Live monitoring unavailable</string>
+    <string name="live_server_notifications_invalid_server">Enter a valid Suwayomi server connection before starting live monitoring.</string>
+    <string name="live_server_notifications_permission_required">Allow notifications for Amatsubu before starting live monitoring.</string>
+    <string name="live_server_notifications_open_settings">Open notification settings</string>
     <string name="channel_progress">Progress</string>
     <string name="channel_complete">Complete</string>
     <string name="channel_errors">Errors</string>

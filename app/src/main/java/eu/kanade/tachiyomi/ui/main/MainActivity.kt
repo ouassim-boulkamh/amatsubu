@@ -64,6 +64,7 @@ import eu.kanade.presentation.util.DefaultNavigatorScreenTransition
 import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.data.cache.ChapterCache
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
+import eu.kanade.tachiyomi.data.notification.ServerLiveNotificationManager
 import eu.kanade.tachiyomi.data.suwayomi.FetchSourceMangaType
 import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
@@ -199,6 +200,11 @@ class MainActivity : BaseActivity() {
                 chapterCache.clear()
             }
         }
+    }
+
+    override fun onPostResume() {
+        super.onPostResume()
+        ServerLiveNotificationManager.startIfEnabled(this)
     }
 
     override fun onProvideAssistContent(outContent: AssistContent) {
