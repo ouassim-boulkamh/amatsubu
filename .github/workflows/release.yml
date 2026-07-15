@@ -91,11 +91,24 @@ jobs:
         run: |
           set -e
 
-          mv app/build/outputs/apk/release/app-universal-release.apk amatsubu-universal-all-devices-${{ needs.get_tag.outputs.tag }}.apk
-          mv app/build/outputs/apk/release/app-arm64-v8a-release.apk amatsubu-arm64-v8a-modern-android-${{ needs.get_tag.outputs.tag }}.apk
-          mv app/build/outputs/apk/release/app-armeabi-v7a-release.apk amatsubu-armeabi-v7a-legacy-32bit-arm-${{ needs.get_tag.outputs.tag }}.apk
-          mv app/build/outputs/apk/release/app-x86-release.apk amatsubu-x86-32bit-emulator-${{ needs.get_tag.outputs.tag }}.apk
-          mv app/build/outputs/apk/release/app-x86_64-release.apk amatsubu-x86_64-64bit-emulator-${{ needs.get_tag.outputs.tag }}.apk
+          move_apk() {
+            source_pattern="$1"
+            destination="$2"
+
+            set -- app/build/outputs/apk/release/$source_pattern
+            if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then
+              echo "Expected exactly one APK for pattern $source_pattern, found: $*" >&2
+              exit 1
+            fi
+
+            mv "$1" "$destination"
+          }
+
+          move_apk "app-universal-release*.apk" "amatsubu-universal-all-devices-${{ needs.get_tag.outputs.tag }}.apk"
+          move_apk "app-arm64-v8a-release*.apk" "amatsubu-arm64-v8a-modern-android-${{ needs.get_tag.outputs.tag }}.apk"
+          move_apk "app-armeabi-v7a-release*.apk" "amatsubu-armeabi-v7a-legacy-32bit-arm-${{ needs.get_tag.outputs.tag }}.apk"
+          move_apk "app-x86-release*.apk" "amatsubu-x86-32bit-emulator-${{ needs.get_tag.outputs.tag }}.apk"
+          move_apk "app-x86_64-release*.apk" "amatsubu-x86_64-64bit-emulator-${{ needs.get_tag.outputs.tag }}.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
