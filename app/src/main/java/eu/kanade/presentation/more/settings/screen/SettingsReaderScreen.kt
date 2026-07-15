@@ -72,7 +72,8 @@ object SettingsReaderScreen : SearchableSettings {
     @Composable
     private fun getDisplayGroup(readerPreferences: ReaderPreferences): Preference.PreferenceGroup {
         val fullscreen by readerPreferences.fullscreen.collectAsState()
-        val verticalNavigatorForLongStrip by readerPreferences.verticalNavigatorForLongStrip.collectAsState()
+        val verticalNavigatorModes by readerPreferences.verticalNavigator.collectAsState()
+        val verticalNavigatorHeight by readerPreferences.verticalNavigatorHeight.collectAsState()
         return Preference.PreferenceGroup(
             title = stringResource(MR.strings.pref_category_display),
             preferenceItems = listOf(
@@ -109,14 +110,25 @@ object SettingsReaderScreen : SearchableSettings {
                     preference = readerPreferences.showPageNumber,
                     title = stringResource(MR.strings.pref_show_page_number),
                 ),
-                Preference.PreferenceItem.SwitchPreference(
-                    preference = readerPreferences.verticalNavigatorForLongStrip,
-                    title = stringResource(MR.strings.pref_webtoon_vertical_navigator),
+                Preference.PreferenceItem.MultiSelectListPreference(
+                    preference = readerPreferences.verticalNavigator,
+                    entries = ReadingMode.entries
+                        .filter { it != ReadingMode.DEFAULT }
+                        .associate { it.name to stringResource(it.stringRes) },
+                    title = stringResource(MR.strings.pref_vertical_navigator),
                 ),
                 Preference.PreferenceItem.SwitchPreference(
                     preference = readerPreferences.verticalNavigatorOnLeft,
                     title = stringResource(MR.strings.pref_webtoon_vertical_navigator_on_left),
-                    enabled = verticalNavigatorForLongStrip,
+                    enabled = verticalNavigatorModes.isNotEmpty(),
+                ),
+                Preference.PreferenceItem.SliderPreference(
+                    value = verticalNavigatorHeight,
+                    title = stringResource(MR.strings.pref_vertical_navigator_height),
+                    valueRange = 65..100,
+                    steps = 6,
+                    enabled = verticalNavigatorModes.isNotEmpty(),
+                    onValueChanged = readerPreferences.verticalNavigatorHeight::set,
                 ),
             ),
         )

@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderSettingsScreenModel
+import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import eu.kanade.tachiyomi.util.system.hasDisplayCutout
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.CheckboxItem
@@ -61,16 +62,34 @@ internal fun ColumnScope.GeneralPage(screenModel: ReaderSettingsScreenModel) {
         pref = screenModel.preferences.showPageNumber,
     )
 
-    val verticalNavigatorForLongStrip by screenModel.preferences.verticalNavigatorForLongStrip.collectAsState()
-    CheckboxItem(
-        label = stringResource(MR.strings.pref_webtoon_vertical_navigator),
-        pref = screenModel.preferences.verticalNavigatorForLongStrip,
-    )
+    val verticalNavigatorModes by screenModel.preferences.verticalNavigator.collectAsState()
+    SettingsChipRow(MR.strings.pref_vertical_navigator) {
+        ReadingMode.entries.filter { it != ReadingMode.DEFAULT }.forEach { mode ->
+            FilterChip(
+                selected = mode.name in verticalNavigatorModes,
+                onClick = {
+                    screenModel.preferences.verticalNavigator.set(
+                        if (mode.name in verticalNavigatorModes) verticalNavigatorModes - mode.name else verticalNavigatorModes + mode.name,
+                    )
+                },
+                label = { Text(stringResource(mode.stringRes)) },
+            )
+        }
+    }
 
-    if (verticalNavigatorForLongStrip) {
+    if (verticalNavigatorModes.isNotEmpty()) {
+        val verticalNavigatorHeightPref = screenModel.preferences.verticalNavigatorHeight
+        val verticalNavigatorHeight by verticalNavigatorHeightPref.collectAsState()
         CheckboxItem(
             label = stringResource(MR.strings.pref_webtoon_vertical_navigator_on_left),
             pref = screenModel.preferences.verticalNavigatorOnLeft,
+        )
+        SliderItem(
+            label = stringResource(MR.strings.pref_vertical_navigator_height),
+            value = verticalNavigatorHeight,
+            valueRange = 65..100,
+            steps = 6,
+            onChange = verticalNavigatorHeightPref::set,
         )
     }
 

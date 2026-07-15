@@ -28,14 +28,19 @@ class ReaderPreferences(
 
     val showPageNumber: Preference<Boolean> = preferenceStore.getBoolean("pref_show_page_number_key", true)
 
-    val verticalNavigatorForLongStrip: Preference<Boolean> = preferenceStore.getBoolean(
-        "pref_webtoon_vertical_navigator",
-        true,
+    val verticalNavigator: Preference<Set<String>> = preferenceStore.getStringSet(
+        "pref_vertical_navigator",
+        emptySet(),
     )
 
     val verticalNavigatorOnLeft: Preference<Boolean> = preferenceStore.getBoolean(
-        "pref_webtoon_vertical_navigator_on_left",
+        "pref_vertical_navigator_on_left",
         false,
+    )
+
+    val verticalNavigatorHeight: Preference<Int> = preferenceStore.getInt(
+        "pref_vertical_navigator_height",
+        65,
     )
 
     val showReadingMode: Preference<Boolean> = preferenceStore.getBoolean("pref_show_reading_mode", true)

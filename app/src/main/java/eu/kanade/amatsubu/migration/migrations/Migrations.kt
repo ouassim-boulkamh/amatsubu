@@ -7,4 +7,5 @@ val migrations: List<Migration>
         SetupLibraryUpdateMigration(),
         CategoryPreferencesCleanupMigration(),
         InstallationIdMigration(),
+        VerticalNavigatorMigration(),
     )

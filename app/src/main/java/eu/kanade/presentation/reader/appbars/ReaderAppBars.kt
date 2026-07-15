@@ -62,6 +62,8 @@ fun ReaderAppBars(
     currentPage: Int,
     totalPages: Int,
     onPageIndexChange: (Int) -> Unit,
+    onPageIndexChangeFinished: () -> Unit,
+    verticalNavigatorHeight: Float,
 
     readingMode: ReadingMode,
     onClickReadingMode: () -> Unit,
@@ -120,6 +122,8 @@ fun ReaderAppBars(
                                 currentPage = currentPage,
                                 totalPages = totalPages,
                                 onPageIndexChange = onPageIndexChange,
+                                onPageIndexChangeFinished = onPageIndexChangeFinished,
+                                verticalNavigatorHeight = verticalNavigatorHeight,
                             )
                         }
                     }
@@ -146,6 +150,8 @@ fun ReaderAppBars(
                         currentPage = currentPage,
                         totalPages = totalPages,
                         onPageIndexChange = onPageIndexChange,
+                        onPageIndexChangeFinished = onPageIndexChangeFinished,
+                        verticalNavigatorHeight = verticalNavigatorHeight,
                     )
                 }
                 ReaderBottomBar(

@@ -179,6 +179,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
                 application = this,
                 basePreferences = dependencies.basePreferences,
                 libraryPreferences = dependencies.libraryPreferences,
+                preferenceStore = preferenceStore,
             ),
             onMigrationComplete = {
                 logcat { "Updating last version to ${BuildConfig.VERSION_CODE}" }
