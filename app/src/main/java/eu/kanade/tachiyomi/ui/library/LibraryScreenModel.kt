@@ -408,6 +408,10 @@ internal class LibraryScreenModel(
     }
 
     private fun getServerLibraryTrackingFlow(): Flow<LibraryTrackingState> = flow {
+        if (suwayomiClient.getLibraryMangasSnapshot() != null) {
+            emit(LibraryTrackingState())
+        }
+
         val trackingData = runCatching {
             suwayomiClient.getLibraryTrackingData()
         }.onFailure { error ->
@@ -484,13 +488,18 @@ internal class LibraryScreenModel(
 
     private fun getServerCategoriesFlow(): Flow<List<Category>> {
         val serverCategoriesFlow = flow {
+            if (suwayomiClient.getLibraryMangasSnapshot() != null) {
+                mutableState.update { it.copy(serverUnavailable = true) }
+                emit(listOf(SuwayomiCategoryDto(id = 0, name = "Default")))
+            }
+
             val result = runCatching {
                 suwayomiClient.getCategories()
                     .ifEmpty { listOf(SuwayomiCategoryDto(id = 0, name = "Default")) }
             }.onFailure { error ->
                 if (error is CancellationException) throw error
                 logcat(LogPriority.ERROR, error) { "Failed to load server library categories" }
-                if (error.isSuwayomiServerUnavailable()) {
+                if (shouldUseOfflineLibrarySnapshot(error, suwayomiClient.getLibraryMangasSnapshot())) {
                     mutableState.update { it.copy(serverUnavailable = true) }
                 }
             }.onSuccess {
@@ -519,6 +528,12 @@ internal class LibraryScreenModel(
     }
 
     private fun getServerLibraryMangaFlow(): Flow<List<LibraryManga>> = flow {
+        suwayomiClient.getLibraryMangasSnapshot()?.let { snapshot ->
+            clearServerLibraryDerivedCaches()
+            mutableState.update { it.copy(serverUnavailable = true) }
+            emit(snapshot.toLibraryMangaSnapshotItems())
+        }
+
         var serverUnavailable = false
         val categories = runCatching {
             suwayomiClient.getCategories()
@@ -526,15 +541,10 @@ internal class LibraryScreenModel(
         }.onFailure { error ->
             if (error is CancellationException) throw error
             logcat(LogPriority.ERROR, error) { "Failed to load server library categories" }
-            serverUnavailable = error.isSuwayomiServerUnavailable()
+            serverUnavailable = shouldUseOfflineLibrarySnapshot(error, suwayomiClient.getLibraryMangasSnapshot())
         }.getOrDefault(listOf(SuwayomiCategoryDto(id = 0, name = "Default")))
 
-        serverDownloadCounts.clear()
-        localDownloadCounts.clear()
-        serverSourceLanguages.clear()
-        serverSourceNames.clear()
-        serverLocalSourceIds.clear()
-        serverStaleSnapshotSyncedAt.clear()
+        clearServerLibraryDerivedCaches()
 
         if (serverUnavailable) {
             val snapshot = suwayomiClient.getLibraryMangasSnapshot()
@@ -584,7 +594,12 @@ internal class LibraryScreenModel(
                 }
             }.onFailure { error ->
                 logcat(LogPriority.ERROR, error) { "Failed to load server category ${category.id} manga" }
-                serverUnavailable = serverUnavailable || error.isSuwayomiServerUnavailable()
+                val snapshot = if (category.id == 0) {
+                    suwayomiClient.getLibraryMangasSnapshot()
+                } else {
+                    suwayomiClient.getCategoryMangasSnapshot(category.id)
+                }
+                serverUnavailable = serverUnavailable || shouldUseOfflineLibrarySnapshot(error, snapshot)
             }
             val categorySnapshot = if (categoryMangasResult.isFailure && serverUnavailable) {
                 if (category.id == 0) {
@@ -641,6 +656,15 @@ internal class LibraryScreenModel(
         }
         mutableState.update { it.copy(serverUnavailable = serverUnavailable) }
         emit(mangaById.values.toList())
+    }
+
+    private fun clearServerLibraryDerivedCaches() {
+        serverDownloadCounts.clear()
+        localDownloadCounts.clear()
+        serverSourceLanguages.clear()
+        serverSourceNames.clear()
+        serverLocalSourceIds.clear()
+        serverStaleSnapshotSyncedAt.clear()
     }
 
     private suspend fun SuwayomiSnapshot<List<SuwayomiMangaDto>>?.toLibraryMangaSnapshotItems(): List<LibraryManga> {
@@ -1290,4 +1314,8 @@ private fun SuwayomiLibraryUpdateStatusDto.toLibraryUpdateState(): LibraryUpdate
         totalJobs = jobsInfo.totalJobs,
         finishedJobs = jobsInfo.finishedJobs,
     )
+}
+
+internal fun <T> shouldUseOfflineLibrarySnapshot(error: Throwable, snapshot: SuwayomiSnapshot<T>?): Boolean {
+    return error.isSuwayomiServerUnavailable() || snapshot != null
 }

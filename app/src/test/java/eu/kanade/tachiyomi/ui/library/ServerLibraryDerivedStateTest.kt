@@ -9,10 +9,12 @@ import eu.kanade.tachiyomi.data.suwayomi.SuwayomiLatestFetchedChapterDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiLatestUploadedChapterDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiMangaMetaDto
+import eu.kanade.tachiyomi.data.suwayomi.SuwayomiSnapshot
 import eu.kanade.tachiyomi.data.suwayomi.UpdateStrategy
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import java.net.ConnectException
 
 class ServerLibraryDerivedStateTest {
 
@@ -134,6 +136,22 @@ class ServerLibraryDerivedStateTest {
         assertEquals(3, aggregate.downloadCount)
         assertEquals(45L, aggregate.latestUpload)
         assertEquals(12_000L, aggregate.chapterFetchedAt)
+    }
+
+    @Test
+    fun `offline library snapshot is used for sparse disconnected server responses`() {
+        val error = IllegalStateException("Suwayomi server returned no categories")
+        val snapshot = SuwayomiSnapshot(value = listOf(manga()), syncedAt = 1L)
+
+        assertEquals(true, shouldUseOfflineLibrarySnapshot(error, snapshot))
+        assertEquals(false, shouldUseOfflineLibrarySnapshot<List<SuwayomiMangaDto>>(error, null))
+    }
+
+    @Test
+    fun `offline library snapshot is used for explicit network failures`() {
+        val error = ConnectException("failed to connect")
+
+        assertEquals(true, shouldUseOfflineLibrarySnapshot<List<SuwayomiMangaDto>>(error, null))
     }
 
     @Test

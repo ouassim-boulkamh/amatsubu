@@ -265,10 +265,12 @@ class MangaScreenModel private constructor(
         )
     }
 
-    private suspend fun loadServerMangaSnapshotState(error: Throwable): Boolean {
-        if (!error.isSuwayomiServerUnavailable()) return false
+    private suspend fun loadServerMangaSnapshotState(error: Throwable? = null): Boolean {
         val mangaSnapshot = suwayomiClient.getMangaSnapshot(mangaId.toInt()) ?: return false
         val chapterSnapshot = suwayomiClient.getChaptersSnapshot(mangaId.toInt()) ?: return false
+        if (error != null && !error.isSuwayomiServerUnavailable()) {
+            logcat(LogPriority.ERROR, error) { "Using cached Suwayomi manga state after server response failure" }
+        }
         applyServerMangaState(
             partialErrors = emptyList(),
             serverManga = mangaSnapshot.value,
@@ -451,6 +453,7 @@ class MangaScreenModel private constructor(
     }
 
     private suspend fun loadInitialServerMangaState(fetchChapters: Boolean = false) {
+        loadServerMangaSnapshotState()
         try {
             loadServerMangaState(fetchChapters = fetchChapters)
         } catch (e: Throwable) {
