@@ -84,6 +84,9 @@ android {
         buildConfigField("String", "COMMIT_COUNT", "\"${getLatestCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getLatestCommitSha()}\"")
         buildConfigField("String", "BUILD_TIME", "\"${getBuildTime(useLatestCommitTime = false)}\"")
+        // GitHub-distributed stable builds use the in-app APK updater. Preview, FOSS,
+        // and debug variants deliberately do not query or offer direct APK updates.
+        buildConfigField("boolean", "UPDATER_ENABLED", "false")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -105,6 +108,7 @@ android {
             proguardFiles("proguard-android-optimize.txt", "proguard-rules.pro")
 
             buildConfigField("String", "BUILD_TIME", "\"${getBuildTime(useLatestCommitTime = true)}\"")
+            buildConfigField("boolean", "UPDATER_ENABLED", "true")
         }
 
         val commonMatchingFallbacks = listOf(release.name)
@@ -115,6 +119,8 @@ android {
             applicationIdSuffix = ".foss"
 
             matchingFallbacks.addAll(commonMatchingFallbacks)
+
+            buildConfigField("boolean", "UPDATER_ENABLED", "false")
         }
         create("preview") {
             initWith(release)
@@ -127,6 +133,7 @@ android {
             matchingFallbacks.addAll(commonMatchingFallbacks)
 
             buildConfigField("String", "BUILD_TIME", "\"${getBuildTime(useLatestCommitTime = false)}\"")
+            buildConfigField("boolean", "UPDATER_ENABLED", "false")
         }
     }
 

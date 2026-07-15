@@ -8,7 +8,6 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.app.NotificationManagerCompat
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -24,6 +23,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -52,8 +52,8 @@ import eu.kanade.tachiyomi.data.suwayomi.SuwayomiPreferences.Companion.AUTH_TOKE
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiServerAboutDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiServerSettingsDto
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiWebUiAboutDto
-import eu.kanade.tachiyomi.data.suwayomi.isValidSuwayomiServerPort
 import eu.kanade.tachiyomi.data.suwayomi.isValidSuwayomiConnectionSettings
+import eu.kanade.tachiyomi.data.suwayomi.isValidSuwayomiServerPort
 import eu.kanade.tachiyomi.data.suwayomi.serverSettingsAffectedEntities
 import eu.kanade.tachiyomi.data.suwayomi.successMessage
 import eu.kanade.tachiyomi.data.suwayomi.userMessage
@@ -368,7 +368,8 @@ object SettingsServerScreen : SearchableSettings {
                                     return@SwitchPreference false
                                 }
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                                    context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                                    context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
+                                    PackageManager.PERMISSION_GRANTED
                                 ) {
                                     notificationPermissionRequester.launch(Manifest.permission.POST_NOTIFICATIONS)
                                     return@SwitchPreference false
@@ -385,7 +386,9 @@ object SettingsServerScreen : SearchableSettings {
                         Preference.PreferenceItem.SwitchPreference(
                             preference = preferences.showServerAddressInLiveNotification,
                             title = stringResource(MR.strings.live_server_notifications_show_server_address),
-                            subtitle = stringResource(MR.strings.live_server_notifications_show_server_address_description),
+                            subtitle = stringResource(
+                                MR.strings.live_server_notifications_show_server_address_description,
+                            ),
                             enabled = liveServerNotifications,
                         ),
                     ),

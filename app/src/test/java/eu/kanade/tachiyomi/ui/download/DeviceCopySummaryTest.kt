@@ -126,7 +126,10 @@ class DeviceCopySummaryTest {
     @Test
     fun `chapter status labels preserve manager readiness semantics`() {
         assertEquals("Ready", copy(chapterId = 1).deviceCopyChapterStatusLabel())
-        assertEquals("Stale", copy(chapterId = 2, freshness = ClientChapterCopyFreshness.STALE).deviceCopyChapterStatusLabel())
+        assertEquals(
+            "Stale",
+            copy(chapterId = 2, freshness = ClientChapterCopyFreshness.STALE).deviceCopyChapterStatusLabel(),
+        )
         assertEquals(
             "Unverified",
             copy(chapterId = 3, freshness = ClientChapterCopyFreshness.UNVERIFIED).deviceCopyChapterStatusLabel(),
@@ -141,7 +144,10 @@ class DeviceCopySummaryTest {
                 downloadedPageCount = 1,
             ).deviceCopyChapterStatusLabel(),
         )
-        assertEquals("Failed", copy(chapterId = 5, status = ClientChapterCopyStatus.FAILED).deviceCopyChapterStatusLabel())
+        assertEquals(
+            "Failed",
+            copy(chapterId = 5, status = ClientChapterCopyStatus.FAILED).deviceCopyChapterStatusLabel(),
+        )
         assertEquals(
             "Orphaned",
             copy(chapterId = 6, freshness = ClientChapterCopyFreshness.ORPHANED).deviceCopyChapterStatusLabel(),

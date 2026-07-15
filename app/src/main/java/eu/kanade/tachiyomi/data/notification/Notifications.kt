@@ -19,6 +19,10 @@ object Notifications {
      * Common notification channel and ids used anywhere.
      */
     const val CHANNEL_COMMON = "common_channel"
+    const val CHANNEL_APP_UPDATE = "app_update_channel"
+    const val ID_APP_UPDATER = -2
+    const val ID_APP_UPDATE_PROMPT = -4
+    const val ID_APP_UPDATE_ERROR = -5
     const val ID_DOWNLOAD_IMAGE = 2
     const val ID_NOTIFICATION_ACTION_ERROR = -3
     const val CHANNEL_DOWNLOAD_PROGRESS = "server_download_progress_channel"
@@ -122,6 +126,10 @@ object Notifications {
             listOf(
                 buildNotificationChannel(CHANNEL_COMMON, IMPORTANCE_LOW) {
                     setName(context.stringResource(MR.strings.channel_common))
+                },
+                buildNotificationChannel(CHANNEL_APP_UPDATE, IMPORTANCE_DEFAULT) {
+                    setName(context.stringResource(MR.strings.channel_app_updates))
+                    setShowBadge(false)
                 },
                 buildNotificationChannel(CHANNEL_LIVE_SERVER_NOTIFICATIONS, IMPORTANCE_LOW) {
                     setName(context.stringResource(MR.strings.channel_live_server_notifications))

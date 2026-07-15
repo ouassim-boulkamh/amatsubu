@@ -10,6 +10,7 @@ import com.eygraber.sqldelight.androidx.driver.AndroidxSqliteDriver
 import com.eygraber.sqldelight.androidx.driver.FileProvider
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.library.service.LibraryPreferences
+import eu.kanade.domain.release.interactor.GetApplicationRelease
 import eu.kanade.domain.source.interactor.GetIncognitoState
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.domain.storage.service.StoragePreferences
@@ -39,6 +40,7 @@ import tachiyomi.core.common.preference.AndroidPreferenceStore
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.storage.AndroidStorageFolderProvider
 import tachiyomi.data.Database
+import tachiyomi.data.release.ReleaseServiceImpl
 import tachiyomi.presentation.widget.UpdatesWidgetDataSource
 
 internal class AppDependencies(
@@ -49,6 +51,7 @@ internal class AppDependencies(
     val clientMangaMetadataStore: ClientMangaMetadataStore,
     val coverCache: CoverCache,
     val getIncognitoState: GetIncognitoState,
+    val getApplicationRelease: GetApplicationRelease,
     val imageSaver: ImageSaver,
     val libraryPreferences: LibraryPreferences,
     val networkHelper: NetworkHelper,
@@ -111,6 +114,7 @@ internal fun createAppDependencies(application: Application): AppDependencies {
         clientMangaMetadataStore = ClientMangaMetadataStore(database, json),
         coverCache = CoverCache(application),
         getIncognitoState = GetIncognitoState(basePreferences, sourcePreferences),
+        getApplicationRelease = GetApplicationRelease(ReleaseServiceImpl(networkHelper, json), preferenceStore),
         imageSaver = ImageSaver(application),
         libraryPreferences = LibraryPreferences(preferenceStore),
         networkHelper = networkHelper,

@@ -42,6 +42,24 @@ internal class AmatsubuDevice {
         assertTag(Selectors.Tags.SOURCE_SEARCH_BUTTON)
     }
 
+    fun launchControlledUpdatePrompt() {
+        device.pressHome()
+        startApp(ACTION_AUTOMATION_APP_UPDATE) {
+            putExtra("update_version", "v0.1.1")
+            putExtra(
+                "update_changelog",
+                """
+                    ## Controlled update
+
+                    - Restored updater prompt
+                    - Validates Markdown changelog rendering
+                """.trimIndent(),
+            )
+            putExtra("update_release_link", "https://example.com/releases/v0.1.1")
+            putExtra("update_download_link", "https://example.com/amatsubu-arm64-v8a-modern-android-v0.1.1.apk")
+        }
+    }
+
     private fun startApp(action: String? = null, configure: Intent.() -> Unit = {}) {
         val intent = context.packageManager.getLaunchIntentForPackage(packageName)
             ?: error("No launch intent found for $packageName")
@@ -142,6 +160,12 @@ internal class AmatsubuDevice {
         }
     }
 
+    fun assertDesc(desc: String) {
+        check(device.wait(Until.hasObject(By.desc(desc)), DEFAULT_TIMEOUT_MILLIS)) {
+            "Timed out waiting for content description \"$desc\""
+        }
+    }
+
     fun assertAnyText(vararg texts: String) {
         check(hasAnyText(*texts)) {
             "Timed out waiting for any text: ${texts.joinToString()}"
@@ -213,7 +237,7 @@ internal class AmatsubuDevice {
             .putStringSet("source_languages", enabledLanguages + "all")
             .putStringSet("hidden_catalogues", disabledSources - sourceId)
             .putStringSet("pinned_catalogues", pinnedSources + sourceId)
-            .putString("amatsubu_server_url", "http://127.0.0.1:4567/")
+            .putString("amatsubu_server_url", "http://192.168.137.1:4568/")
             .putBoolean("browse_hide_in_library_items", false)
             .apply()
     }
@@ -249,6 +273,7 @@ internal class AmatsubuDevice {
 
     private companion object {
         const val ACTION_AUTOMATION_SOURCE = "eu.kanade.tachiyomi.DEBUG_AUTOMATION_SOURCE"
+        const val ACTION_AUTOMATION_APP_UPDATE = "eu.kanade.tachiyomi.DEBUG_AUTOMATION_APP_UPDATE"
         const val DEFAULT_TIMEOUT_MILLIS = 10_000L
         const val SHORT_TIMEOUT_MILLIS = 2_000L
         const val POLL_MILLIS = 250L

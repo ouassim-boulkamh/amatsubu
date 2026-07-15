@@ -134,7 +134,9 @@ internal class SuwayomiGraphQlSubscriptionClient(
                         }
                         val data = response.data ?: return
                         if (trySend(mapper(data)).isFailure) {
-                            logcat { "Ignored Suwayomi websocket update after subscription closed operation=$operationName" }
+                            logcat {
+                                "Ignored Suwayomi websocket update after subscription closed operation=$operationName"
+                            }
                         }
                     }
                     "error" -> close(

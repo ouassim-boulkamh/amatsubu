@@ -53,6 +53,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.amatsubu.migration.Migrator
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.library.service.LibraryPreferences
+import eu.kanade.domain.release.interactor.GetApplicationRelease
 import eu.kanade.domain.source.interactor.GetIncognitoState
 import eu.kanade.presentation.components.AppStateBanners
 import eu.kanade.presentation.components.DownloadedOnlyBannerBackgroundColor
@@ -66,6 +67,7 @@ import eu.kanade.tachiyomi.data.cache.ChapterCache
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.notification.ServerLiveNotificationManager
 import eu.kanade.tachiyomi.data.suwayomi.FetchSourceMangaType
+import eu.kanade.tachiyomi.data.updater.AppUpdateChecker
 import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
 import eu.kanade.tachiyomi.ui.browse.ServerGlobalSearchScreen
@@ -73,18 +75,22 @@ import eu.kanade.tachiyomi.ui.browse.ServerSourceMangaScreen
 import eu.kanade.tachiyomi.ui.deeplink.DeepLinkScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
+import eu.kanade.tachiyomi.ui.more.NewUpdateScreen
 import eu.kanade.tachiyomi.ui.more.OnboardingScreen
 import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import eu.kanade.tachiyomi.util.system.dpToPx
 import eu.kanade.tachiyomi.util.system.isDebugBuildType
 import eu.kanade.tachiyomi.util.system.isNavigationBarNeedsScrim
+import eu.kanade.tachiyomi.util.system.updaterEnabled
 import eu.kanade.tachiyomi.util.view.setComposeContent
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import logcat.LogPriority
 import tachiyomi.core.common.Constants
 import tachiyomi.core.common.util.lang.launchIO
+import tachiyomi.core.common.util.system.logcat
 import tachiyomi.presentation.core.components.material.Scaffold
 
 class MainActivity : BaseActivity() {
@@ -185,6 +191,7 @@ class MainActivity : BaseActivity() {
 
                 HandleOnNewIntent(context = context, navigator = navigator)
                 ShowOnboarding()
+                CheckForAppUpdate()
             }
         }
 
@@ -238,6 +245,31 @@ class MainActivity : BaseActivity() {
                 navigator.lastItem !is OnboardingScreen
             ) {
                 navigator.push(OnboardingScreen())
+            }
+        }
+    }
+
+    @Composable
+    private fun CheckForAppUpdate() {
+        val context = LocalContext.current
+        val navigator = LocalNavigator.currentOrThrow
+        LaunchedEffect(Unit) {
+            // Do not place an update prompt over first-run server onboarding.
+            if (!updaterEnabled || !preferences.shownOnboardingFlow.get()) return@LaunchedEffect
+            try {
+                val result = AppUpdateChecker(context).checkForUpdate()
+                if (result is GetApplicationRelease.Result.NewUpdate) {
+                    navigator.push(
+                        NewUpdateScreen(
+                            result.release.version,
+                            result.release.info,
+                            result.release.releaseLink,
+                            result.release.downloadLink,
+                        ),
+                    )
+                }
+            } catch (error: Exception) {
+                logcat(LogPriority.ERROR, error) { "Automatic app update check failed" }
             }
         }
     }
@@ -374,6 +406,20 @@ class MainActivity : BaseActivity() {
                     ),
                 )
             }
+            INTENT_AUTOMATION_APP_UPDATE -> {
+                if (!BuildConfig.DEBUG) return false
+                navigator.popUntilRoot()
+                navigator.push(
+                    NewUpdateScreen(
+                        versionName = intent.getStringExtra(INTENT_UPDATE_VERSION) ?: "v0.1.1",
+                        changelogInfo = intent.getStringExtra(INTENT_UPDATE_CHANGELOG).orEmpty(),
+                        releaseLink = intent.getStringExtra(INTENT_UPDATE_RELEASE_LINK)
+                            ?: "https://example.com/releases/v0.1.1",
+                        downloadLink = intent.getStringExtra(INTENT_UPDATE_DOWNLOAD_LINK)
+                            ?: "https://example.com/amatsubu-arm64-v8a-modern-android-v0.1.1.apk",
+                    ),
+                )
+            }
             Intent.ACTION_VIEW -> {
                 // Handling opening of backup files
                 if (intent.data.toString().endsWith(".tachibk")) {
@@ -393,6 +439,7 @@ class MainActivity : BaseActivity() {
         const val INTENT_SEARCH_QUERY = "query"
         const val INTENT_SEARCH_FILTER = "filter"
         const val INTENT_AUTOMATION_SOURCE = "eu.kanade.tachiyomi.DEBUG_AUTOMATION_SOURCE"
+        const val INTENT_AUTOMATION_APP_UPDATE = "eu.kanade.tachiyomi.DEBUG_AUTOMATION_APP_UPDATE"
         const val INTENT_SOURCE_ID = "source_id"
         const val INTENT_SOURCE_NAME = "source_name"
         const val INTENT_SOURCE_DISPLAY_NAME = "source_display_name"
@@ -400,6 +447,10 @@ class MainActivity : BaseActivity() {
         const val INTENT_SOURCE_IS_CONFIGURABLE = "source_is_configurable"
         const val INTENT_SOURCE_INITIAL_TYPE = "source_initial_type"
         const val INTENT_SOURCE_INITIAL_QUERY = "source_initial_query"
+        const val INTENT_UPDATE_VERSION = "update_version"
+        const val INTENT_UPDATE_CHANGELOG = "update_changelog"
+        const val INTENT_UPDATE_RELEASE_LINK = "update_release_link"
+        const val INTENT_UPDATE_DOWNLOAD_LINK = "update_download_link"
     }
 }
 

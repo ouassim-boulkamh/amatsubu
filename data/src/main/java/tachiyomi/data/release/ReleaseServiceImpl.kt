@@ -23,7 +23,8 @@ class ReleaseServiceImpl(
                 .parseAs<GithubRelease>()
         }
 
-        val downloadLink = getDownloadLink(release = release, isFoss = arguments.isFoss) ?: return null
+        val downloadLink =
+            selectDownloadLink(release.assets, Build.SUPPORTED_ABIS.firstOrNull(), arguments.isFoss) ?: return null
 
         return Release(
             version = release.version,
@@ -35,21 +36,16 @@ class ReleaseServiceImpl(
         )
     }
 
-    private fun getDownloadLink(release: GithubRelease, isFoss: Boolean): String? {
-        val map = release.assets.associate { asset ->
-            BUILD_TYPES.find { "-$it" in asset.name } to asset.downloadLink
-        }
-
-        return if (!isFoss) {
-            map[Build.SUPPORTED_ABIS[0]] ?: map[null]
-        } else {
-            map[FOSS]
-        }
-    }
-
     companion object {
         private const val FOSS = "foss"
         private val BUILD_TYPES = listOf(FOSS, "arm64-v8a", "armeabi-v7a", "x86_64", "x86")
+
+        fun selectDownloadLink(assets: List<GitHubAsset>, supportedAbi: String?, isFoss: Boolean): String? {
+            val map = assets.associate { asset ->
+                BUILD_TYPES.find { "-$it" in asset.name } to asset.downloadLink
+            }
+            return if (isFoss) map[FOSS] else supportedAbi?.let(map::get) ?: map[null]
+        }
 
         /**
          * Regular expression that matches a mention to a valid GitHub username, like it's

@@ -513,7 +513,8 @@ private val DeviceCopyFilter.label: String
 private fun DeviceCopyMangaSummary.readinessLine(): String {
     return when (readiness) {
         DeviceCopyReadiness.READY -> "$completeFreshCount ready"
-        DeviceCopyReadiness.PARTIAL -> "$completeFreshCount ready, ${totalChapterCopyCount - completeFreshCount} not ready"
+        DeviceCopyReadiness.PARTIAL ->
+            "$completeFreshCount ready, ${totalChapterCopyCount - completeFreshCount} not ready"
         DeviceCopyReadiness.NEEDS_ATTENTION -> "Not ready"
         DeviceCopyReadiness.ORPHANED -> "Orphaned"
     }

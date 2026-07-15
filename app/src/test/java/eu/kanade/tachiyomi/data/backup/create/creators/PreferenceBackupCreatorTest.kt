@@ -98,7 +98,12 @@ class PreferenceBackupCreatorTest {
             publicOnly.map { it.key }.toSet(),
         )
         assertEquals(
-            setOf("theme", privateKey, "amatsubu_live_server_notifications", "amatsubu_show_server_address_in_live_notification"),
+            setOf(
+                "theme",
+                privateKey,
+                "amatsubu_live_server_notifications",
+                "amatsubu_show_server_address_in_live_notification",
+            ),
             withPrivate.map { it.key }.toSet(),
         )
         assertFalse(withPrivate.any { it.key == appStateKey })

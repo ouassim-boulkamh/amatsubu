@@ -4,11 +4,11 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.awaitCancellation
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -28,7 +28,14 @@ class SuwayomiLiveStatusClientTest {
         coEvery { graphQlClient.getLibraryUpdateStatus() } returns SuwayomiLibraryUpdateStatusDto()
         every { subscriptionClient.libraryUpdateStatusChanged(any()) } returns flow { awaitCancellation() }
 
-        val job = launch { SuwayomiLiveStatusClient(graphQlClient, subscriptionClient).libraryUpdateStatusFlow(monitorMode = true).collect {} }
+        val job =
+            launch {
+                SuwayomiLiveStatusClient(
+                    graphQlClient,
+                    subscriptionClient,
+                ).libraryUpdateStatusFlow(monitorMode = true).collect {
+                }
+            }
         runCurrent()
         coVerify(exactly = 1) { graphQlClient.getLibraryUpdateStatus() }
 
@@ -45,7 +52,14 @@ class SuwayomiLiveStatusClientTest {
         coEvery { graphQlClient.getLibraryUpdateStatus() } returns SuwayomiLibraryUpdateStatusDto()
         every { subscriptionClient.libraryUpdateStatusChanged(any()) } returns flow { throw IOException("offline") }
 
-        val job = launch { SuwayomiLiveStatusClient(graphQlClient, subscriptionClient).libraryUpdateStatusFlow(monitorMode = true).collect {} }
+        val job =
+            launch {
+                SuwayomiLiveStatusClient(
+                    graphQlClient,
+                    subscriptionClient,
+                ).libraryUpdateStatusFlow(monitorMode = true).collect {
+                }
+            }
         runCurrent()
         coVerify(exactly = 1) { subscriptionClient.libraryUpdateStatusChanged(any()) }
 

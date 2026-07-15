@@ -6,13 +6,13 @@ import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.util.lang.toTimestampString
 import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.notificationBuilder
+import eu.kanade.tachiyomi.util.system.notify
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -93,7 +93,7 @@ internal class ServerLiveNotificationService : Service() {
     }
 
     private fun updateNotification(state: MonitorState) {
-        NotificationManagerCompat.from(this).notify(
+        notify(
             Notifications.ID_LIVE_SERVER_NOTIFICATIONS,
             monitorNotification(state),
         )
@@ -103,10 +103,13 @@ internal class ServerLiveNotificationService : Service() {
         val stopIntent = PendingIntent.getBroadcast(
             this,
             REQUEST_STOP,
-            Intent(this, NotificationReceiver::class.java).setAction(NotificationReceiver.ACTION_STOP_LIVE_SERVER_NOTIFICATIONS),
+            Intent(this, NotificationReceiver::class.java).setAction(
+                NotificationReceiver.ACTION_STOP_LIVE_SERVER_NOTIFICATIONS,
+            ),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val showServerAddress = appDependencies.suwayomiClientProvider.preferences.showServerAddressInLiveNotification.get()
+        val showServerAddress =
+            appDependencies.suwayomiClientProvider.preferences.showServerAddressInLiveNotification.get()
         val titleResource = when (state) {
             MonitorState.CONNECTED -> if (showServerAddress) {
                 MR.strings.live_server_notifications_connected_to_server
@@ -125,7 +128,11 @@ internal class ServerLiveNotificationService : Service() {
             }
         }
         val titleArguments = if (showServerAddress) {
-            arrayOf(runCatching { appDependencies.suwayomiClientProvider.preferences.notificationServerAddress() }.getOrDefault("127.0.0.1:4567"))
+            arrayOf(
+                runCatching {
+                    appDependencies.suwayomiClientProvider.preferences.notificationServerAddress()
+                }.getOrDefault("127.0.0.1:4567"),
+            )
         } else {
             emptyArray()
         }
@@ -134,7 +141,9 @@ internal class ServerLiveNotificationService : Service() {
             setContentTitle(stringResource(titleResource, *titleArguments))
             setContentIntent(openAppIntent())
             lastSuccessfulCheckAt?.let {
-                setContentText(stringResource(MR.strings.live_server_notifications_last_checked, Date(it).toTimestampString()))
+                setContentText(
+                    stringResource(MR.strings.live_server_notifications_last_checked, Date(it).toTimestampString()),
+                )
             }
             setOngoing(true)
             setOnlyAlertOnce(true)

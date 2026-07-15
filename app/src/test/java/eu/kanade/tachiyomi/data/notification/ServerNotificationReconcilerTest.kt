@@ -209,7 +209,9 @@ class ServerNotificationReconcilerTest {
         assertFalse(result.completed)
         assertEquals(1, result.unnotifiedChapterCount)
         assertEquals(0, reconnectResult.unnotifiedChapterCount)
-        verify(exactly = 1) { renderer.showNewChapters(match { it.map(SuwayomiChapterWithMangaDto::id) == listOf(11) }) }
+        verify(exactly = 1) {
+            renderer.showNewChapters(match { it.map(SuwayomiChapterWithMangaDto::id) == listOf(11) })
+        }
     }
 
     @Test

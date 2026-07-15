@@ -116,7 +116,7 @@ class GetApplicationReleaseTest {
     }
 
     @Test
-    fun `When stable release has same core version as alpha expect new update`() = runTest {
+    fun `When stable release has same core version as alpha 2 expect new update`() = runTest {
         every { preference.get() } returns 0
         every { preference.set(any()) }.answers { }
 
@@ -134,7 +134,7 @@ class GetApplicationReleaseTest {
                 isFoss = false,
                 isPreview = false,
                 commitCount = 0,
-                versionName = "0.1.0-alpha.1",
+                versionName = "0.1.0-alpha.2",
                 repository = "test",
             ),
         )
@@ -169,6 +169,23 @@ class GetApplicationReleaseTest {
         )
 
         result shouldBe GetApplicationRelease.Result.NoNewUpdate
+    }
+
+    @Test
+    fun `When stable release has newer patch expect new update`() = runTest {
+        every { preference.get() } returns 0
+        every { preference.set(any()) }.answers { }
+        coEvery { releaseService.latest(any()) } returns
+            Release("v0.1.1", "info", "https://example.com", "https://example.com/app.apk")
+
+        val result = getApplicationRelease.await(
+            GetApplicationRelease.Arguments(false, false, 0, "0.1.0", "ouassim-boulkamh/amatsubu"),
+        )
+
+        result shouldBe
+            GetApplicationRelease.Result.NewUpdate(
+                Release("v0.1.1", "info", "https://example.com", "https://example.com/app.apk"),
+            )
     }
 
     @Test

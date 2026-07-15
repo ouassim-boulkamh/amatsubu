@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.data.suwayomi
 
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -8,10 +9,9 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.cancelAndJoin
-import kotlin.coroutines.cancellation.CancellationException
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -84,7 +84,9 @@ internal class SuwayomiLiveStatusClient(
                     }
                 } catch (error: Throwable) {
                     if (error is CancellationException) throw error
-                    logcat(LogPriority.WARN, error) { "Suwayomi live library subscription disconnected; retrying in $retryDelay" }
+                    logcat(LogPriority.WARN, error) {
+                        "Suwayomi live library subscription disconnected; retrying in $retryDelay"
+                    }
                 } finally {
                     healthReconciler.cancelAndJoin()
                 }
@@ -101,7 +103,10 @@ internal class SuwayomiLiveStatusClient(
         maxUpdates: Int,
     ): Flow<SuwayomiLibraryUpdateStatusDto> = channelFlow {
         var latestStatus: SuwayomiLibraryUpdateStatusDto? = null
-        suspend fun sendStatus(status: SuwayomiLibraryUpdateStatusDto) { latestStatus = status; send(status) }
+        suspend fun sendStatus(status: SuwayomiLibraryUpdateStatusDto) {
+            latestStatus = status
+            send(status)
+        }
         sendStatus(graphQlClient.getLibraryUpdateStatus())
         val statusReconciler = launch {
             while (isActive) {

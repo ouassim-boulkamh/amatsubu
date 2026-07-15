@@ -6,8 +6,8 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.data.suwayomi.isValidSuwayomiConnectionSettings
+import eu.kanade.tachiyomi.di.appDependencies
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 
@@ -49,9 +49,12 @@ internal object ServerLiveNotificationManager {
             return false
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            appContext.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            appContext.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
         ) {
-            logcat(LogPriority.WARN) { "Did not auto-start live Suwayomi monitoring; notification permission is missing" }
+            logcat(LogPriority.WARN) {
+                "Did not auto-start live Suwayomi monitoring; notification permission is missing"
+            }
             return false
         }
         if (!NotificationManagerCompat.from(appContext).areNotificationsEnabled()) {

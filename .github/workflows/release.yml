@@ -1,11 +1,20 @@
 name: Release
 on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag name to use for the release and APK asset suffix, e.g. v0.1.0-validation.1
+        required: true
+        type: string
   push:
     tags:
       - v*
 
 env:
   AMATSUBU_GITHUB_RELEASE: true
+
+permissions:
+  contents: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -21,7 +30,36 @@ jobs:
     steps:
       - name: Get tag name
         id: extract
-        run: echo "tag=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -e
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag="$INPUT_TAG"
+          else
+            tag="${GITHUB_REF#refs/tags/}"
+          fi
+
+          case "$tag" in
+            v*) ;;
+            *)
+              echo "Release tag must start with 'v', got: $tag" >&2
+              exit 1
+              ;;
+          esac
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            case "$tag" in
+              *-validation*) ;;
+              *)
+                echo "Manual validation release tag must contain '-validation', got: $tag" >&2
+                exit 1
+                ;;
+            esac
+          fi
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
   build:
     name: Build
@@ -42,7 +80,7 @@ jobs:
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
 
       - name: Build
-        run: ./gradlew assembleRelease -Pinclude-telemetry -Penable-updater
+        run: ./gradlew assembleRelease -Pinclude-telemetry
         env:
           storeFileBase64: ${{ secrets.SIGNING_KEY }}
           storePassword: ${{ secrets.KEY_STORE_PASSWORD }}
@@ -115,6 +153,6 @@ jobs:
             amatsubu-armeabi-v7a-legacy-32bit-arm-${{ needs.get_tag.outputs.tag }}.apk
             amatsubu-x86-32bit-emulator-${{ needs.get_tag.outputs.tag }}.apk
             amatsubu-x86_64-64bit-emulator-${{ needs.get_tag.outputs.tag }}.apk
-          draft: false
-          prerelease: false
+          draft: ${{ github.event_name == 'workflow_dispatch' }}
+          prerelease: ${{ github.event_name == 'workflow_dispatch' }}
           token: ${{ secrets.GITHUB_TOKEN }}

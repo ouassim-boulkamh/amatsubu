@@ -14,9 +14,9 @@ import eu.kanade.tachiyomi.data.backup.create.buildServerBackupCreateInputData
 import eu.kanade.tachiyomi.data.backup.restore.RestoreOptions
 import eu.kanade.tachiyomi.data.backup.restore.ServerBackupRestoreJob
 import eu.kanade.tachiyomi.data.backup.restore.buildServerBackupRestoreInputData
-import eu.kanade.tachiyomi.data.notification.ServerNotificationSyncJob
-import eu.kanade.tachiyomi.data.notification.ServerLiveNotificationManager
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
+import eu.kanade.tachiyomi.data.notification.ServerLiveNotificationManager
+import eu.kanade.tachiyomi.data.notification.ServerNotificationSyncJob
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyWorker
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiPreferences.Companion.AUTH_TOKEN
 import eu.kanade.tachiyomi.di.appDependencies

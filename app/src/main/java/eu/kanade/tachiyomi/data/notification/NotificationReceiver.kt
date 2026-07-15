@@ -13,6 +13,7 @@ import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiGraphQlClient
 import eu.kanade.tachiyomi.data.suwayomi.serverNotificationDownloadAffectedEntities
 import eu.kanade.tachiyomi.data.suwayomi.serverNotificationLibraryUpdateAffectedEntities
+import eu.kanade.tachiyomi.data.updater.AppUpdateDownloadJob
 import eu.kanade.tachiyomi.di.appDependencies
 import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.getParcelableExtraCompat
@@ -55,6 +56,8 @@ class NotificationReceiver : BroadcastReceiver() {
                     "application/x-protobuf+gzip",
                 )
             ACTION_CANCEL_RESTORE -> cancelRestore(context)
+            ACTION_START_APP_UPDATE -> startDownloadAppUpdate(context, intent)
+            ACTION_CANCEL_APP_UPDATE_DOWNLOAD -> AppUpdateDownloadJob.stop(context)
             ACTION_STOP_LIBRARY_UPDATE -> runServerMutation(context, ServerNotificationAction.StopLibraryUpdate)
             ACTION_START_DOWNLOADER -> runServerMutation(context, ServerNotificationAction.StartDownloader)
             ACTION_STOP_DOWNLOADER -> runServerMutation(context, ServerNotificationAction.StopDownloader)
@@ -99,6 +102,12 @@ class NotificationReceiver : BroadcastReceiver() {
      */
     private fun cancelRestore(context: Context) {
         ServerBackupRestoreJob.stop(context)
+    }
+
+    private fun startDownloadAppUpdate(context: Context, intent: Intent) {
+        intent.getStringExtra(AppUpdateDownloadJob.EXTRA_DOWNLOAD_URL)?.let { url ->
+            AppUpdateDownloadJob.start(context, url, intent.getStringExtra(AppUpdateDownloadJob.EXTRA_DOWNLOAD_TITLE))
+        }
     }
 
     private fun runServerMutation(context: Context, action: ServerNotificationAction) {
@@ -150,6 +159,8 @@ class NotificationReceiver : BroadcastReceiver() {
         private const val ACTION_SHARE_BACKUP = "$ID.$NAME.SEND_BACKUP"
 
         private const val ACTION_CANCEL_RESTORE = "$ID.$NAME.CANCEL_RESTORE"
+        private const val ACTION_START_APP_UPDATE = "$ID.$NAME.START_APP_UPDATE"
+        private const val ACTION_CANCEL_APP_UPDATE_DOWNLOAD = "$ID.$NAME.CANCEL_APP_UPDATE_DOWNLOAD"
 
         private const val ACTION_DISMISS_NOTIFICATION = "$ID.$NAME.ACTION_DISMISS_NOTIFICATION"
 
@@ -313,6 +324,42 @@ class NotificationReceiver : BroadcastReceiver() {
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
+        }
+
+        internal fun downloadAppUpdatePendingBroadcast(
+            context: Context,
+            url: String,
+            title: String? = null,
+        ): PendingIntent {
+            val intent = downloadAppUpdateIntent(context, url, title)
+            return PendingIntent.getBroadcast(
+                context,
+                2,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        }
+
+        internal fun cancelDownloadAppUpdatePendingBroadcast(context: Context): PendingIntent {
+            val intent = cancelDownloadAppUpdateIntent(context)
+            return PendingIntent.getBroadcast(
+                context,
+                3,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        }
+
+        internal fun downloadAppUpdateIntent(context: Context, url: String, title: String? = null): Intent {
+            return Intent(context, NotificationReceiver::class.java).apply {
+                action = ACTION_START_APP_UPDATE
+                putExtra(AppUpdateDownloadJob.EXTRA_DOWNLOAD_URL, url)
+                title?.let { putExtra(AppUpdateDownloadJob.EXTRA_DOWNLOAD_TITLE, it) }
+            }
+        }
+
+        internal fun cancelDownloadAppUpdateIntent(context: Context): Intent {
+            return Intent(context, NotificationReceiver::class.java).setAction(ACTION_CANCEL_APP_UPDATE_DOWNLOAD)
         }
 
         internal fun stopLibraryUpdatePendingBroadcast(context: Context): PendingIntent {
