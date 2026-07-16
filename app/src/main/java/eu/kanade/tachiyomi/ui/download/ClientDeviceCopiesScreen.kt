@@ -48,8 +48,16 @@ import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopy
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyOrphanManager
+import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyPathPolicy
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyStore
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyWorker
+import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceCopyStorageCleanupCandidate
+import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceCopyStorageCleanupCandidateType
+import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceCopyStorageRowIssueType
+import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceCopyStorageScanResult
+import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceCopyStorageScanner
+import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyFreshness
+import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyStatus
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.di.AppDependencies
 import eu.kanade.tachiyomi.di.appDependencies
@@ -63,6 +71,8 @@ import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
+import java.io.File
+import java.net.URI
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
@@ -74,7 +84,9 @@ object ClientDeviceCopiesScreen : Screen() {
         val navigator = LocalNavigator.currentOrThrow
         val context = LocalContext.current
         val dependencies = context.appDependencies
-        val screenModel = rememberScreenModel { ClientDeviceCopiesScreenModel(dependencies) }
+        val screenModel = rememberScreenModel {
+            ClientDeviceCopiesScreenModel(dependencies, context.applicationContext)
+        }
         val state by screenModel.state.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
         var pendingRemoval by remember { mutableStateOf<DeviceCopyMangaSummary?>(null) }
@@ -159,6 +171,10 @@ object ClientDeviceCopiesScreen : Screen() {
                             screenModel.applyBulkAction(context, summary, DeviceCopyBulkActionTarget.REMOVE_ORPHANED)
                         },
                         onRemove = { summary -> pendingRemoval = summary },
+                        onPurgeTempDirectories = screenModel::purgeStaleTempDirectories,
+                        onPurgePartialCopies = screenModel::purgePartialCopyDirectories,
+                        onPurgeStrayEntries = screenModel::purgeStrayEntries,
+                        onReconcileMissingFiles = screenModel::reconcileMissingFiles,
                         modifier = Modifier.padding(contentPadding),
                     )
                 }
@@ -172,6 +188,9 @@ object ClientDeviceCopiesScreen : Screen() {
                     ClientDeviceCopiesScreenModel.Event.ActionHadNoTargets -> "No matching device copies"
                     ClientDeviceCopiesScreenModel.Event.ActionFailed -> "Failed to queue device copy action"
                     ClientDeviceCopiesScreenModel.Event.RefreshFailed -> "Failed to refresh device copies"
+                    ClientDeviceCopiesScreenModel.Event.CleanupCompleted -> "Device copy cleanup completed"
+                    ClientDeviceCopiesScreenModel.Event.CleanupHadNoTargets -> "No cleanup candidates"
+                    ClientDeviceCopiesScreenModel.Event.CleanupFailed -> "Device copy cleanup partially failed"
                 }
                 snackbarHostState.showSnackbar(message)
             }
@@ -187,11 +206,21 @@ private fun ClientDeviceCopiesContent(
     onRetry: (DeviceCopyMangaSummary) -> Unit,
     onRemoveOrphaned: (DeviceCopyMangaSummary) -> Unit,
     onRemove: (DeviceCopyMangaSummary) -> Unit,
+    onPurgeTempDirectories: () -> Unit,
+    onPurgePartialCopies: () -> Unit,
+    onPurgeStrayEntries: () -> Unit,
+    onReconcileMissingFiles: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val filteredSummaries = state.summaries.filter { it.matches(state.filter) }
     Column(modifier = modifier) {
-        DeviceCopySummaryStrip(state)
+        DeviceCopySummaryStrip(
+            state = state,
+            onPurgeTempDirectories = onPurgeTempDirectories,
+            onPurgePartialCopies = onPurgePartialCopies,
+            onPurgeStrayEntries = onPurgeStrayEntries,
+            onReconcileMissingFiles = onReconcileMissingFiles,
+        )
         DeviceCopyFilterRow(
             selected = state.filter,
             onFilterChanged = onFilterChanged,
@@ -232,10 +261,23 @@ private fun ClientDeviceCopiesContent(
 @Composable
 private fun DeviceCopySummaryStrip(
     state: ClientDeviceCopiesScreenModel.State.Ready,
+    onPurgeTempDirectories: () -> Unit,
+    onPurgePartialCopies: () -> Unit,
+    onPurgeStrayEntries: () -> Unit,
+    onReconcileMissingFiles: () -> Unit,
 ) {
     val mangaCount = state.summaries.size
     val chapterCount = state.summaries.sumOf { it.totalChapterCopyCount }
     val totalBytes = state.summaries.sumOf { it.totalBytes }
+    val scan = state.storageScan
+    val quotaWarning = deviceCopyStorageQuotaWarning(scan.filesystemByteTotal)
+    val missingFileRows = scan.rowIssues.count {
+        it.type == ClientDeviceCopyStorageRowIssueType.COMPLETE_MISSING_DIRECTORY ||
+            it.type == ClientDeviceCopyStorageRowIssueType.COMPLETE_MISSING_PAGE_FILES
+    }
+    val partialRows = scan.rowIssues.count {
+        it.type == ClientDeviceCopyStorageRowIssueType.INCOMPLETE_WITH_PARTIAL_FILES
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -251,6 +293,54 @@ private fun DeviceCopySummaryStrip(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium,
         )
+        Text(
+            text = "Scanner: DB ${formatBytes(scan.dbByteTotal)}, files ${formatBytes(scan.filesystemByteTotal)}",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        if (quotaWarning != null) {
+            Text(
+                text = "Device copies exceed ${formatBytes(quotaWarning.thresholdBytes)}. " +
+                    "Cleanup is manual; Suwayomi server downloads are not affected.",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        val issueLine = listOfNotNull(
+            missingFileRows.takeIf { it > 0 }?.let { "$it missing-file rows" },
+            partialRows.takeIf { it > 0 }?.let { "$it partial rows" },
+            scan.staleTempDirectories.size.takeIf { it > 0 }?.let { "$it stale temp dirs" },
+            scan.strayEntries.size.takeIf { it > 0 }?.let { "$it stray entries" },
+        ).joinToString(separator = ", ")
+        if (issueLine.isNotBlank()) {
+            Text(
+                text = issueLine,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (scan.staleTempDirectories.isNotEmpty()) {
+                TextButton(onClick = onPurgeTempDirectories) {
+                    Text(text = "Remove temp")
+                }
+            }
+            if (partialRows > 0) {
+                TextButton(onClick = onPurgePartialCopies) {
+                    Text(text = "Remove partial")
+                }
+            }
+            if (scan.strayEntries.isNotEmpty()) {
+                TextButton(onClick = onPurgeStrayEntries) {
+                    Text(text = "Remove stray")
+                }
+            }
+            if (missingFileRows > 0) {
+                TextButton(onClick = onReconcileMissingFiles) {
+                    Text(text = "Reconcile rows")
+                }
+            }
+        }
     }
 }
 
@@ -400,11 +490,13 @@ private fun ClientDeviceCopyChapterItem(copy: ClientDeviceChapterCopy) {
 private class ClientDeviceCopiesScreenModel(
     private val store: ClientDeviceChapterCopyStore,
     private val provider: SuwayomiClientProvider,
+    private val appContext: Context,
 ) : StateScreenModel<ClientDeviceCopiesScreenModel.State>(State.Loading) {
 
-    constructor(dependencies: AppDependencies) : this(
+    constructor(dependencies: AppDependencies, appContext: Context) : this(
         store = dependencies.clientDeviceChapterCopyStore,
         provider = dependencies.suwayomiClientProvider,
+        appContext = appContext,
     )
 
     private val orphanManager = ClientDeviceChapterCopyOrphanManager(
@@ -472,14 +564,93 @@ private class ClientDeviceCopiesScreenModel(
         }
     }
 
+    fun purgeStaleTempDirectories() {
+        cleanupStorageCandidates { state -> state.storageScan.staleTempDirectories }
+    }
+
+    fun purgePartialCopyDirectories() {
+        cleanupStorageCandidates { state -> state.storageScan.rowIssues.mapNotNull { it.cleanupCandidate } }
+    }
+
+    fun purgeStrayEntries() {
+        cleanupStorageCandidates { state -> state.storageScan.strayEntries }
+    }
+
+    fun reconcileMissingFiles() {
+        screenModelScope.launchIO {
+            try {
+                val ready = mutableState.value as? State.Ready ?: return@launchIO
+                val targets = ready.storageScan.rowIssues.filter {
+                    it.type == ClientDeviceCopyStorageRowIssueType.COMPLETE_MISSING_DIRECTORY ||
+                        it.type == ClientDeviceCopyStorageRowIssueType.COMPLETE_MISSING_PAGE_FILES
+                }
+                if (targets.isEmpty()) {
+                    _events.send(Event.CleanupHadNoTargets)
+                    return@launchIO
+                }
+                targets.forEach { issue ->
+                    val copy = issue.copy
+                    store.updateState(
+                        serverKey = copy.serverKey,
+                        mangaId = copy.mangaId,
+                        chapterId = copy.chapterId,
+                        status = ClientChapterCopyStatus.INCOMPLETE,
+                        freshness = ClientChapterCopyFreshness.INCOMPLETE,
+                        downloadedPageCount = copy.presentPageFileCount(),
+                        verifiedAt = copy.verifiedAt,
+                        orphanedAt = copy.orphanedAt,
+                    )
+                }
+                _events.send(Event.CleanupCompleted)
+                refresh()
+            } catch (error: Throwable) {
+                if (error is CancellationException) throw error
+                logcat(LogPriority.ERROR, error) { "Failed to reconcile missing client device copy files" }
+                _events.send(Event.CleanupFailed)
+            }
+        }
+    }
+
+    private fun cleanupStorageCandidates(
+        selectCandidates: (State.Ready) -> List<ClientDeviceCopyStorageCleanupCandidate>,
+    ) {
+        screenModelScope.launchIO {
+            try {
+                val ready = mutableState.value as? State.Ready ?: return@launchIO
+                val targets = selectCandidates(ready)
+                if (targets.isEmpty()) {
+                    _events.send(Event.CleanupHadNoTargets)
+                    return@launchIO
+                }
+                val root = ClientDeviceChapterCopyWorker.defaultRootDirectory(appContext).canonicalFile
+                var failed = false
+                targets.forEach { candidate ->
+                    if (!candidate.canDeleteFrom(root) || !candidate.path.deleteRecursively()) {
+                        failed = true
+                    }
+                }
+                _events.send(if (failed) Event.CleanupFailed else Event.CleanupCompleted)
+                refresh()
+            } catch (error: Throwable) {
+                if (error is CancellationException) throw error
+                logcat(LogPriority.ERROR, error) { "Failed to clean up client device copy storage" }
+                _events.send(Event.CleanupFailed)
+            }
+        }
+    }
+
     private suspend fun buildReadyState(
         filter: DeviceCopyFilter,
         reconciliationSkipped: Boolean,
     ): State.Ready {
+        val copies = store.getCopiesForServer(provider.serverKey())
         return State.Ready(
-            summaries = store.getCopiesForServer(provider.serverKey()).toDeviceCopyMangaSummaries(),
+            summaries = copies.toDeviceCopyMangaSummaries(),
             filter = filter,
             reconciliationSkipped = reconciliationSkipped,
+            storageScan = ClientDeviceCopyStorageScanner(
+                ClientDeviceChapterCopyWorker.defaultRootDirectory(appContext),
+            ).scan(copies),
         )
     }
 
@@ -489,6 +660,7 @@ private class ClientDeviceCopiesScreenModel(
             val summaries: List<DeviceCopyMangaSummary>,
             val filter: DeviceCopyFilter,
             val reconciliationSkipped: Boolean,
+            val storageScan: ClientDeviceCopyStorageScanResult,
         ) : State
         data class Error(val message: String) : State
     }
@@ -498,6 +670,9 @@ private class ClientDeviceCopiesScreenModel(
         data object ActionHadNoTargets : Event
         data object ActionFailed : Event
         data object RefreshFailed : Event
+        data object CleanupCompleted : Event
+        data object CleanupHadNoTargets : Event
+        data object CleanupFailed : Event
     }
 }
 
@@ -552,4 +727,36 @@ private fun formatBytes(bytes: Long): String {
         unitIndex++
     }
     return String.format(Locale.US, "%.1f %s", value, units[unitIndex])
+}
+
+private fun ClientDeviceCopyStorageCleanupCandidate.canDeleteFrom(root: File): Boolean {
+    val canonicalPath = path.canonicalFile
+    if (!canonicalPath.isWithin(root) || canonicalPath == root) return false
+    return when (type) {
+        ClientDeviceCopyStorageCleanupCandidateType.STALE_TEMP_DIRECTORY -> {
+            canonicalPath.isDirectory && canonicalPath.name.endsWith(".tmp")
+        }
+        ClientDeviceCopyStorageCleanupCandidateType.STRAY_DIRECTORY,
+        ClientDeviceCopyStorageCleanupCandidateType.STRAY_FILE,
+        ClientDeviceCopyStorageCleanupCandidateType.PARTIAL_COPY_DIRECTORY,
+        -> true
+    }
+}
+
+private fun ClientDeviceChapterCopy.presentPageFileCount(): Int {
+    val directory = storagePath?.takeIf { it.isNotBlank() }?.let(::File) ?: return 0
+    return pages.count { page ->
+        page.isPresent && page.resolveFile(directory).isFile
+    }
+}
+
+private fun eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyPage.resolveFile(directory: File): File {
+    val fromUri = localUri
+        ?.takeIf { it.isNotBlank() }
+        ?.let { uri -> runCatching { File(URI(uri)) }.getOrNull() }
+    return fromUri ?: File(directory, fileName ?: ClientDeviceChapterCopyPathPolicy.pageFileName(index))
+}
+
+private fun File.isWithin(root: File): Boolean {
+    return path == root.path || path.startsWith(root.path + File.separator)
 }

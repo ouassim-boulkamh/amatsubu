@@ -343,6 +343,7 @@
     <string name="device_copy_incomplete">Device copy incomplete</string>
     <string name="device_copy_saving">Saving device copy</string>
     <string name="device_copy_failed">Device copy failed</string>
+    <string name="device_copy_low_space">Device copy failed: low storage</string>
     <string name="device_copy_orphaned">Device copy orphaned</string>
     <string name="pref_library_columns">Items per row</string>
     <string name="portrait">Portrait</string>

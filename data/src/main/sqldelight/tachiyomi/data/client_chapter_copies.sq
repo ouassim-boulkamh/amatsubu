@@ -15,6 +15,7 @@ CREATE TABLE client_chapter_copies(
     manifest_hash TEXT NOT NULL,
     status TEXT NOT NULL,
     freshness TEXT NOT NULL,
+    failure_reason TEXT,
     expected_page_count INTEGER NOT NULL,
     downloaded_page_count INTEGER NOT NULL,
     created_at INTEGER NOT NULL,
@@ -72,6 +73,7 @@ INSERT INTO client_chapter_copies(
     manifest_hash,
     status,
     freshness,
+    failure_reason,
     expected_page_count,
     downloaded_page_count,
     created_at,
@@ -96,6 +98,7 @@ VALUES (
     :manifestHash,
     :status,
     :freshness,
+    :failureReason,
     :expectedPageCount,
     :downloadedPageCount,
     :createdAt,
@@ -117,6 +120,7 @@ ON CONFLICT(server_key, manga_id, chapter_id) DO UPDATE SET
     manifest_hash = excluded.manifest_hash,
     status = excluded.status,
     freshness = excluded.freshness,
+    failure_reason = excluded.failure_reason,
     expected_page_count = excluded.expected_page_count,
     downloaded_page_count = excluded.downloaded_page_count,
     updated_at = excluded.updated_at,
@@ -205,6 +209,7 @@ updateCopyState:
 UPDATE client_chapter_copies
 SET status = :status,
     freshness = :freshness,
+    failure_reason = :failureReason,
     downloaded_page_count = :downloadedPageCount,
     updated_at = :updatedAt,
     verified_at = :verifiedAt,
@@ -217,6 +222,7 @@ updateCopyDownloadProgress:
 UPDATE client_chapter_copies
 SET status = :status,
     freshness = :freshness,
+    failure_reason = NULL,
     downloaded_page_count = :downloadedPageCount,
     updated_at = :updatedAt
 WHERE server_key = :serverKey

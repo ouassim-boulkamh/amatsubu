@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.ui.download
 
 import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyFreshness
+import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyFailureReason
 import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyStatus
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopy
 
@@ -41,6 +42,21 @@ internal enum class DeviceCopyBulkActionTarget {
     RETRY,
     REMOVE,
     REMOVE_ORPHANED,
+}
+
+internal data class DeviceCopyStorageQuotaWarning(
+    val usedBytes: Long,
+    val thresholdBytes: Long,
+)
+
+internal fun deviceCopyStorageQuotaWarning(
+    usedBytes: Long,
+    thresholdBytes: Long = DEFAULT_DEVICE_COPY_STORAGE_WARNING_BYTES,
+): DeviceCopyStorageQuotaWarning? {
+    return DeviceCopyStorageQuotaWarning(
+        usedBytes = usedBytes,
+        thresholdBytes = thresholdBytes,
+    ).takeIf { usedBytes >= thresholdBytes }
 }
 
 internal fun List<ClientDeviceChapterCopy>.toDeviceCopyMangaSummaries(): List<DeviceCopyMangaSummary> {
@@ -123,6 +139,8 @@ internal fun DeviceCopyMangaSummary.bulkActionCopies(
 internal fun ClientDeviceChapterCopy.deviceCopyChapterStatusLabel(): String {
     return when {
         freshness == ClientChapterCopyFreshness.ORPHANED -> "Orphaned"
+        status == ClientChapterCopyStatus.FAILED &&
+            failureReason == ClientChapterCopyFailureReason.LOW_SPACE -> "Low storage"
         status == ClientChapterCopyStatus.FAILED -> "Failed"
         isCompleteFreshDeviceCopy() -> "Ready"
         freshness == ClientChapterCopyFreshness.STALE -> "Stale"
@@ -163,3 +181,5 @@ private val DeviceCopyReadiness.sortOrder: Int
         DeviceCopyReadiness.ORPHANED -> 2
         DeviceCopyReadiness.READY -> 3
     }
+
+internal const val DEFAULT_DEVICE_COPY_STORAGE_WARNING_BYTES = 5L * 1024L * 1024L * 1024L

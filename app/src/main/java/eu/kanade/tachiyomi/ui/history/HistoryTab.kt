@@ -24,6 +24,7 @@ import eu.kanade.presentation.history.HistoryScreen
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.di.appDependencies
+import eu.kanade.tachiyomi.ui.ServerForegroundRefreshEffect
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
@@ -79,6 +80,10 @@ data object HistoryTab : Tab {
             onDialogChange = screenModel::setDialog,
             onRefresh = screenModel::syncServerState,
         )
+
+        ServerForegroundRefreshEffect {
+            screenModel.refreshServerState(emitErrors = false)
+        }
 
         val onDismissRequest = { screenModel.setDialog(null) }
         when (val dialog = state.dialog) {

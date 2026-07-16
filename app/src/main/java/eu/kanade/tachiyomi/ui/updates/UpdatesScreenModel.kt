@@ -77,7 +77,7 @@ class UpdatesScreenModel private constructor(
     )
 
     private val suwayomiClient = suwayomiProvider.graphQlClient
-    private val serverUpdatesRefreshes = MutableStateFlow(0)
+    private val serverUpdatesRefreshes = MutableStateFlow(ServerRefreshRequest())
     private val serverDownloadRefreshes = MutableStateFlow(0)
     private var recentChapterIds: Set<Long> = emptySet()
     private var activeDownloadChapterIds: Set<Long> = emptySet()
@@ -94,7 +94,9 @@ class UpdatesScreenModel private constructor(
     init {
         screenModelScope.launchIO {
             combine(
-                serverUpdatesRefreshes.flatMapLatest { getServerUpdatesFlow() },
+                serverUpdatesRefreshes.flatMapLatest { request ->
+                    getServerUpdatesFlow(emitErrors = request.emitErrors)
+                },
                 serverDownloadRefreshes.flatMapLatest { getServerDownloadStatusFlow() },
                 getUpdatesItemPreferenceFlow().distinctUntilChanged(),
             ) { updates, downloadStatus, itemPreferences ->
@@ -133,7 +135,7 @@ class UpdatesScreenModel private constructor(
         ServerStateSync.invalidations
             .onEach { invalidation ->
                 if (invalidation.affectsAny(ServerStateEntity.Updates)) {
-                    serverUpdatesRefreshes.update { it + 1 }
+                    refreshServerUpdates()
                 }
                 if (invalidation.affectsAny(ServerStateEntity.Downloads)) {
                     serverDownloadRefreshes.update { it + 1 }
@@ -192,12 +194,14 @@ class UpdatesScreenModel private constructor(
         }
     }
 
-    private fun getServerUpdatesFlow(): Flow<List<SuwayomiChapterWithMangaDto>> = flow {
+    private fun getServerUpdatesFlow(emitErrors: Boolean): Flow<List<SuwayomiChapterWithMangaDto>> = flow {
         val result = runCatching { suwayomiClient.getRecentChapters() }
             .onFailure { error ->
                 logcat(LogPriority.ERROR, error) { "Failed to load server updates" }
                 mutableState.update { it.copy(serverUnavailable = error.isSuwayomiServerUnavailable()) }
-                _events.send(if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError)
+                if (emitErrors) {
+                    _events.send(if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError)
+                }
             }
             .onSuccess {
                 mutableState.update { it.copy(serverUnavailable = false) }
@@ -222,13 +226,19 @@ class UpdatesScreenModel private constructor(
             .subtract(nextActiveIds)
         activeDownloadChapterIds = nextActiveIds
         if (removedVisibleIds.isNotEmpty()) {
-            serverUpdatesRefreshes.update { it + 1 }
+            refreshServerUpdates()
         }
     }
 
-    fun refreshServerState() {
-        serverUpdatesRefreshes.update { it + 1 }
+    fun refreshServerState(emitErrors: Boolean = true) {
+        refreshServerUpdates(emitErrors)
         serverDownloadRefreshes.update { it + 1 }
+    }
+
+    private fun refreshServerUpdates(emitErrors: Boolean = true) {
+        serverUpdatesRefreshes.update {
+            ServerRefreshRequest(sequence = it.sequence + 1, emitErrors = emitErrors)
+        }
     }
 
     private fun List<SuwayomiChapterWithMangaDto>.toUpdateItems(
@@ -296,7 +306,7 @@ class UpdatesScreenModel private constructor(
                 suwayomiClient.updateLibraryMangas()
             }.onSuccess { started ->
                 libraryPreferences.lastUpdatedTimestamp.set(System.currentTimeMillis())
-                serverUpdatesRefreshes.update { it + 1 }
+                refreshServerUpdates()
                 ServerStateSync.requestRefresh(*serverLibraryUpdateAffectedEntities().toTypedArray())
                 if (started) {
                     ServerNotificationSyncJob.schedulePromptReconciliation(application)
@@ -315,7 +325,7 @@ class UpdatesScreenModel private constructor(
             runCatching {
                 suwayomiClient.stopLibraryUpdate()
             }.onSuccess {
-                serverUpdatesRefreshes.update { it + 1 }
+                refreshServerUpdates()
                 ServerStateSync.requestRefresh(*serverLibraryUpdateAffectedEntities().toTypedArray())
                 _events.send(Event.LibraryUpdateStopped)
             }.onFailure { error ->
@@ -390,7 +400,7 @@ class UpdatesScreenModel private constructor(
                     },
                 )
             }.onSuccess {
-                serverUpdatesRefreshes.update { it + 1 }
+                refreshServerUpdates()
                 ServerStateSync.requestRefresh(
                     *serverUpdatesReadAffectedEntities(changedMangaIds).toTypedArray(),
                 )
@@ -414,7 +424,7 @@ class UpdatesScreenModel private constructor(
                     .map { it.update.chapterId.toInt() }
                 suwayomiClient.updateChaptersBookmark(chapterIds, bookmark)
             }.onSuccess {
-                serverUpdatesRefreshes.update { it + 1 }
+                refreshServerUpdates()
                 ServerStateSync.requestRefresh(
                     *serverUpdatesBookmarkAffectedEntities(updates.map { it.update.mangaId.toInt() }.distinct())
                         .toTypedArray(),
@@ -448,7 +458,7 @@ class UpdatesScreenModel private constructor(
         runCatching {
             action()
         }.onSuccess {
-            serverUpdatesRefreshes.update { it + 1 }
+            refreshServerUpdates()
             serverDownloadRefreshes.update { it + 1 }
             ServerStateSync.requestRefresh(*affected.toTypedArray())
         }.onFailure { error ->
@@ -676,6 +686,11 @@ data class UpdatesItem(
     val downloadProgressProvider: () -> Int,
     val excludedScanlators: Set<String> = emptySet(),
     val selected: Boolean = false,
+)
+
+private data class ServerRefreshRequest(
+    val sequence: Int = 0,
+    val emitErrors: Boolean = true,
 )
 
 private const val SERVER_EXCLUDED_SCANLATORS_META_KEY = "amatsubu.excludedScanlators"

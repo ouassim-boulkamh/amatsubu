@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.ui.download
 
 import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyFreshness
+import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyFailureReason
 import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyStatus
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopy
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyPage
@@ -149,6 +150,14 @@ class DeviceCopySummaryTest {
             copy(chapterId = 5, status = ClientChapterCopyStatus.FAILED).deviceCopyChapterStatusLabel(),
         )
         assertEquals(
+            "Low storage",
+            copy(
+                chapterId = 7,
+                status = ClientChapterCopyStatus.FAILED,
+                failureReason = ClientChapterCopyFailureReason.LOW_SPACE,
+            ).deviceCopyChapterStatusLabel(),
+        )
+        assertEquals(
             "Orphaned",
             copy(chapterId = 6, freshness = ClientChapterCopyFreshness.ORPHANED).deviceCopyChapterStatusLabel(),
         )
@@ -167,6 +176,15 @@ class DeviceCopySummaryTest {
         )
     }
 
+    @Test
+    fun `quota warning appears only when usage reaches threshold`() {
+        assertEquals(null, deviceCopyStorageQuotaWarning(usedBytes = 99L, thresholdBytes = 100L))
+        assertEquals(
+            DeviceCopyStorageQuotaWarning(usedBytes = 100L, thresholdBytes = 100L),
+            deviceCopyStorageQuotaWarning(usedBytes = 100L, thresholdBytes = 100L),
+        )
+    }
+
     private fun copy(
         serverKey: String = "server",
         mangaId: Int = 1,
@@ -174,6 +192,7 @@ class DeviceCopySummaryTest {
         mangaTitle: String? = "Manga $mangaId",
         status: ClientChapterCopyStatus = ClientChapterCopyStatus.COMPLETE,
         freshness: ClientChapterCopyFreshness = ClientChapterCopyFreshness.FRESH,
+        failureReason: ClientChapterCopyFailureReason? = null,
         expectedPageCount: Int = 1,
         downloadedPageCount: Int = expectedPageCount,
         byteSizes: List<Long> = List(expectedPageCount) { 100L },
@@ -205,6 +224,7 @@ class DeviceCopySummaryTest {
             manifestHash = "hash-$chapterId",
             status = status,
             freshness = freshness,
+            failureReason = failureReason,
             expectedPageCount = expectedPageCount,
             downloadedPageCount = downloadedPageCount,
             createdAt = chapterId.toLong(),

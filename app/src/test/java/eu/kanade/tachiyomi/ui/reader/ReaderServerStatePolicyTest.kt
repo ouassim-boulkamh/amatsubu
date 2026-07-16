@@ -1,6 +1,8 @@
 package eu.kanade.tachiyomi.ui.reader
 
 import eu.kanade.domain.chapter.model.Chapter
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateEntity
+import eu.kanade.tachiyomi.data.suwayomi.ServerStateInvalidation
 import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -32,6 +34,43 @@ class ReaderServerStatePolicyTest {
         assertFalse(baseline.isRead)
         assertEquals(4, baseline.lastPageRead)
         assertTrue(baseline.isBookmarked)
+    }
+
+    @Test
+    fun `reader reacts only to invalidations that can affect current manga state`() {
+        assertTrue(ServerStateInvalidation(setOf(ServerStateEntity.Manga(10))).affectsReaderManga(10))
+        assertTrue(ServerStateInvalidation(setOf(ServerStateEntity.Chapters(10))).affectsReaderManga(10))
+        assertTrue(ServerStateInvalidation(setOf(ServerStateEntity.History)).affectsReaderManga(10))
+        assertTrue(ServerStateInvalidation(setOf(ServerStateEntity.Updates)).affectsReaderManga(10))
+        assertTrue(ServerStateInvalidation(setOf(ServerStateEntity.Trackers(10))).affectsReaderManga(10))
+        assertFalse(ServerStateInvalidation(setOf(ServerStateEntity.Manga(11))).affectsReaderManga(10))
+        assertFalse(ServerStateInvalidation(setOf(ServerStateEntity.Chapters(11))).affectsReaderManga(10))
+        assertFalse(ServerStateInvalidation(setOf(ServerStateEntity.Trackers(11))).affectsReaderManga(10))
+    }
+
+    @Test
+    fun `external reader state is blocked while local pending state exists`() {
+        assertTrue(
+            shouldApplyExternalReaderChapterState(
+                chapterId = 10,
+                pendingReaderIntentChapterIds = emptySet(),
+                pendingReadStateChapterIds = emptySet(),
+            ),
+        )
+        assertFalse(
+            shouldApplyExternalReaderChapterState(
+                chapterId = 10,
+                pendingReaderIntentChapterIds = setOf(10),
+                pendingReadStateChapterIds = emptySet(),
+            ),
+        )
+        assertFalse(
+            shouldApplyExternalReaderChapterState(
+                chapterId = 10,
+                pendingReaderIntentChapterIds = emptySet(),
+                pendingReadStateChapterIds = setOf(10),
+            ),
+        )
     }
 
     private fun chapter(

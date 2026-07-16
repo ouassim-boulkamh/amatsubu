@@ -223,6 +223,7 @@ private fun DeviceCopyState.label(progress: Int): String? {
         DeviceCopyState.INCOMPLETE -> stringResource(MR.strings.device_copy_incomplete)
         DeviceCopyState.DOWNLOADING -> "${stringResource(MR.strings.device_copy_saving)} $progress%"
         DeviceCopyState.FAILED -> stringResource(MR.strings.device_copy_failed)
+        DeviceCopyState.LOW_SPACE -> stringResource(MR.strings.device_copy_low_space)
         DeviceCopyState.ORPHANED -> stringResource(MR.strings.device_copy_orphaned)
     }
 }

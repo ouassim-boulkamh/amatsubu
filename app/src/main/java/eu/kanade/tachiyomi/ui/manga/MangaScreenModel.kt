@@ -29,6 +29,7 @@ import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.util.formattedMessage
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyFreshness
+import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyFailureReason
 import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyStatus
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopy
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyStore
@@ -1696,6 +1697,7 @@ enum class DeviceCopyState {
     INCOMPLETE,
     DOWNLOADING,
     FAILED,
+    LOW_SPACE,
     ORPHANED,
 }
 
@@ -1704,6 +1706,8 @@ private fun ClientDeviceChapterCopy.toDeviceCopyState(): DeviceCopyState {
         status == ClientChapterCopyStatus.DOWNLOADING || status == ClientChapterCopyStatus.QUEUED -> {
             DeviceCopyState.DOWNLOADING
         }
+        status == ClientChapterCopyStatus.FAILED &&
+            failureReason == ClientChapterCopyFailureReason.LOW_SPACE -> DeviceCopyState.LOW_SPACE
         status == ClientChapterCopyStatus.FAILED -> DeviceCopyState.FAILED
         !isComplete || status == ClientChapterCopyStatus.INCOMPLETE -> DeviceCopyState.INCOMPLETE
         freshness == ClientChapterCopyFreshness.FRESH -> DeviceCopyState.FRESH

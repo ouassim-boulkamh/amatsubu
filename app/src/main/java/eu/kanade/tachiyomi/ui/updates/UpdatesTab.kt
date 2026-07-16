@@ -26,13 +26,12 @@ import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
+import eu.kanade.tachiyomi.ui.ServerForegroundRefreshEffect
 import eu.kanade.tachiyomi.ui.updates.UpdatesScreenModel.Event
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
-import kotlin.time.Duration.Companion.seconds
 
 data object UpdatesTab : Tab {
 
@@ -91,6 +90,10 @@ data object UpdatesTab : Tab {
             hasActiveFilters = state.hasActiveFilters,
         )
 
+        ServerForegroundRefreshEffect {
+            screenModel.refreshServerState(emitErrors = false)
+        }
+
         val onDismissDialog = { screenModel.setDialog(null) }
         when (val dialog = state.dialog) {
             is UpdatesScreenModel.Dialog.DeleteConfirmation -> {
@@ -132,13 +135,6 @@ data object UpdatesTab : Tab {
             }
         }
 
-        LaunchedEffect(screenModel) {
-            while (true) {
-                delay(SERVER_UPDATES_STATE_POLL_INTERVAL)
-                screenModel.refreshServerState()
-            }
-        }
-
         LaunchedEffect(state.selectionMode) {
             HomeScreen.showBottomNav(!state.selectionMode)
         }
@@ -157,5 +153,3 @@ data object UpdatesTab : Tab {
         }
     }
 }
-
-private val SERVER_UPDATES_STATE_POLL_INTERVAL = 30.seconds

@@ -22,6 +22,7 @@ import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
 import java.io.File
 import java.io.IOException
+import java.io.InterruptedIOException
 import java.security.MessageDigest
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -37,12 +38,15 @@ internal class ClientDeviceChapterCopyDownloader(
     private val deleteCopyDirectory: (directory: File) -> Boolean = { directory ->
         directory.deleteRecursively()
     },
+    private val usableSpaceBytes: (File) -> Long = { directory -> directory.usableSpace },
+    private val minimumUsableSpaceBytes: Long = MINIMUM_USABLE_SPACE_BYTES,
 ) {
 
     suspend fun saveToDevice(
         serverKey: String,
         mangaTitle: String?,
         chapterId: Int,
+        finalAttempt: Boolean = false,
     ): ClientDeviceChapterCopy = withIOContext {
         val manifest = pageFetcher.fetchManifest(chapterId)
         val expectedPages = buildClientDeviceCopyPages(manifest)
@@ -70,6 +74,7 @@ internal class ClientDeviceChapterCopyDownloader(
         )
 
         try {
+            ensureUsableSpace(rootDirectory())
             expectedPages.forEach { page ->
                 val pageFile = File(tempDir, pageFileName(page.index))
                 val downloaded = downloadPageWithRetry(page.sourceUrl, pageFile)
@@ -114,6 +119,8 @@ internal class ClientDeviceChapterCopyDownloader(
             if (existingCompleteCopy != null) {
                 store.upsert(existingCompleteCopy.toUpsert())
             } else {
+                val failureReason = error.toDeviceCopyFailureReason(finalAttempt)
+                val failedFinally = failureReason != null
                 finalDir.deleteRecursively()
                 if (downloadedPages.isNotEmpty()) {
                     tempDir.renameTo(finalDir)
@@ -137,8 +144,13 @@ internal class ClientDeviceChapterCopyDownloader(
                         manifest = manifest,
                         storagePath = finalDir.absolutePath,
                         pages = incompletePages,
-                        status = ClientChapterCopyStatus.INCOMPLETE,
+                        status = if (failedFinally) {
+                            ClientChapterCopyStatus.FAILED
+                        } else {
+                            ClientChapterCopyStatus.INCOMPLETE
+                        },
                         freshness = ClientChapterCopyFreshness.INCOMPLETE,
+                        failureReason = failureReason,
                     ),
                 )
             }
@@ -191,6 +203,21 @@ internal class ClientDeviceChapterCopyDownloader(
     }
 
     private fun pageFileName(index: Int): String = ClientDeviceChapterCopyPathPolicy.pageFileName(index)
+
+    private fun ensureUsableSpace(root: File) {
+        root.mkdirs()
+        val usable = usableSpaceBytes(root)
+        if (usable in 0 until minimumUsableSpaceBytes) {
+            throw ClientDeviceCopyLowSpaceException(
+                "Not enough usable space for device copy: ${usable}B available, " +
+                    "${minimumUsableSpaceBytes}B required",
+            )
+        }
+    }
+
+    private companion object {
+        const val MINIMUM_USABLE_SPACE_BYTES = 64L * 1024L * 1024L
+    }
 }
 
 private fun ClientDeviceChapterCopy.toUpsert(): ClientDeviceChapterCopyUpsert {
@@ -217,6 +244,7 @@ private fun ClientDeviceChapterCopy.toUpsert(): ClientDeviceChapterCopyUpsert {
         pages = pages,
         status = status,
         freshness = freshness,
+        failureReason = failureReason,
         verifiedAt = verifiedAt,
         orphanedAt = orphanedAt,
     )
@@ -236,11 +264,33 @@ internal object ClientDeviceChapterCopyPathPolicy {
 
 private fun Throwable.isTransientPageDownloadFailure(): Boolean {
     return when (this) {
-        is IOException -> true
+        is IOException -> !isNoSpaceFailure()
         is HttpException -> code == 408 || code == 429 || code in 500..599
         else -> false
     }
 }
+
+private fun Throwable.toDeviceCopyFailureReason(finalAttempt: Boolean): ClientChapterCopyFailureReason? {
+    return when {
+        this is ClientDeviceCopyLowSpaceException || isNoSpaceFailure() -> ClientChapterCopyFailureReason.LOW_SPACE
+        !isTransientPageDownloadFailure() -> ClientChapterCopyFailureReason.NON_RETRYABLE
+        finalAttempt -> ClientChapterCopyFailureReason.RETRIES_EXHAUSTED
+        else -> null
+    }
+}
+
+private fun Throwable.isNoSpaceFailure(): Boolean {
+    return generateSequence(this) { it.cause }
+        .filterIsInstance<IOException>()
+        .any { error ->
+            val message = error.message.orEmpty()
+            message.contains("ENOSPC", ignoreCase = true) ||
+                message.contains("No space left", ignoreCase = true) ||
+                message.contains("not enough space", ignoreCase = true)
+        }
+}
+
+private class ClientDeviceCopyLowSpaceException(message: String) : InterruptedIOException(message)
 
 internal data class DownloadedClientDevicePage(
     val mimeType: String?,
@@ -329,6 +379,7 @@ internal class ClientDeviceChapterCopyWorker(
                 ),
                 rootDirectory = { defaultRootDirectory(context) },
             )
+            val finalAttempt = runAttemptCount >= MAX_SAVE_ATTEMPTS - 1
 
             when (action) {
                 ACTION_SAVE -> {
@@ -341,6 +392,7 @@ internal class ClientDeviceChapterCopyWorker(
                         serverKey = provider.serverKey(),
                         mangaTitle = inputData.getString(KEY_MANGA_TITLE),
                         chapterId = chapterId,
+                        finalAttempt = finalAttempt,
                     )
                 }
                 ACTION_REMOVE -> {
@@ -367,7 +419,11 @@ internal class ClientDeviceChapterCopyWorker(
         } catch (error: Throwable) {
             if (error is CancellationException) throw error
             logcat(LogPriority.ERROR, error) { "Client device chapter copy worker failed" }
-            Result.retry()
+            if (error.toDeviceCopyFailureReason(runAttemptCount >= MAX_SAVE_ATTEMPTS - 1) != null) {
+                Result.failure()
+            } else {
+                Result.retry()
+            }
         }
     }
 
@@ -379,6 +435,7 @@ internal class ClientDeviceChapterCopyWorker(
         private const val KEY_MANGA_ID = "manga_id"
         private const val KEY_MANGA_TITLE = "manga_title"
         private const val KEY_CHAPTER_ID = "chapter_id"
+        private const val MAX_SAVE_ATTEMPTS = 3
 
         fun enqueueSave(context: Context, mangaTitle: String?, chapterId: Int) {
             val request = OneTimeWorkRequestBuilder<ClientDeviceChapterCopyWorker>()

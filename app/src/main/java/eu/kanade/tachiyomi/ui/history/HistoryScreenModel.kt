@@ -58,7 +58,7 @@ class HistoryScreenModel internal constructor(
 ) : StateScreenModel<HistoryScreenModel.State>(State()) {
 
     private val suwayomiClient = suwayomiProvider.graphQlClient
-    private val serverHistoryRefreshes = MutableStateFlow(0)
+    private val serverHistoryRefreshes = MutableStateFlow(ServerRefreshRequest())
 
     private val _events: Channel<Event> = Channel(Channel.UNLIMITED)
     val events: Flow<Event> = _events.receiveAsFlow()
@@ -68,8 +68,8 @@ class HistoryScreenModel internal constructor(
             combine(
                 state.map { it.searchQuery }.distinctUntilChanged(),
                 serverHistoryRefreshes,
-            ) { query, _ -> query }
-                .map { query ->
+            ) { query, request -> query to request.emitErrors }
+                .map { (query, emitErrors) ->
                     runCatching {
                         suwayomiClient.getReadingHistory()
                             .filter { it.matchesHistoryQuery(query) }
@@ -77,9 +77,11 @@ class HistoryScreenModel internal constructor(
                     }.onFailure { error ->
                         logcat(LogPriority.ERROR, error) { "Failed to load Suwayomi reading history" }
                         mutableState.update { it.copy(serverUnavailable = error.isSuwayomiServerUnavailable()) }
-                        _events.send(
-                            if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError,
-                        )
+                        if (emitErrors) {
+                            _events.send(
+                                if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError,
+                            )
+                        }
                     }.onSuccess {
                         mutableState.update { it.copy(serverUnavailable = false) }
                     }.getOrDefault(emptyList())
@@ -91,7 +93,7 @@ class HistoryScreenModel internal constructor(
         ServerStateSync.invalidations
             .onEach { invalidation ->
                 if (invalidation.affectsAny(ServerStateEntity.History, ServerStateEntity.Library)) {
-                    serverHistoryRefreshes.update { it + 1 }
+                    refreshServerState()
                 }
             }
             .launchIn(screenModelScope)
@@ -133,11 +135,17 @@ class HistoryScreenModel internal constructor(
         }
     }
 
+    fun refreshServerState(emitErrors: Boolean = true) {
+        serverHistoryRefreshes.update {
+            ServerRefreshRequest(sequence = it.sequence + 1, emitErrors = emitErrors)
+        }
+    }
+
     fun removeFromHistory(history: HistoryWithRelations) {
         screenModelScope.launchIO {
             runCatching {
                 suwayomiClient.updateChapterRead(history.chapterId.toInt(), isRead = false)
-                serverHistoryRefreshes.update { it + 1 }
+                refreshServerState()
                 ServerStateSync.requestRefresh(
                     *serverHistoryReadAffectedEntities(listOf(history.mangaId.toInt())).toTypedArray(),
                 )
@@ -156,7 +164,7 @@ class HistoryScreenModel internal constructor(
                     .forEach { chapterIds ->
                         suwayomiClient.updateChaptersRead(chapterIds, isRead = false)
                     }
-                serverHistoryRefreshes.update { it + 1 }
+                refreshServerState()
                 ServerStateSync.requestRefresh(*serverHistoryClearAffectedEntities().toTypedArray())
                 _events.send(Event.HistoryCleared)
             }.onFailure { error ->
@@ -289,7 +297,7 @@ class HistoryScreenModel internal constructor(
                     mangaId = manga.id.toInt(),
                     categoryIds = categories.toServerCategoryIds(),
                 )
-                serverHistoryRefreshes.update { it + 1 }
+                refreshServerState()
                 ServerStateSync.requestRefresh(*serverHistoryLibraryAffectedEntities(manga.id.toInt()).toTypedArray())
                 mutableState.update { it.copy(dialog = null) }
             }.onFailure { error ->
@@ -317,7 +325,7 @@ class HistoryScreenModel internal constructor(
                 }
 
             if (manga.favorite) {
-                serverHistoryRefreshes.update { it + 1 }
+                refreshServerState()
                 return@launchIO
             }
 
@@ -342,7 +350,7 @@ class HistoryScreenModel internal constructor(
                             mangaId = manga.id.toInt(),
                             categoryIds = listOf(defaultCategory.id).toServerCategoryIds(),
                         )
-                        serverHistoryRefreshes.update { it + 1 }
+                        refreshServerState()
                         ServerStateSync.requestRefresh(
                             *serverHistoryLibraryAffectedEntities(manga.id.toInt()).toTypedArray(),
                         )
@@ -354,7 +362,7 @@ class HistoryScreenModel internal constructor(
                             mangaId = manga.id.toInt(),
                             inLibrary = true,
                         )
-                        serverHistoryRefreshes.update { it + 1 }
+                        refreshServerState()
                         ServerStateSync.requestRefresh(
                             *serverHistoryLibraryAffectedEntities(manga.id.toInt()).toTypedArray(),
                         )
@@ -453,7 +461,12 @@ class HistoryScreenModel internal constructor(
         data object ServerSyncFailed : Event
     }
 
-    private companion object {
+private companion object {
         const val CLEAR_HISTORY_CHUNK_SIZE = 100
     }
 }
+
+private data class ServerRefreshRequest(
+    val sequence: Int = 0,
+    val emitErrors: Boolean = true,
+)

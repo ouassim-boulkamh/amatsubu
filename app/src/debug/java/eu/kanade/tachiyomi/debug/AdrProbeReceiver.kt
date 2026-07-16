@@ -20,6 +20,7 @@ import eu.kanade.tachiyomi.data.notification.ServerNotificationSyncJob
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyWorker
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiPreferences.Companion.AUTH_TOKEN
 import eu.kanade.tachiyomi.di.appDependencies
+import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import eu.kanade.tachiyomi.util.system.workManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -47,6 +48,7 @@ class AdrProbeReceiver : BroadcastReceiver() {
             ACTION_ENQUEUE_DELAYED_SERVER_BACKUP_CREATE -> enqueueDelayedServerBackupCreate(context, intent)
             ACTION_ENQUEUE_DELAYED_SERVER_BACKUP_RESTORE -> enqueueDelayedServerBackupRestore(context, intent)
             ACTION_MUTATION_REFETCH_FAILURE -> probeMutationRefetchFailure(context, intent)
+            ACTION_OPEN_READER -> openReader(context, intent)
             ACTION_START_LIVE_SERVER_NOTIFICATIONS -> {
                 check(ServerLiveNotificationManager.start(context))
                 Log.i(TAG, "Started live server notification monitoring")
@@ -282,6 +284,21 @@ class AdrProbeReceiver : BroadcastReceiver() {
         }
     }
 
+    private fun openReader(context: Context, intent: Intent) {
+        val mangaId = intent.getLongExtra(EXTRA_MANGA_ID_LONG, -1L)
+        val chapterId = intent.getLongExtra(EXTRA_CHAPTER_ID_LONG, -1L)
+        if (mangaId < 0 || chapterId < 0) {
+            Log.e(TAG, "Missing $EXTRA_MANGA_ID_LONG or $EXTRA_CHAPTER_ID_LONG")
+            return
+        }
+
+        context.startActivity(
+            ReaderActivity.newIntent(context, mangaId, chapterId, isServerBacked = true)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+        Log.i(TAG, "Opened reader mangaId=$mangaId chapterId=$chapterId")
+    }
+
     companion object {
         private const val TAG = "AdrProbeReceiver"
         private const val TAG_CLIENT_DEVICE_COPY = "ClientDeviceChapterCopy"
@@ -309,6 +326,8 @@ class AdrProbeReceiver : BroadcastReceiver() {
             "app.amatsubu.debug.ADR_PROBE_ENQUEUE_DELAYED_SERVER_BACKUP_RESTORE"
         const val ACTION_MUTATION_REFETCH_FAILURE =
             "app.amatsubu.debug.ADR_PROBE_MUTATION_REFETCH_FAILURE"
+        const val ACTION_OPEN_READER =
+            "app.amatsubu.debug.ADR_PROBE_OPEN_READER"
         const val ACTION_START_LIVE_SERVER_NOTIFICATIONS =
             "app.amatsubu.debug.ADR_PROBE_START_LIVE_SERVER_NOTIFICATIONS"
         const val ACTION_STOP_LIVE_SERVER_NOTIFICATIONS =
@@ -320,8 +339,10 @@ class AdrProbeReceiver : BroadcastReceiver() {
         const val EXTRA_PRIMARY_SERVER_URL = "primary_server_url"
         const val EXTRA_UNAVAILABLE_SERVER_URL = "unavailable_server_url"
         const val EXTRA_MANGA_ID = "manga_id"
+        const val EXTRA_MANGA_ID_LONG = "manga_id_long"
         const val EXTRA_ORIGINAL_IN_LIBRARY = "original_in_library"
         const val EXTRA_CHAPTER_ID = "chapter_id"
+        const val EXTRA_CHAPTER_ID_LONG = "chapter_id_long"
         const val EXTRA_MANGA_TITLE = "manga_title"
         const val EXTRA_DELAY_SECONDS = "delay_seconds"
         const val EXTRA_USERNAME = "username"

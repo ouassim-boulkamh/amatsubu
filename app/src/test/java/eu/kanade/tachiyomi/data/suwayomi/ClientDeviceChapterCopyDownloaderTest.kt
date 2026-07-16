@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.security.MessageDigest
@@ -105,6 +106,77 @@ class ClientDeviceChapterCopyDownloaderTest {
     }
 
     @Test
+    fun `save to device fails with low space reason when preflight has too little usable space`() = runTest {
+        val store = FakeClientDeviceChapterCopyRepository()
+        val manifest = manifest(pageCount = 2)
+        val downloader = downloader(
+            store = store,
+            fetcher = FakeClientDeviceChapterPageFetcher(manifest),
+            usableSpaceBytes = { 1024L },
+        )
+
+        val result = runCatching {
+            downloader.saveToDevice("server-a", "Manga", manifest.chapter.id)
+        }
+        val copy = store.getCopy("server-a", manifest.chapter.mangaId, manifest.chapter.id)
+
+        assertTrue(result.isFailure)
+        assertNotNull(copy)
+        assertEquals(ClientChapterCopyStatus.FAILED, copy!!.status)
+        assertEquals(ClientChapterCopyFailureReason.LOW_SPACE, copy.failureReason)
+        assertEquals(0, copy.downloadedPageCount)
+    }
+
+    @Test
+    fun `save to device persists low space failure for no-space IO errors`() = runTest {
+        val store = FakeClientDeviceChapterCopyRepository()
+        val manifest = manifest(pageCount = 2)
+        val fetcher = FakeClientDeviceChapterPageFetcher(
+            manifest = manifest,
+            alwaysFailAtIndex = 0,
+            alwaysFailWith = IOException("ENOSPC: No space left on device"),
+        )
+        val downloader = downloader(store, fetcher)
+
+        val result = runCatching {
+            downloader.saveToDevice("server-a", "Manga", manifest.chapter.id)
+        }
+        val copy = store.getCopy("server-a", manifest.chapter.mangaId, manifest.chapter.id)
+
+        assertTrue(result.isFailure)
+        assertNotNull(copy)
+        assertEquals(ClientChapterCopyStatus.FAILED, copy!!.status)
+        assertEquals(ClientChapterCopyFailureReason.LOW_SPACE, copy.failureReason)
+        assertEquals(1, fetcher.downloadAttempts.getValue(0))
+    }
+
+    @Test
+    fun `save to device persists failed state when final attempt exhausts transient retries`() = runTest {
+        val store = FakeClientDeviceChapterCopyRepository()
+        val manifest = manifest(pageCount = 2)
+        val downloader = downloader(
+            store = store,
+            fetcher = FakeClientDeviceChapterPageFetcher(
+                manifest = manifest,
+                alwaysFailAtIndex = 1,
+                alwaysFailWith = IOException("temporary network failure"),
+            ),
+        )
+
+        val result = runCatching {
+            downloader.saveToDevice("server-a", "Manga", manifest.chapter.id, finalAttempt = true)
+        }
+        val copy = store.getCopy("server-a", manifest.chapter.mangaId, manifest.chapter.id)
+
+        assertTrue(result.isFailure)
+        assertNotNull(copy)
+        assertEquals(ClientChapterCopyStatus.FAILED, copy!!.status)
+        assertEquals(ClientChapterCopyFailureReason.RETRIES_EXHAUSTED, copy.failureReason)
+        assertEquals(1, copy.downloadedPageCount)
+        assertEquals(listOf(true, false), copy.pages.map { it.isPresent })
+    }
+
+    @Test
     fun `failed promotion retains a complete partial copy for recovery`() = runTest {
         val store = FakeClientDeviceChapterCopyRepository()
         val manifest = manifest(pageCount = 3)
@@ -121,8 +193,9 @@ class ClientDeviceChapterCopyDownloaderTest {
 
         assertTrue(result.isFailure)
         assertNotNull(copy)
-        assertEquals(ClientChapterCopyStatus.INCOMPLETE, copy!!.status)
+        assertEquals(ClientChapterCopyStatus.FAILED, copy!!.status)
         assertEquals(ClientChapterCopyFreshness.INCOMPLETE, copy.freshness)
+        assertEquals(ClientChapterCopyFailureReason.NON_RETRYABLE, copy.failureReason)
         assertEquals(3, copy.downloadedPageCount)
         assertEquals(listOf(true, true, true), copy.pages.map { it.isPresent })
         assertTrue(File(copy.storagePath!!).isDirectory)
@@ -336,6 +409,7 @@ class ClientDeviceChapterCopyDownloaderTest {
         fetcher: ClientDeviceChapterPageFetcher,
         promoteTempDirectory: (File, File) -> Boolean = { tempDir, finalDir -> tempDir.renameTo(finalDir) },
         deleteCopyDirectory: (File) -> Boolean = { directory -> directory.deleteRecursively() },
+        usableSpaceBytes: (File) -> Long = { directory -> directory.usableSpace },
     ): ClientDeviceChapterCopyDownloader {
         return ClientDeviceChapterCopyDownloader(
             store = store,
@@ -344,6 +418,7 @@ class ClientDeviceChapterCopyDownloaderTest {
             now = { 1234L },
             promoteTempDirectory = promoteTempDirectory,
             deleteCopyDirectory = deleteCopyDirectory,
+            usableSpaceBytes = usableSpaceBytes,
         )
     }
 
@@ -381,6 +456,8 @@ class ClientDeviceChapterCopyDownloaderTest {
 private class FakeClientDeviceChapterPageFetcher(
     private val manifest: SuwayomiChapterPageManifest,
     private val failAtIndex: Int? = null,
+    private val alwaysFailAtIndex: Int? = null,
+    private val alwaysFailWith: Throwable = IOException("download failed"),
     transientFailures: Map<Int, Int> = emptyMap(),
 ) : ClientDeviceChapterPageFetcher {
     private val remainingTransientFailures = transientFailures.toMutableMap()
@@ -395,7 +472,10 @@ private class FakeClientDeviceChapterPageFetcher(
         val index = sourceUrl.substringAfterLast('-').toInt()
         downloadAttempts[index] = downloadAttempts.getOrDefault(index, 0) + 1
         if (index == failAtIndex) {
-            error("download failed")
+            throw IOException("temporary download failure")
+        }
+        if (index == alwaysFailAtIndex) {
+            throw alwaysFailWith
         }
         val remainingFailures = remainingTransientFailures[index] ?: 0
         if (remainingFailures > 0) {
@@ -443,6 +523,7 @@ private class FakeClientDeviceChapterCopyRepository : ClientDeviceChapterCopyRep
             manifestHash = buildManifestHash(upsert.manifest),
             status = upsert.status,
             freshness = upsert.freshness,
+            failureReason = upsert.failureReason,
             expectedPageCount = upsert.manifest.pages.size,
             downloadedPageCount = downloadedPageCount,
             createdAt = existing?.createdAt ?: 1L,

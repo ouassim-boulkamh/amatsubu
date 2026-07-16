@@ -23,6 +23,12 @@ enum class ClientChapterCopyFreshness {
     ORPHANED,
 }
 
+enum class ClientChapterCopyFailureReason {
+    LOW_SPACE,
+    NON_RETRYABLE,
+    RETRIES_EXHAUSTED,
+}
+
 data class ClientDeviceChapterCopy(
     val serverKey: String,
     val mangaId: Int,
@@ -47,6 +53,7 @@ data class ClientDeviceChapterCopy(
     val verifiedAt: Long?,
     val orphanedAt: Long?,
     val pages: List<ClientDeviceChapterCopyPage> = emptyList(),
+    val failureReason: ClientChapterCopyFailureReason? = null,
 ) {
     val isComplete: Boolean
         get() = status == ClientChapterCopyStatus.COMPLETE &&
@@ -74,6 +81,7 @@ data class ClientDeviceChapterCopyUpsert(
     val pages: List<ClientDeviceChapterCopyPage>,
     val status: ClientChapterCopyStatus,
     val freshness: ClientChapterCopyFreshness,
+    val failureReason: ClientChapterCopyFailureReason? = null,
     val verifiedAt: Long? = null,
     val orphanedAt: Long? = null,
 )
@@ -122,6 +130,7 @@ internal class ClientDeviceChapterCopyStore(
                 manifestHash = manifestHash,
                 status = upsert.status.name,
                 freshness = upsert.freshness.name,
+                failureReason = upsert.failureReason?.name,
                 expectedPageCount = upsert.manifest.pages.size.toLong(),
                 downloadedPageCount = downloadedPageCount.toLong(),
                 createdAt = createdAt,
@@ -214,6 +223,7 @@ internal class ClientDeviceChapterCopyStore(
         chapterId: Int,
         status: ClientChapterCopyStatus,
         freshness: ClientChapterCopyFreshness,
+        failureReason: ClientChapterCopyFailureReason? = null,
         downloadedPageCount: Int,
         verifiedAt: Long? = null,
         orphanedAt: Long? = null,
@@ -224,6 +234,7 @@ internal class ClientDeviceChapterCopyStore(
             chapterId = chapterId.toLong(),
             status = status.name,
             freshness = freshness.name,
+            failureReason = failureReason?.name,
             downloadedPageCount = downloadedPageCount.toLong(),
             updatedAt = now(),
             verifiedAt = verifiedAt,
@@ -264,6 +275,7 @@ internal class ClientDeviceChapterCopyStore(
             chapterId = copy.chapterId,
             status = copy.status,
             freshness = ClientChapterCopyFreshness.ORPHANED,
+            failureReason = copy.failureReason,
             downloadedPageCount = copy.downloadedPageCount,
             verifiedAt = copy.verifiedAt,
             orphanedAt = orphanedAt,
@@ -333,6 +345,7 @@ private fun Client_chapter_copies.toModel(
         manifestHash = manifest_hash,
         status = enumValueOf(status),
         freshness = enumValueOf(freshness),
+        failureReason = failure_reason?.let { enumValueOf<ClientChapterCopyFailureReason>(it) },
         expectedPageCount = expected_page_count.toInt(),
         downloadedPageCount = downloaded_page_count.toInt(),
         createdAt = created_at,
