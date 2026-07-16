@@ -79,7 +79,11 @@ class HistoryScreenModel internal constructor(
                         mutableState.update { it.copy(serverUnavailable = error.isSuwayomiServerUnavailable()) }
                         if (emitErrors) {
                             _events.send(
-                                if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError,
+                                if (error.isSuwayomiServerUnavailable()) {
+                                    Event.ServerUnavailable
+                                } else {
+                                    Event.InternalError
+                                },
                             )
                         }
                     }.onSuccess {
@@ -461,7 +465,7 @@ class HistoryScreenModel internal constructor(
         data object ServerSyncFailed : Event
     }
 
-private companion object {
+    private companion object {
         const val CLEAR_HISTORY_CHUNK_SIZE = 100
     }
 }

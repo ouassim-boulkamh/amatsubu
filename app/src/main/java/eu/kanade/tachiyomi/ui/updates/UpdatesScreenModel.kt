@@ -200,7 +200,9 @@ class UpdatesScreenModel private constructor(
                 logcat(LogPriority.ERROR, error) { "Failed to load server updates" }
                 mutableState.update { it.copy(serverUnavailable = error.isSuwayomiServerUnavailable()) }
                 if (emitErrors) {
-                    _events.send(if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError)
+                    _events.send(
+                        if (error.isSuwayomiServerUnavailable()) Event.ServerUnavailable else Event.InternalError,
+                    )
                 }
             }
             .onSuccess {

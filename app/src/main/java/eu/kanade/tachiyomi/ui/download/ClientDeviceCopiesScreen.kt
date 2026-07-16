@@ -46,6 +46,8 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.util.Screen
+import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyFreshness
+import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyStatus
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopy
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyOrphanManager
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyPathPolicy
@@ -56,8 +58,6 @@ import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceCopyStorageCleanupCandidate
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceCopyStorageRowIssueType
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceCopyStorageScanResult
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceCopyStorageScanner
-import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyFreshness
-import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyStatus
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiClientProvider
 import eu.kanade.tachiyomi.di.AppDependencies
 import eu.kanade.tachiyomi.di.appDependencies

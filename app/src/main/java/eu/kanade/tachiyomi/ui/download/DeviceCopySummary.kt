@@ -1,7 +1,7 @@
 package eu.kanade.tachiyomi.ui.download
 
-import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyFreshness
 import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyFailureReason
+import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyFreshness
 import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyStatus
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopy
 

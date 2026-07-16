@@ -25,7 +25,12 @@ class ClientDeviceCopyStorageScannerTest {
 
         assertEquals(10L, result.dbByteTotal)
         assertEquals(0L, result.filesystemByteTotal)
-        assertEquals(listOf(ClientDeviceCopyStorageRowIssueType.COMPLETE_MISSING_DIRECTORY), result.rowIssues.map { it.type })
+        assertEquals(
+            listOf(ClientDeviceCopyStorageRowIssueType.COMPLETE_MISSING_DIRECTORY),
+            result.rowIssues.map {
+                it.type
+            },
+        )
         assertEquals(listOf(0), result.rowIssues.single().missingPageIndexes)
         assertTrue(result.cleanupCandidates.isEmpty())
     }
@@ -48,7 +53,12 @@ class ClientDeviceCopyStorageScannerTest {
 
         assertEquals(18L, result.dbByteTotal)
         assertEquals(7L, result.filesystemByteTotal)
-        assertEquals(listOf(ClientDeviceCopyStorageRowIssueType.COMPLETE_MISSING_PAGE_FILES), result.rowIssues.map { it.type })
+        assertEquals(
+            listOf(ClientDeviceCopyStorageRowIssueType.COMPLETE_MISSING_PAGE_FILES),
+            result.rowIssues.map {
+                it.type
+            },
+        )
         assertEquals(listOf(1), result.rowIssues.single().missingPageIndexes)
     }
 

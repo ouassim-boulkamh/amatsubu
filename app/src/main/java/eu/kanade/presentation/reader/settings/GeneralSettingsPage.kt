@@ -69,7 +69,14 @@ internal fun ColumnScope.GeneralPage(screenModel: ReaderSettingsScreenModel) {
                 selected = mode.name in verticalNavigatorModes,
                 onClick = {
                     screenModel.preferences.verticalNavigator.set(
-                        if (mode.name in verticalNavigatorModes) verticalNavigatorModes - mode.name else verticalNavigatorModes + mode.name,
+                        if (mode.name in
+                            verticalNavigatorModes
+                        ) {
+                            verticalNavigatorModes - mode.name
+                        } else {
+                            verticalNavigatorModes +
+                                mode.name
+                        },
                     )
                 },
                 label = { Text(stringResource(mode.stringRes)) },

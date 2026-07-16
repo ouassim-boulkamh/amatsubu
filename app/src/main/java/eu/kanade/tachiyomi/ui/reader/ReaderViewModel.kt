@@ -24,6 +24,7 @@ import eu.kanade.tachiyomi.data.suwayomi.ClientChapterCopyFreshness
 import eu.kanade.tachiyomi.data.suwayomi.ClientDeviceChapterCopyStore
 import eu.kanade.tachiyomi.data.suwayomi.MangaStatus
 import eu.kanade.tachiyomi.data.suwayomi.ServerReadStatePendingStore
+import eu.kanade.tachiyomi.data.suwayomi.ServerReaderIntentBaseline
 import eu.kanade.tachiyomi.data.suwayomi.ServerReaderIntentPendingStore
 import eu.kanade.tachiyomi.data.suwayomi.ServerStateSync
 import eu.kanade.tachiyomi.data.suwayomi.SuwayomiChapterDto
@@ -326,7 +327,9 @@ class ReaderViewModel private constructor(
                     chapterId = readerChapter.chapter.id.toInt(),
                 ),
             )
-            if (source is ReaderChapterSource.DeviceCopy && readerChapter.pageLoader !is ClientDeviceChapterCopyPageLoader) {
+            if (source is ReaderChapterSource.DeviceCopy &&
+                readerChapter.pageLoader !is ClientDeviceChapterCopyPageLoader
+            ) {
                 readerChapter.pageLoader = ClientDeviceChapterCopyPageLoader(source.copy)
             }
         }
@@ -611,8 +614,8 @@ class ReaderViewModel private constructor(
         )
     }
 
-    private fun SuwayomiChapterDto.toReaderIntentBaseline(): eu.kanade.tachiyomi.data.suwayomi.ServerReaderIntentBaseline {
-        return eu.kanade.tachiyomi.data.suwayomi.ServerReaderIntentBaseline(
+    private fun SuwayomiChapterDto.toReaderIntentBaseline(): ServerReaderIntentBaseline {
+        return ServerReaderIntentBaseline(
             isRead = isRead,
             lastPageRead = lastPageRead,
             isBookmarked = isBookmarked,

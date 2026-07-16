@@ -76,12 +76,12 @@ internal class AmatsubuDevice {
     }
 
     fun tapText(text: String) {
-        findText(text).click()
+        findText(text).clickBestTarget()
         device.waitForIdle()
     }
 
     fun tapTextContains(text: String) {
-        findTextContains(text).click()
+        findTextContains(text).clickBestTarget()
         device.waitForIdle()
     }
 
@@ -269,6 +269,19 @@ internal class AmatsubuDevice {
     private fun findObject(label: String, selector: () -> androidx.test.uiautomator.BySelector): UiObject2 {
         return device.wait(Until.findObject(selector()), DEFAULT_TIMEOUT_MILLIS)
             ?: error("Timed out waiting for $label")
+    }
+
+    private fun UiObject2.clickBestTarget() {
+        var target: UiObject2 = this
+        var ancestor = parent
+        while (ancestor != null) {
+            if (ancestor.isClickable) {
+                target = ancestor
+                break
+            }
+            ancestor = ancestor.parent
+        }
+        target.click()
     }
 
     private companion object {
